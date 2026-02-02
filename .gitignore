@@ -1,0 +1,8 @@
+#VSCODE
+.vscode
+
+#.ENV
+.env
+
+#Secrets
+secrets
