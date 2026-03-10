@@ -1,0 +1,17 @@
+
+1. Install Node.js
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+   Restart your terminal, then:
+   nvm install --lts
+
+2. Go into the project folder
+   cd frontend
+
+3. Install dependencies
+   npm install
+
+4. Run the app
+   npm run dev
+
+5. Open your browser at http://localhost:3000

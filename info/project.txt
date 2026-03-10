@@ -1,0 +1,253 @@
+================================================================
+                  PROJECT TECHNOLOGY DECISIONS
+================================================================
+
+This document explains every technology we are using or plan
+to use, what it does, and why we chose it.
+
+Last updated: March 2026
+Project: ft_transcendence
+
+----------------------------------------------------------------
+THE BIG PICTURE
+----------------------------------------------------------------
+
+Our project is a web application. Here is how everything
+fits together:
+
+  [Browser]
+      |
+  [Next.js]  <-- handles pages, routing, and server logic
+      |
+  [PostgreSQL]  <-- stores all data (users, scores, etc.)
+      |
+  [Docker]  <-- packages everything to run anywhere
+
+
+----------------------------------------------------------------
+1. NEXT.JS  (Frontend + Backend Framework)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  Next.js is a framework that lets you build both the frontend
+  (pages the user sees) and the backend (server, API, database
+  calls) in one project using JavaScript or TypeScript.
+
+WHY WE CHOSE IT?
+  - One language for everything (no switching between Python
+    backend and JavaScript frontend)
+  - Counts as BOTH frontend AND backend framework in the
+    subject = Major module worth 2 points with one tool
+  - Huge community, tons of tutorials, beginner friendly
+  - Used by Netflix, TikTok, Twitch in production
+  - Built-in routing, no extra configuration needed
+
+WHAT IS REACT?
+  Next.js is built on top of React. React is a library for
+  building user interfaces. Every page you write in Next.js
+  is a React component.
+
+WHAT IS TYPESCRIPT?
+  TypeScript is JavaScript with types added. It catches bugs
+  before you even run the code. If a function expects a number
+  and you pass a string, TypeScript warns you immediately.
+  All our code will be written in TypeScript.
+
+
+----------------------------------------------------------------
+2. TAILWIND CSS  (Styling Framework)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  Tailwind is a CSS framework. Instead of writing separate
+  CSS files, you add small utility classes directly in your
+  HTML elements to style them.
+
+WHY WE CHOSE IT?
+  - Very fast to write once you know the classes
+  - No need to name CSS classes (a common source of headaches)
+  - Responsive design is easy (works on mobile and desktop)
+  - Comes built into Next.js setup
+  - Huge community
+
+EXAMPLE:
+  Traditional CSS:
+    <div class="box">Hello</div>
+    .box { background: white; padding: 16px; border-radius: 8px; }
+
+  With Tailwind:
+    <div className="bg-white p-4 rounded-lg">Hello</div>
+
+  Same result, no separate CSS file needed.
+
+
+----------------------------------------------------------------
+3. DOCKER  (Deployment and Environment)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  Docker packages your entire application into containers.
+  A container is like a box that holds your code AND everything
+  it needs to run. That box works the same on every machine.
+
+WHY WE CHOSE IT?
+  - REQUIRED by the subject (must run with a single command)
+  - Fixes the "works on my machine" problem completely
+  - Every teammate and evaluator gets the exact same environment
+  - Industry standard for deploying web apps
+
+HOW IT WORKS FOR US?
+  We will have a docker-compose.yml file at the root of the repo.
+  To run the entire project anyone just runs:
+
+    docker compose up
+
+  That one command starts everything: the Next.js app,
+  the database, and anything else we add.
+
+NOTE: We set Docker up last, after everything works locally.
+
+
+----------------------------------------------------------------
+4. POSTGRESQL  (Database)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  PostgreSQL is a database. It stores all the data for our
+  application: users, passwords, scores, game history, etc.
+  Data is stored in tables (like spreadsheets) with rows
+  and columns.
+
+WHY POSTGRESQL?
+  - Most popular database for Next.js projects
+  - Handles multiple users at the same time perfectly
+    (required by the subject)
+  - Free and open source
+  - Rock solid, used by Instagram, Spotify, Reddit
+  - Works perfectly with Prisma (see below)
+
+WHY NOT OTHERS?
+  - SQLite: too simple for a multi-user web app
+  - MongoDB: our data is structured and relational,
+    SQL is a better fit
+  - MySQL: PostgreSQL is just more modern and feature-rich
+
+STATUS: Not installed yet. Next step after this document.
+
+
+----------------------------------------------------------------
+5. PRISMA  (ORM - Database Interface)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  Prisma is an ORM (Object-Relational Mapper). It is the
+  layer between our Next.js code and our PostgreSQL database.
+  Instead of writing raw SQL queries, we write normal
+  TypeScript code to talk to the database.
+
+WHY PRISMA?
+  - Minor module worth 1 point in the subject
+  - Much easier than writing SQL, especially for beginners
+  - Auto-generates TypeScript types from your database schema
+  - Comes with Prisma Studio, a visual database browser
+  - Protects against SQL injection attacks automatically
+  - Perfect fit with Next.js and PostgreSQL
+
+EXAMPLE:
+  Without Prisma (raw SQL):
+    SELECT * FROM users WHERE id = 1;
+
+  With Prisma:
+    const user = await prisma.user.findUnique({ where: { id: 1 } })
+
+  Same result, but in TypeScript, safer and easier to read.
+
+STATUS: Not installed yet. Installed alongside PostgreSQL.
+
+
+----------------------------------------------------------------
+6. NEXTAUTH.JS  (Authentication)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  NextAuth.js is a library that handles user login and
+  authentication. It supports email/password login and
+  also social logins like Google and GitHub (OAuth).
+
+WHY NEXTAUTH.JS?
+  - Built specifically for Next.js, works out of the box
+  - Handles all the complex security stuff automatically
+    (sessions, tokens, encryption)
+  - OAuth support gives us the Minor module (1 point)
+  - Saves weeks of work building auth from scratch
+  - Trusted and widely used in production
+
+WHAT IS OAUTH?
+  OAuth lets users log in with an existing account like
+  Google or GitHub instead of creating a new password.
+  You have seen this as "Login with Google" buttons.
+  This is a Minor module worth 1 point in the subject.
+
+STATUS: Not installed yet. Installed when we build the
+login/register pages.
+
+
+----------------------------------------------------------------
+7. SOCKET.IO  (Real-time Communication)
+----------------------------------------------------------------
+
+WHAT IS IT?
+  Socket.io is a library that enables real-time two-way
+  communication between the browser and the server.
+  Normal web requests are one-way (you ask, server answers).
+  Socket.io keeps a permanent connection open so the server
+  can push updates to the browser instantly.
+
+WHY SOCKET.IO?
+  - Required for any real-time game (Pong, Chess, etc.)
+  - Required for real-time chat
+  - Handles the Real-time features Major module (2 points)
+  - Handles network disconnections and reconnections
+  - Works well with Next.js
+
+WHEN DO WE NEED IT?
+  The moment we start building the game or any live feature.
+  Without it, two players cannot see each others moves
+  in real time.
+
+STATUS: Not installed yet. Installed when we start the game.
+
+
+----------------------------------------------------------------
+MODULE POINTS SUMMARY
+----------------------------------------------------------------
+
+Technology          Module                        Points
+-----------         ------                        ------
+Next.js             Framework (frontend+backend)  2 pts (Major)
+Prisma              ORM                           1 pt  (Minor)
+NextAuth OAuth      Remote authentication         1 pt  (Minor)
+Socket.io           Real-time features            2 pts (Major)
+[Game TBD]          Web-based game                2 pts (Major)
+[Game TBD]          Remote players                2 pts (Major)
+[TBD]               Tournament system             1 pt  (Minor)
+[TBD]               Standard user management      2 pts (Major)
+                                          -----------------
+                                          TOTAL:  13 pts
+                                          (1 more needed)
+
+Note: We need 14 points minimum to pass. Adding one more
+minor module will cover us. Aiming for 16+ is recommended
+in case some modules are not validated during evaluation.
+
+
+----------------------------------------------------------------
+WHAT WE HAVE NOT DECIDED YET
+----------------------------------------------------------------
+
+- What game or app we are building
+  (this affects which modules we pick)
+
+- AI opponent (2 pts Major) - requires a game first
+- Game customization (1 pt Minor) - requires a game first
+- Tournament system (1 pt Minor) - requires a game first
