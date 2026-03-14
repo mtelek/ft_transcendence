@@ -1,4 +1,6 @@
 
+# WANT TO INSTALL AND HOW TO RUN NEXT.JS APP
+
 1. Install Node.js
    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
@@ -16,7 +18,28 @@
 
 5. Open your browser at http://localhost:3000
 
-6. intsall PostgreSQL (missing)
-   everybody needs to install PostgreSQL
+# INSTALL DATABASE (PostgreSQL)
 
+1. This installs and starts PostgreSQL as a background service
 
+brew install postgresql@17
+brew services start postgresql@17
+
+2. Verify its running
+
+psql postgres
+
+\q to quit
+
+3. create database
+
+createdb ft_transcendence
+
+# CHANGE .ENV TO .ENV.EXAMPLE
+
+# INSTALLiNG PRISMA
+
+`npm install` reads the `package.json` and installs everything — 
+including Prisma and all other dependencies.
+
+npx prisma migrate dev --name init

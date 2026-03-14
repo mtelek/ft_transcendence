@@ -20,6 +20,12 @@ export default function Header() {
         >
           Login
         </Link>
+        <Link
+          href="/register"
+          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+        >
+        Register
+        </Link>
       </nav>
     </header>
   );
