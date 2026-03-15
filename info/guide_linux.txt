@@ -1,0 +1,90 @@
+//WORKING ONLY FOR UBUNTU AND DEBIAN
+
+# WANT TO INSTALL AND HOW TO RUN NEXT.JS APP
+
+1. Install Node.js
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+   Restart your terminal, then:
+   nvm install --lts
+
+2. Go into the project folder
+   cd frontend
+
+3. Install dependencies
+   npm install
+
+4. Run the app
+   npm run dev
+
+5. Open your browser at http://localhost:3000
+
+# INSTALL DATABASE (PostgreSQL)
+
+1. Install PostgreSQL
+
+sudo apt update
+sudo apt install postgresql
+
+2. Start the service
+
+sudo systemctl start postgresql
+
+3. Verify its running
+
+sudo systemctl status postgresql
+
+look for 'active'
+
+\q to quit
+
+4. create database
+
+sudo -u postgres createdb ft_transcendence
+
+5. create a user (needed for next.js apps on ubuntu/debian) and give him privileges for our database
+
+sudo -u postgres psql
+
+run the following SQL cmds:
+
+CREATE USER 'your_username' WITH PASSWORD 'strongpassword';
+ALTER ROLE 'your_username' CREATEDB;
+GRANT ALL PRIVILEGES ON DATABASE ft_transcendence TO 'your_username';
+
+quit
+
+6. Create .env file inside frontend directory and define
+
+DATABASE_URL="postgresql://'your_username':'strongpassword'@localhost:5432/ft_transcendence"
+
+7. Test connection
+
+psql postgresql://ft_user:strongpassword@localhost:5432/ft_transcendence
+
+
+# INSTALLiNG PRISMA
+
+0. Prisma installed already as a node package
+`npm install` reads the `package.json` and installs everything — 
+including Prisma and all other dependencies.
+
+1. Fix permissions
+
+sudo -u postgres psql
+\c ft_transcendence
+GRANT ALL ON SCHEMA public TO 'your_username';
+ALTER SCHEMA public OWNER TO 'your_username';
+quit
+
+2. Sync tables with database
+
+npx prisma migrate dev --name init
+
+3. Create prisma client
+
+npx prisma generate
+
+4. Check with interface if its connected correctly
+
+npx prisma studio
