@@ -1,16 +1,49 @@
+"use client";
+
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
+  const router = useRouter();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.SyntheticEvent) {
+    e.preventDefault();
+
+    const result = await signIn("credentials", {
+      identifier,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError("Invalid email or password");
+    } else {
+      router.refresh();
+      router.push("/dashboard");
+    }
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <form className="flex flex-col gap-4 w-80">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
         <h1 className="text-2xl font-bold text-center">Login</h1>
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
         <input
-          type="email"
-          placeholder="Email"
+          type="text"
+          placeholder="Email or Username"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           className="px-4 py-2 border rounded"
         />
         <input
           type="password"
           placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           className="px-4 py-2 border rounded"
         />
         <button
