@@ -43,3 +43,10 @@ createdb ft_transcendence
 including Prisma and all other dependencies.
 
 npx prisma migrate dev --name init
+
+#CREATE SECRET FOR NEXTAUTH
+
+-create .env secret (we need a secret key for NextAuth, when it creates a new JWT it needs to sign it), create random bytes with 
+    * openssl rand -base64 32 
+and copy it into .env like this 'AUTH_SECRET='
+-create session provider as a client wrapper
