@@ -14,6 +14,9 @@ export default async function Header() {
         {session ? (
           <>
             <span className="px-4 py-2 text-gray-600">Hey, {session.user?.name}</span>
+            <Link href="/poker" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
+              Poker
+            </Link>
             <LogoutButton />
           </>
         ) : (
