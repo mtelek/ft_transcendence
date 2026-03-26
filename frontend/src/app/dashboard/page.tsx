@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import LogoutButton from "@/components/LogoutButton";
+import Chat from "@/components/Chat";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -8,10 +8,9 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
       <h1 className="text-3xl font-bold">Welcome, {session.user?.name}!</h1>
-      <p className="text-gray-500">You are logged in as {session.user?.email}</p>
-      <LogoutButton />
+      <Chat username={session.user?.name ?? "Anonymous"} />
     </div>
   );
 }
