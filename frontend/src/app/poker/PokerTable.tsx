@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, getCardDisplay, DECK } from "@/lib/cards";
+import Chat from "@/components/Chat";
 
 // Demo cards
 const COMMUNITY_CARDS: Card[] = [
@@ -56,16 +57,16 @@ const SEAT_POSITIONS: Record<2 | 3 | 6, [number, number][]> = {
 function CardFaceUp({ card }: { card: Card }) {
   const display = getCardDisplay(card);
   return (
-    <div className="w-10 h-14 bg-slate-700 rounded-md border border-slate-500 flex flex-col items-center justify-center shadow-lg">
-      <span className="text-xs font-bold text-white leading-none">{display.rank}</span>
-      <span className={`text-sm leading-none ${display.color}`}>{display.symbol}</span>
+    <div className="w-14 h-20 bg-slate-700 rounded-md border border-slate-500 flex flex-col items-center justify-center shadow-lg">
+      <span className="text-sm font-bold text-white leading-none">{display.rank}</span>
+      <span className={`text-lg leading-none ${display.color}`}>{display.symbol}</span>
     </div>
   );
 }
 
 function CardFaceDown() {
   return (
-    <div className="w-10 h-14 bg-red-400 rounded-md border border-red-300 shadow-lg" />
+    <div className="w-14 h-20 bg-red-400 rounded-md border border-red-300 shadow-lg" />
   );
 }
 
@@ -105,7 +106,7 @@ function PlayerSeat({ player, position }: { player: Player; position: [number, n
   );
 }
 
-export default function PokerTable() {
+export default function PokerTable({ username }: { username: string }) {
   const [playerCount, setPlayerCount] = useState<2 | 3 | 6>(6);
   const [betAmount, setBetAmount] = useState(750);
 
@@ -209,6 +210,11 @@ export default function PokerTable() {
       <p className="text-slate-500 text-xs mt-4">
         ft_transcendence | Room 42 | Seats {playerCount}
       </p>
+
+      {/* Chat */}
+      <div className="fixed bottom-4 left-4 w-80 z-50">
+        <Chat username={username} />
+      </div>
     </div>
   );
 }

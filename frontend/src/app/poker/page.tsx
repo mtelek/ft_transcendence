@@ -6,5 +6,5 @@ export default async function PokerPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  return <PokerTable />;
+  return <PokerTable username={session.user?.name ?? "Anonymous"} />;
 }
