@@ -66,7 +66,11 @@ function CardFaceUp({ card }: { card: Card }) {
 
 function CardFaceDown() {
   return (
-    <div className="w-14 h-20 bg-red-400 rounded-md border border-red-300 shadow-lg" />
+    <img
+      src="/card-back-red.png"
+      alt="Card back"
+      className="w-14 h-20 rounded-md shadow-lg object-cover"
+    />
   );
 }
 
@@ -115,7 +119,26 @@ export default function PokerTable({ username }: { username: string }) {
   const pot = 69420;
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center p-4">
+    <div
+      className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4"
+      style={{
+        backgroundColor: "#1a3a2a",
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
+          `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>` +
+          `<style>text{font-size:26px;fill:%231f4a35;opacity:0.5;text-anchor:middle;dominant-baseline:central;font-family:serif}</style>` +
+          // Row 0: ♠ ♥ ♦ ♣
+          `<text x='20' y='20'>♠</text><text x='60' y='20'>♥</text><text x='100' y='20'>♦</text><text x='140' y='20'>♣</text>` +
+          // Row 1 (shifted +20px): ♥ ♦ ♣ ♠
+          `<text x='0' y='60'>♠</text><text x='40' y='60'>♥</text><text x='80' y='60'>♦</text><text x='120' y='60'>♣</text><text x='160' y='60'>♠</text>` +
+          // Row 2: ♦ ♣ ♠ ♥
+          `<text x='20' y='100'>♦</text><text x='60' y='100'>♣</text><text x='100' y='100'>♠</text><text x='140' y='100'>♥</text>` +
+          // Row 3 (shifted +20px): ♣ ♠ ♥ ♦
+          `<text x='0' y='140'>♦</text><text x='40' y='140'>♣</text><text x='80' y='140'>♠</text><text x='120' y='140'>♥</text><text x='160' y='140'>♦</text>` +
+          `</svg>`
+        )}")`,
+        backgroundSize: "160px 160px",
+      }}
+    >
       {/* Player count selector */}
       <div className="flex gap-2 mb-4">
         {([2, 3, 6] as const).map((count) => (
