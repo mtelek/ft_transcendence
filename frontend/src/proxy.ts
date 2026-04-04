@@ -1,8 +1,10 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/auth.config";
+import { NextRequest, NextResponse } from "next/server";
 
-export default NextAuth(authConfig).auth;
+export function proxy(request: NextRequest) {
+  // Pass through - no middleware logic needed currently
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/login", "/register"],
+  matcher: [], // Empty matcher means proxy won't run
 };

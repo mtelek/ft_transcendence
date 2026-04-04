@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import GoogleLogin from "@/components/GoogleLogin";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -13,18 +12,11 @@ export default function LoginPage() {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
 
-    const result = await signIn("credentials", {
+    await signIn("credentials", {
       identifier,
       password,
-      redirect: false,
+      callbackUrl: "/",
     });
-
-    if (result?.error) {
-      setError("Invalid email or password");
-    } else {
-      router.refresh();
-      router.push("/dashboard");
-    }
   }
 
   return (
@@ -52,6 +44,9 @@ export default function LoginPage() {
         >
           Login
         </button>
+        <div className="mt-2">
+          <GoogleLogin />
+        </div>
       </form>
     </div>
   );
