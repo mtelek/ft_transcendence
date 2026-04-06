@@ -95,3 +95,7 @@ npx prisma studio
     * openssl rand -base64 32 
 and copy it into .env like this 'AUTH_SECRET='
 -create session provider as a client wrapper
+
+#FOR GOOGLE AUTHENTICATION
+npm install @auth/prisma-adapter
+npx prisma migrate dev --name auth_update
