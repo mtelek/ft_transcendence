@@ -99,3 +99,6 @@ and copy it into .env like this 'AUTH_SECRET='
 #FOR GOOGLE AUTHENTICATION
 npm install @auth/prisma-adapter
 npx prisma migrate dev --name auth_update
+
+#FOR BETTER TRANSITION FOR THE PROFILE OVERLAY
+npm install framer-motion

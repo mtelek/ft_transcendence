@@ -6,6 +6,7 @@ import { authConfig } from "@/auth.config";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
+//! comment missing
 const adapter = PrismaAdapter(prisma);
 
 async function getUniqueUsername(base?: string | null) {
