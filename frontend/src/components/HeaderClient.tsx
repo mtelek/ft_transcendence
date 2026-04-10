@@ -29,7 +29,7 @@ export default function HeaderClient({ session }: any) {
             {/* Avatar setting based on the authentication form*/}
             <button onClick={() => setOpen(!open)}>
               <div className="w-10 h-10 bg-gray-500 rounded-full overflow-hidden flex items-center justify-center">
-                {session?.user.image ? (
+                {session?.user?.image ? (
                   <Image
                   src= {session.user.image}
                   alt="User Avatar"
