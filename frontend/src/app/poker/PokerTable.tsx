@@ -110,9 +110,31 @@ function PlayerSeat({ player, position }: { player: Player; position: [number, n
   );
 }
 
+type BgColor = "green" | "red" | "blue" | "brown" | "white" | "yellow";
+
+const BG_FILTERS: Record<BgColor, string> = {
+  green:  "sepia(1) hue-rotate(90deg) saturate(2) brightness(0.6)",
+  red:    "sepia(1) hue-rotate(335deg) saturate(5) brightness(0.55)",
+  blue:   "sepia(1) hue-rotate(190deg) saturate(3) brightness(0.6)",
+  brown:  "sepia(1) saturate(1.5) brightness(0.55)",
+  white:  "grayscale(1) brightness(1.4)",
+  yellow: "sepia(1) hue-rotate(30deg) saturate(3) brightness(0.75)",
+};
+
+const BG_SWATCHES: Record<BgColor, string> = {
+  green:  "#2d7a3a",
+  red:    "#b02020",
+  blue:   "#1e4fa0",
+  brown:  "#7a4a1e",
+  white:  "#d0d0d0",
+  yellow: "#c8a800",
+};
+
 export default function PokerTable({ username }: { username: string }) {
   const [playerCount, setPlayerCount] = useState<2 | 3 | 6>(6);
   const [betAmount, setBetAmount] = useState(750);
+  const [bgColor, setBgColor] = useState<BgColor>("green");
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const players = getDemoPlayers(playerCount);
   const positions = SEAT_POSITIONS[playerCount];
@@ -120,25 +142,65 @@ export default function PokerTable({ username }: { username: string }) {
 
   return (
     <div
-      className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4"
+      className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4"
+      /* Original SVG background (deactivated):
       style={{
         backgroundColor: "#1a3a2a",
         backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
           `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>` +
           `<style>text{font-size:26px;fill:%231f4a35;opacity:0.5;text-anchor:middle;dominant-baseline:central;font-family:serif}</style>` +
-          // Row 0: ♠ ♥ ♦ ♣
           `<text x='20' y='20'>♠</text><text x='60' y='20'>♥</text><text x='100' y='20'>♦</text><text x='140' y='20'>♣</text>` +
-          // Row 1 (shifted +20px): ♥ ♦ ♣ ♠
           `<text x='0' y='60'>♠</text><text x='40' y='60'>♥</text><text x='80' y='60'>♦</text><text x='120' y='60'>♣</text><text x='160' y='60'>♠</text>` +
-          // Row 2: ♦ ♣ ♠ ♥
           `<text x='20' y='100'>♦</text><text x='60' y='100'>♣</text><text x='100' y='100'>♠</text><text x='140' y='100'>♥</text>` +
-          // Row 3 (shifted +20px): ♣ ♠ ♥ ♦
           `<text x='0' y='140'>♦</text><text x='40' y='140'>♣</text><text x='80' y='140'>♠</text><text x='120' y='140'>♥</text><text x='160' y='140'>♦</text>` +
           `</svg>`
         )}")`,
         backgroundSize: "160px 160px",
       }}
+      */
     >
+      {/* Green image background */}
+      <img
+        src="/dark-poker-background-of-spades-and-clubs.jpg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ filter: BG_FILTERS[bgColor], zIndex: 0 }}
+      />
+      {/* Reverse vignette: brighten edges, darken center */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(255,255,255,0.15) 100%)",
+          zIndex: 1,
+        }}
+      />
+      {/* Content above background */}
+      <div className="relative z-10 flex flex-col items-center w-full">
+
+      {/* Color picker — fixed below header */}
+      <div className="fixed top-[72px] left-4 z-20">
+        <button
+          onClick={() => setShowColorPicker(v => !v)}
+          className="w-8 h-8 rounded-full border-2 border-white/60 shadow-lg transition-transform hover:scale-110"
+          style={{ background: BG_SWATCHES[bgColor] }}
+          title="Change table color"
+        />
+        {showColorPicker && (
+          <div className="absolute top-10 left-0 flex flex-col gap-2 bg-black/70 backdrop-blur-sm p-2 rounded-xl shadow-xl">
+            {(Object.keys(BG_SWATCHES) as BgColor[]).map(color => (
+              <button
+                key={color}
+                onClick={() => { setBgColor(color); setShowColorPicker(false); }}
+                className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <span className="w-5 h-5 rounded-full border-2 border-white/40 flex-shrink-0" style={{ background: BG_SWATCHES[color] }} />
+                <span className="text-white text-xs capitalize">{color}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {/* Player count selector */}
       <div className="flex gap-2 mb-4">
         {([2, 3, 6] as const).map((count) => (
@@ -158,12 +220,12 @@ export default function PokerTable({ username }: { username: string }) {
       <br></br><br></br>
       {/* Table container */}
       <div className="relative w-full max-w-4xl aspect-[16/10]">
-        {/* Outer table border */}
-        <div className="absolute inset-0 bg-slate-700 rounded-[50%] shadow-2xl shadow-black/50" />
-        {/* Inner table felt */}
-        <div className="absolute inset-[6%] bg-slate-800 rounded-[50%] border-2 border-slate-600" />
-        {/* Inner felt surface */}
-        <div className="absolute inset-[10%] bg-slate-750 rounded-[50%]" style={{ backgroundColor: "#3a4a5c" }} />
+        {/* Poker table image */}
+        <img
+          src="/pokertable_no_bg.png"
+          alt="Poker table"
+          className="absolute inset-0 w-full h-full object-contain"
+        />
 
         {/* Pot display */}
         <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium">
@@ -184,7 +246,14 @@ export default function PokerTable({ username }: { username: string }) {
       </div>
 
       {/* Action bar */}
-      <div className="flex items-center gap-3 mt-6">
+      <div
+        className="flex items-center gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
+        style={{
+          background: "linear-gradient(180deg, #8B5E3C 0%, #6B3F1F 30%, #7A4A28 70%, #5C3317 100%)",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
+          border: "2px solid #3d1f0a",
+        }}
+      >
         {/* Quick bet buttons left */}
         <div className="flex flex-col gap-1">
           <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">Min</button>
@@ -233,6 +302,8 @@ export default function PokerTable({ username }: { username: string }) {
       <p className="text-slate-500 text-xs mt-4">
         ft_transcendence | Room 42 | Seats {playerCount}
       </p>
+
+      </div>{/* end z-10 content wrapper */}
 
       {/* Chat */}
       <div className="fixed bottom-4 left-4 w-80 z-50">
