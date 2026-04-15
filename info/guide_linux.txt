@@ -103,5 +103,5 @@ npx prisma migrate dev --name auth_update
 #FOR BETTER TRANSITION FOR THE PROFILE OVERLAY
 npm install framer-motion
 
-#For INSTANT RELOAD
+#FOR INSTANT RELOAD
 npm install --save-dev nodemon
