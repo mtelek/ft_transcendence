@@ -2,8 +2,9 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "dev": "nodemon --watch server.ts --exec ts-node server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "nodemon": "^3.1.14",
     "prisma": "^6.12.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
