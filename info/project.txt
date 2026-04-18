@@ -224,14 +224,14 @@ MODULE POINTS SUMMARY
 
 Technology          Module                        Points
 -----------         ------                        ------
-Next.js             Framework (frontend+backend)  2 pts (Major)
-Prisma              ORM                           1 pt  (Minor)
-NextAuth OAuth      Remote authentication         1 pt  (Minor)
-Socket.io           Real-time features            2 pts (Major)
+Next.js             Framework (frontend+backend)  2 pts (Major) ✅
+Prisma              ORM                           1 pt  (Minor) ✅
+NextAuth OAuth      Remote authentication         1 pt  (Minor) ✅
+Socket.io           Real-time features            2 pts (Major) ✅
 [Game TBD]          Web-based game                2 pts (Major)
 [Game TBD]          Remote players                2 pts (Major)
 [TBD]               Tournament system             1 pt  (Minor)
-[TBD]               Standard user management      2 pts (Major)
+[TBD]               Standard user management      2 pts (Major) ✅
                                           -----------------
                                           TOTAL:  13 pts
                                           (1 more needed)

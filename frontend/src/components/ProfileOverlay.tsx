@@ -1,12 +1,162 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import LogoutButton from "./LogoutButton";
 import { motion } from "framer-motion"
 import Link from "next/link";
+import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { apiRequest } from "@/lib/client-api";
+
+type Friend = {
+  id: string;
+  name: string;
+  image: string | null;
+  isOnline: boolean;
+};
+
+const FRIENDS_REFRESH_MS = 1500;
+
+function areFriendsEqual(a: Friend[], b: Friend[]) {
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i += 1) {
+    if (
+      a[i].id !== b[i].id ||
+      a[i].name !== b[i].name ||
+      a[i].image !== b[i].image ||
+      a[i].isOnline !== b[i].isOnline
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   const { data: session } = useSession();
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [friendIdentifier, setFriendIdentifier] = useState("");
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
+
+  async function loadFriends(options?: { showLoading?: boolean }) {
+    if (options?.showLoading) {
+      setFriendsLoading(true);
+    }
+
+    try {
+      const data = await apiRequest<{ friends?: Friend[] }>(
+        "/api/auth/friends",
+        { method: "GET" },
+        "Failed to load friends"
+      );
+
+      const incomingFriends = Array.isArray(data.friends) ? data.friends : [];
+
+      setFriends((previousFriends) =>
+        areFriendsEqual(previousFriends, incomingFriends) ? previousFriends : incomingFriends
+      );
+      setFriendsError(null);
+    } catch (error) {
+      setFriendsError(error instanceof Error ? error.message : "Failed to load friends");
+    } finally {
+      if (options?.showLoading) {
+        setFriendsLoading(false);
+      }
+    }
+  }
+
+  async function handleAddFriend() {
+    const identifier = friendIdentifier.trim();
+    if (!identifier || isAddingFriend) {
+      return;
+    }
+
+    setIsAddingFriend(true);
+    setFriendsError(null);
+
+    try {
+      await apiRequest<{ message?: string }>(
+        "/api/auth/friends",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier }),
+        },
+        "Failed to add friend"
+      );
+
+      setFriendIdentifier("");
+      await loadFriends();
+    } catch (error) {
+      setFriendsError(error instanceof Error ? error.message : "Failed to add friend");
+    } finally {
+      setIsAddingFriend(false);
+    }
+  }
+
+  async function handleRemoveFriend(friendId: string) {
+    if (removingFriendId) {
+      return;
+    }
+
+    setRemovingFriendId(friendId);
+    setFriendsError(null);
+
+    try {
+      await apiRequest<{ message?: string }>(
+        "/api/auth/friends",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendId }),
+        },
+        "Failed to remove friend"
+      );
+
+      await loadFriends();
+    } catch (error) {
+      setFriendsError(error instanceof Error ? error.message : "Failed to remove friend");
+    } finally {
+      setRemovingFriendId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!session?.user) {
+      return;
+    }
+
+    const refreshFriends = () => {
+      void loadFriends();
+    };
+
+    void loadFriends({ showLoading: true });
+    const intervalId = window.setInterval(refreshFriends, FRIENDS_REFRESH_MS);
+
+    const handleFocus = () => {
+      refreshFriends();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshFriends();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [session?.user?.email, session?.user?.name]);
 
   return (
     <>
@@ -54,6 +204,63 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
 			<LogoutButton/>
 		</div>
+
+        <div className="mt-6 border-t border-gray-300 pt-4">
+          <h3 className="text-md font-bold text-gray-800">Friends</h3>
+
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              value={friendIdentifier}
+              onChange={(event) => setFriendIdentifier(event.target.value)}
+              placeholder="Username or email"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500"
+            />
+            <button
+              onClick={handleAddFriend}
+              disabled={isAddingFriend}
+              className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
+            >
+              Add
+            </button>
+          </div>
+
+          {friendsError && (
+            <p className="mt-2 text-xs text-red-600">{friendsError}</p>
+          )}
+
+          <div className="mt-3 space-y-2">
+            {friendsLoading ? (
+              <p className="text-sm text-gray-500">Loading friends...</p>
+            ) : friends.length === 0 ? (
+              <p className="text-sm text-gray-500">No friends yet</p>
+            ) : (
+              friends.map((friend) => (
+                <div key={friend.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-2 py-2">
+                  <img
+                    src={friend.image || DEFAULT_AVATAR}
+                    alt={`${friend.name} avatar`}
+                    className="h-8 w-8 rounded-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.src = DEFAULT_AVATAR;
+                    }}
+                  />
+                  <span className="text-sm text-gray-900">{friend.name}</span>
+                  <span
+                    className={`ml-auto h-2.5 w-2.5 rounded-full ${friend.isOnline ? "bg-green-500" : "bg-gray-400"}`}
+                    title={friend.isOnline ? "Online" : "Offline"}
+                  />
+                  <button
+                    onClick={() => handleRemoveFriend(friend.id)}
+                    disabled={removingFriendId === friend.id}
+                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-60"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </motion.div>
     </>
   );
