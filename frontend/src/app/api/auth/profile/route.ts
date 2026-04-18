@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { jsonError, jsonOk } from "@/lib/api-response";
+import { findUserFromSession } from "@/lib/auth-user";
 
 type ProfilePatchBody = {
   username?: string;
@@ -9,48 +10,28 @@ type ProfilePatchBody = {
   password?: string;
 };
 
-async function getCurrentUserFromSession(session: { user?: { email?: string | null; name?: string | null } }) {
-  const sessionEmail = session.user?.email ?? undefined;
-  const sessionUsername = session.user?.name ?? undefined;
-
-  if (!sessionEmail && !sessionUsername) {
-    return null;
-  }
-
-  return prisma.user.findFirst({
-    where: {
-      OR: [
-        ...(sessionEmail ? [{ email: sessionEmail }] : []),
-        ...(sessionUsername ? [{ username: sessionUsername }] : []),
-      ],
-    },
-    select: { id: true, username: true, email: true, password: true },
-  });
-}
-
 export async function GET() {
   try {
     const session = await auth();
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return jsonError("Unauthorized", 401);
     }
 
-    const currentUser = await getCurrentUserFromSession(session);
+    const currentUser = await findUserFromSession(session);
 
     if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return jsonError("User not found", 404);
     }
 
-    return NextResponse.json(
+    return jsonOk(
       {
         user: { username: currentUser.username, email: currentUser.email },
         canChangePassword: Boolean(currentUser.password),
-      },
-      { status: 200 }
+      }
     );
   } catch {
-    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
+    return jsonError("Failed to load profile", 500);
   }
 }
 
@@ -59,7 +40,7 @@ export async function PATCH(request: Request) {
     const session = await auth();
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return jsonError("Unauthorized", 401);
     }
 
     const body = (await request.json()) as ProfilePatchBody;
@@ -68,13 +49,13 @@ export async function PATCH(request: Request) {
     const nextPassword = body.password?.trim();
 
     if (!nextUsername && !nextEmail && !nextPassword) {
-      return NextResponse.json({ error: "No changes provided" }, { status: 400 });
+      return jsonError("No changes provided", 400);
     }
 
-    const currentUser = await getCurrentUserFromSession(session);
+    const currentUser = await findUserFromSession(session);
 
     if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return jsonError("User not found", 404);
     }
 
     const dataToUpdate: { username?: string; email?: string; password?: string } = {};
@@ -92,12 +73,11 @@ export async function PATCH(request: Request) {
     }
 
     if (Object.keys(dataToUpdate).length === 0) {
-      return NextResponse.json(
+      return jsonOk(
         {
           message: "No changes detected",
           user: { username: currentUser.username, email: currentUser.email },
-        },
-        { status: 200 }
+        }
       );
     }
 
@@ -107,14 +87,13 @@ export async function PATCH(request: Request) {
       select: { username: true, email: true },
     });
 
-    return NextResponse.json(
+    return jsonOk(
       {
         message: "Profile updated",
         user: { username: updatedUser.username, email: updatedUser.email },
-      },
-      { status: 200 }
+      }
     );
   } catch {
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return jsonError("Failed to update profile", 500);
   }
 }

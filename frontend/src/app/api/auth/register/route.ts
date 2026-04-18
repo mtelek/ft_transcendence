@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { jsonError, jsonOk } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -15,10 +15,7 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email or username already taken" },
-        { status: 400 }
-      );
+      return jsonError("Email or username already taken", 400);
     }
 
     // Hash password
@@ -34,14 +31,8 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(
-      { message: "User created", userId: user.id },
-      { status: 201 }
-    );
+    return jsonOk({ message: "User created", userId: user.id }, 201);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
+    return jsonError("Something went wrong", 500);
   }
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { apiRequest } from "@/lib/client-api";
+import EditableFieldRow from "@/components/EditableFieldRow";
 
 type EditableField = "username" | "email" | "password";
 
@@ -28,8 +30,11 @@ export default function Home() {
 
     async function loadProfileMeta() {
       try {
-        const res = await fetch("/api/auth/profile", { method: "GET" });
-        const data = (await res.json()) as { canChangePassword?: boolean };
+        const data = await apiRequest<{ canChangePassword?: boolean }>(
+          "/api/auth/profile",
+          { method: "GET" },
+          "Failed to load profile"
+        );
 
         if (!isMounted) return;
         setCanChangePassword(Boolean(data.canChangePassword));
@@ -85,21 +90,19 @@ export default function Home() {
       if (field === "email") payload.email = emailValue;
       if (field === "password") payload.password = passwordValue;
 
-      const res = await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await res.json()) as {
+      const data = await apiRequest<{
         error?: string;
         message?: string;
         user?: { username?: string | null; email?: string | null };
-      };
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update profile");
-      }
+      }>(
+        "/api/auth/profile",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+        "Failed to update profile"
+      );
 
       const nextName = data.user?.username || session?.user?.name || "";
       const nextEmail = data.user?.email || session?.user?.email || "";
@@ -124,11 +127,14 @@ export default function Home() {
     setIsLoadingAvatars(true);
 
     try {
-      const res = await fetch("/api/auth/avatar", { method: "GET" });
-      const data = (await res.json()) as { avatars?: string[]; error?: string };
+      const data = await apiRequest<{ avatars?: string[] }>(
+        "/api/auth/avatar",
+        { method: "GET" },
+        "Failed to load avatars"
+      );
 
-      if (!res.ok || !Array.isArray(data.avatars)) {
-        throw new Error(data.error || "Failed to load avatars");
+      if (!Array.isArray(data.avatars)) {
+        throw new Error("Failed to load avatars");
       }
 
       setAvatars(data.avatars);
@@ -146,16 +152,18 @@ export default function Home() {
     setError(null);
 
     try {
-      const res = await fetch("/api/auth/avatar", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: avatarPath }),
-      });
+      const data = await apiRequest<{ image?: string }>(
+        "/api/auth/avatar",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: avatarPath }),
+        },
+        "Failed to update avatar"
+      );
 
-      const data = (await res.json()) as { image?: string; error?: string };
-
-      if (!res.ok || typeof data.image !== "string") {
-        throw new Error(data.error || "Failed to update avatar");
+      if (typeof data.image !== "string") {
+        throw new Error("Failed to update avatar");
       }
 
       await update({ image: data.image });
@@ -192,128 +200,47 @@ export default function Home() {
         </div>
 
         <div className="mt-8 space-y-4 max-w-2xl">
-          <div className="flex items-center justify-between gap-4 border border-gray-700 rounded-lg p-3">
-            <div className="flex-1">
-              <p className="text-sm text-gray-400">Username</p>
-              {editingField === "username" ? (
-                <input
-                  value={usernameValue}
-                  onChange={(e) => setUsernameValue(e.target.value)}
-                  className="mt-1 w-full rounded bg-zinc-800 px-3 py-2 text-white outline-none ring-1 ring-zinc-600 focus:ring-green-500"
-                />
-              ) : (
-                <p className="mt-1 text-white">{session?.user?.name || "-"}</p>
-              )}
-            </div>
+          <EditableFieldRow
+            label="Username"
+            field="username"
+            editingField={editingField}
+            value={usernameValue}
+            displayValue={session?.user?.name || "-"}
+            isSaving={isSaving}
+            onChangeValue={setUsernameValue}
+            onStartEdit={startEditing}
+            onSave={saveField}
+            onCancel={cancelEditing}
+          />
 
-            {editingField === "username" ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => saveField("username")}
-                  disabled={isSaving}
-                  className="rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-60"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={cancelEditing}
-                  className="rounded bg-zinc-700 px-3 py-2 text-sm hover:bg-zinc-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => startEditing("username")}
-                className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700"
-              >
-                Change
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-4 border border-gray-700 rounded-lg p-3">
-            <div className="flex-1">
-              <p className="text-sm text-gray-400">Email</p>
-              {editingField === "email" ? (
-                <input
-                  value={emailValue}
-                  onChange={(e) => setEmailValue(e.target.value)}
-                  className="mt-1 w-full rounded bg-zinc-800 px-3 py-2 text-white outline-none ring-1 ring-zinc-600 focus:ring-green-500"
-                />
-              ) : (
-                <p className="mt-1 text-white">{session?.user?.email || "-"}</p>
-              )}
-            </div>
-
-            {editingField === "email" ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => saveField("email")}
-                  disabled={isSaving}
-                  className="rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-60"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={cancelEditing}
-                  className="rounded bg-zinc-700 px-3 py-2 text-sm hover:bg-zinc-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => startEditing("email")}
-                className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700"
-              >
-                Change
-              </button>
-            )}
-          </div>
+          <EditableFieldRow
+            label="Email"
+            field="email"
+            editingField={editingField}
+            value={emailValue}
+            displayValue={session?.user?.email || "-"}
+            isSaving={isSaving}
+            onChangeValue={setEmailValue}
+            onStartEdit={startEditing}
+            onSave={saveField}
+            onCancel={cancelEditing}
+          />
 
           {canChangePassword && (
-            <div className="flex items-center justify-between gap-4 border border-gray-700 rounded-lg p-3">
-              <div className="flex-1">
-                <p className="text-sm text-gray-400">Password</p>
-                {editingField === "password" ? (
-                  <input
-                    type="password"
-                    value={passwordValue}
-                    onChange={(e) => setPasswordValue(e.target.value)}
-                    placeholder="Enter new password"
-                    className="mt-1 w-full rounded bg-zinc-800 px-3 py-2 text-white outline-none ring-1 ring-zinc-600 focus:ring-green-500"
-                  />
-                ) : (
-                  <p className="mt-1 text-white">********</p>
-                )}
-              </div>
-
-              {editingField === "password" ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => saveField("password")}
-                    disabled={isSaving}
-                    className="rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-60"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={cancelEditing}
-                    className="rounded bg-zinc-700 px-3 py-2 text-sm hover:bg-zinc-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => startEditing("password")}
-                  className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700"
-                >
-                  Change
-                </button>
-              )}
-            </div>
+            <EditableFieldRow
+              label="Password"
+              field="password"
+              editingField={editingField}
+              value={passwordValue}
+              displayValue="********"
+              isSaving={isSaving}
+              onChangeValue={setPasswordValue}
+              onStartEdit={startEditing}
+              onSave={saveField}
+              onCancel={cancelEditing}
+              inputType="password"
+              placeholder="Enter new password"
+            />
           )}
 
           {profileError && <p className="text-sm text-red-400">{profileError}</p>}

@@ -26,6 +26,60 @@ async function getUniqueUsername(base?: string | null) {
   return `player${playerCount + 1}`;
 }
 
+type TokenShape = {
+  id?: unknown;
+  name?: unknown;
+  email?: unknown;
+  image?: unknown;
+};
+
+type UserShape = {
+  id?: unknown;
+  name?: unknown;
+  email?: unknown;
+  image?: unknown;
+};
+
+function applyUserToToken(token: TokenShape, user: UserShape) {
+  token.id = user.id;
+  token.name = user.name;
+  token.email = user.email;
+  token.image = user.image ?? DEFAULT_AVATAR;
+}
+
+function applySessionUpdateToToken(token: TokenShape, session: { image?: unknown; name?: unknown; email?: unknown }) {
+  if (typeof session.image === "string") {
+    token.image = session.image;
+  }
+  if (typeof session.name === "string") {
+    token.name = session.name;
+  }
+  if (typeof session.email === "string") {
+    token.email = session.email;
+  }
+}
+
+function applyDbUserToToken(token: TokenShape, dbUser: { username: string | null; image: string | null } | null) {
+  if (dbUser?.username) {
+    token.name = dbUser.username;
+  }
+  token.image = dbUser?.image ?? (typeof token.image === "string" ? token.image : DEFAULT_AVATAR);
+}
+
+function applyTokenToSession(session: { user?: { name?: string | null; email?: string | null; image?: string | null } }, token: TokenShape) {
+  if (!session.user) {
+    return;
+  }
+
+  if (typeof token.name === "string") {
+    session.user.name = token.name;
+  }
+  if (typeof token.email === "string") {
+    session.user.email = token.email;
+  }
+  session.user.image = typeof token.image === "string" ? token.image : DEFAULT_AVATAR;
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
 
@@ -139,26 +193,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     //to make sure session data is consistently populated
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.image = user.image ?? DEFAULT_AVATAR;
+        applyUserToToken(token, user);
       }
 
       if (trigger === "update" && session) {
-        const updatedImage = (session as { image?: unknown }).image;
-        const updatedName = (session as { name?: unknown }).name;
-        const updatedEmail = (session as { email?: unknown }).email;
-
-        if (typeof updatedImage === "string") {
-          token.image = updatedImage;
-        }
-        if (typeof updatedName === "string") {
-          token.name = updatedName;
-        }
-        if (typeof updatedEmail === "string") {
-          token.email = updatedEmail;
-        }
+        applySessionUpdateToToken(token, session as { image?: unknown; name?: unknown; email?: unknown });
       }
 
       if (typeof token.email === "string") {
@@ -166,24 +205,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email: token.email },
           select: { username: true, image: true },
         });
-        if (dbUser?.username) {
-          token.name = dbUser.username;
-        }
-        token.image = dbUser?.image ?? (typeof token.image === "string" ? token.image : DEFAULT_AVATAR);
+        applyDbUserToToken(token, dbUser);
       }
 
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        if (typeof token.name === "string") {
-          session.user.name = token.name;
-        }
-        if (typeof token.email === "string") {
-          session.user.email = token.email;
-        }
-        session.user.image = typeof token.image === "string" ? token.image : DEFAULT_AVATAR;
-      }
+      applyTokenToSession(session, token);
       return session;
     },
     async signIn({ user, account }) {
