@@ -5,9 +5,13 @@ import Link from "next/link";
 import ProfileOverlay from "@/components/ProfileOverlay";
 import { AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { DEFAULT_AVATAR } from "@/lib/avatar";
 
 export default function HeaderClient({ session }: any) {
   const [open, setOpen] = useState(false);
+  const { data: liveSession } = useSession();
+  const activeSession = liveSession ?? session;
 
   return (
     <header className="h-16 flex items-center justify-between px-6 py-4 bg-white border-b">
@@ -16,10 +20,10 @@ export default function HeaderClient({ session }: any) {
       </Link>
 
       <nav className="flex gap-4 items-center">
-        {session ? (
+        {activeSession ? (
           <>
             <span className="px-4 py-2 text-gray-600">
-              Hey, {session.user?.name}
+              Hey, {activeSession.user?.name}
             </span>
 
             <Link href="/poker" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
@@ -29,23 +33,13 @@ export default function HeaderClient({ session }: any) {
             {/* Avatar setting based on the authentication form*/}
             <button onClick={() => setOpen(!open)}>
               <div className="w-10 h-10 bg-gray-500 rounded-full overflow-hidden flex items-center justify-center">
-                {session?.user?.image ? (
-                  <Image
-                  src= {session.user.image}
+                <Image
+                  src={activeSession?.user?.image || DEFAULT_AVATAR}
                   alt="User Avatar"
                   width={40}
                   height={40}
                   className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <Image
-                  src="/avatars/Western avatar.jpg"
-                  alt="Default Avatar"
-                  width={40}
-                  height={40}
-                  className="object-cover w-full h-full"
                 />
-                )}
               </div>
             </button>
 

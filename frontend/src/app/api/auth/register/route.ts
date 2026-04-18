@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
         email,
         username,
         password: hashedPassword,
+        image: DEFAULT_AVATAR,
       },
     });
 

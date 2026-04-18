@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { authConfig } from "@/auth.config";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -36,7 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const created = await prisma.user.create({
         data: {
           email: data.email,
-          image: data.image,
+          image: data.image ?? DEFAULT_AVATAR,
           emailVerified: data.emailVerified,
           username,
         },
@@ -107,7 +108,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         console.log(`[auth] Successfully authorized: ${identifier}`);
-        return { id: String(user.id), email: user.email, name: user.username };
+        return {
+          id: String(user.id),
+          email: user.email,
+          name: user.username,
+          image: user.image ?? DEFAULT_AVATAR,
+        };
       },
     }),
 
@@ -131,21 +137,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     //to make sure session data is consistently populated
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
+        token.image = user.image ?? DEFAULT_AVATAR;
+      }
+
+      if (trigger === "update" && session) {
+        const updatedImage = (session as { image?: unknown }).image;
+        if (typeof updatedImage === "string") {
+          token.image = updatedImage;
+        }
       }
 
       if (typeof token.email === "string") {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { username: true },
+          select: { username: true, image: true },
         });
         if (dbUser?.username) {
           token.name = dbUser.username;
         }
+        token.image = dbUser?.image ?? (typeof token.image === "string" ? token.image : DEFAULT_AVATAR);
       }
 
       return token;
@@ -158,6 +173,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (typeof token.email === "string") {
           session.user.email = token.email;
         }
+        session.user.image = typeof token.image === "string" ? token.image : DEFAULT_AVATAR;
       }
       return session;
     },
