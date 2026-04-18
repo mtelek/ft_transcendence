@@ -147,8 +147,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (trigger === "update" && session) {
         const updatedImage = (session as { image?: unknown }).image;
+        const updatedName = (session as { name?: unknown }).name;
+        const updatedEmail = (session as { email?: unknown }).email;
+
         if (typeof updatedImage === "string") {
           token.image = updatedImage;
+        }
+        if (typeof updatedName === "string") {
+          token.name = updatedName;
+        }
+        if (typeof updatedEmail === "string") {
+          token.email = updatedEmail;
         }
       }
 
