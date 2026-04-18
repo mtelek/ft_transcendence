@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
@@ -22,6 +22,7 @@ export default function Home() {
   const [usernameValue, setUsernameValue] = useState("");
   const [emailValue, setEmailValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentImage = session?.user?.image || DEFAULT_AVATAR;
 
@@ -175,6 +176,51 @@ export default function Home() {
     }
   }
 
+  function openUploadDialog() {
+    uploadInputRef.current?.click();
+  }
+
+  async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (isSaving) {
+      event.target.value = "";
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const data = await apiRequest<{ image?: string }>(
+        "/api/auth/avatar",
+        {
+          method: "POST",
+          body: formData,
+        },
+        "Failed to upload avatar"
+      );
+
+      if (typeof data.image !== "string") {
+        throw new Error("Failed to upload avatar");
+      }
+
+      await update({ image: data.image });
+      setIsPickerOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload avatar");
+    } finally {
+      event.target.value = "";
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="ml-[33vw] p-6">
@@ -252,12 +298,28 @@ export default function Home() {
             <div className="w-full max-w-3xl rounded-xl border border-gray-700 bg-zinc-900 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Choose an avatar</h2>
-                <button
-                  onClick={() => setIsPickerOpen(false)}
-                  className="rounded bg-zinc-700 px-3 py-1 text-sm hover:bg-zinc-600"
-                >
-                  Close
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  <button
+                    onClick={openUploadDialog}
+                    disabled={isSaving}
+                    className="rounded bg-blue-600 px-3 py-1 text-sm hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    Upload profile picture
+                  </button>
+                  <button
+                    onClick={() => setIsPickerOpen(false)}
+                    className="rounded bg-zinc-700 px-3 py-1 text-sm hover:bg-zinc-600"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
 
               {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
