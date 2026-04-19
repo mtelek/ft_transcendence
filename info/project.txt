@@ -264,9 +264,9 @@ Technology          Module                           Points
 
 ❌ Game customization                             1 pt (Minor)
     ❌ Power-ups, attacks, or special abilities.
-    ❌ Different maps or themes.
-    ❌ Customizable game settings.
-    ❌ Default options must be available.
+    ✅ Different maps or themes.
+    ✅ Customizable game settings.
+    ✅ Default options must be available.
 
                                         ------------------------
                                          TOTAL:  14 pts

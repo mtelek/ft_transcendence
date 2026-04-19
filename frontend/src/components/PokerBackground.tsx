@@ -14,23 +14,53 @@ interface Particle {
   rotation: number;
   rotSpeed: number;
   drift: number;
-  // repulsion velocity
   vx: number;
   vy: number;
 }
 
-const SUITS = ["♠", "♥", "♦", "♣"] as const;
-const SUIT_COLORS: Record<string, string> = {
-  "♠": "#c8d6e5",
-  "♥": "#e74c3c",
-  "♦": "#e74c3c",
-  "♣": "#c8d6e5",
+type Variant = "classic" | "wood" | "garden";
+
+const VARIANT_SYMBOLS: Record<Variant, readonly string[]> = {
+  classic: ["♠", "♥", "♦", "♣"],
+  wood: ["♠", "♣", "♦"],
+  garden: ["♣", "♥", "❀", "✿"],
 };
+
+const VARIANT_COLORS: Record<Variant, Record<string, string>> = {
+  classic: {
+    "♠": "#c8d6e5",
+    "♥": "#e74c3c",
+    "♦": "#e74c3c",
+    "♣": "#c8d6e5",
+  },
+  wood: {
+    "♠": "#d4a373",
+    "♣": "#b08968",
+    "♦": "#d97706",
+  },
+  garden: {
+    "♣": "#a7f3d0",
+    "♥": "#fbcfe8",
+    "❀": "#fcd5ce",
+    "✿": "#ddd6fe",
+  },
+};
+
+const VARIANT_BG: Record<Variant, string> = {
+  classic: "#0a0a0a",
+  wood: "#1a0f06",
+  garden: "#0f1410",
+};
+
 const COUNT = 40;
 const MOUSE_RADIUS = 120;
 const REPULSION_FORCE = 2;
 
-export default function PokerBackground() {
+export default function PokerBackground({
+  variant = "classic",
+}: {
+  variant?: Variant;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -9999, y: -9999 });
 
@@ -39,6 +69,10 @@ export default function PokerBackground() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const symbols = VARIANT_SYMBOLS[variant];
+    const colors = VARIANT_COLORS[variant];
+    const bg = VARIANT_BG[variant];
 
     const resize = () => {
       canvas.width = canvas.offsetWidth;
@@ -60,14 +94,14 @@ export default function PokerBackground() {
     canvas.addEventListener("mouseleave", onMouseLeave);
 
     function makeParticle(): Particle {
-      const suit = SUITS[Math.floor(Math.random() * 4)];
+      const suit = symbols[Math.floor(Math.random() * symbols.length)];
       const baseOpacity = 0.04 + Math.random() * 0.1;
       return {
         x: Math.random() * canvas!.width,
         y: Math.random() * canvas!.height,
         size: 40 + Math.random() * 28,
         suit,
-        color: SUIT_COLORS[suit],
+        color: colors[suit],
         speed: 0.15 + Math.random() * 0.35,
         baseOpacity,
         opacity: baseOpacity,
@@ -83,14 +117,13 @@ export default function PokerBackground() {
 
     let animId: number;
     const draw = () => {
-      ctx.fillStyle = "#0a0a0a";
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
 
       for (const p of particles) {
-        // Mouse repulsion
         const dx = p.x - mx;
         const dy = p.y - my;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -99,21 +132,17 @@ export default function PokerBackground() {
           const force = (1 - dist / MOUSE_RADIUS) * REPULSION_FORCE;
           p.vx += (dx / dist) * force;
           p.vy += (dy / dist) * force;
-          // Brighten on proximity
           p.opacity = Math.min(p.baseOpacity + 0.15 * (1 - dist / MOUSE_RADIUS), 0.35);
         } else {
-          // Decay back to base opacity
           p.opacity += (p.baseOpacity - p.opacity) * 0.05;
         }
 
-        // Apply velocity with friction
         p.x += p.drift + p.vx;
         p.y -= p.speed + p.vy * -1;
         p.vx *= 0.92;
         p.vy *= 0.92;
         p.rotation += p.rotSpeed;
 
-        // Wrap edges
         if (p.y < -p.size) {
           p.y = canvas.height + p.size;
           p.x = Math.random() * canvas.width;
@@ -121,7 +150,6 @@ export default function PokerBackground() {
         if (p.x < -p.size) p.x = canvas.width + p.size;
         if (p.x > canvas.width + p.size) p.x = -p.size;
 
-        // Draw
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
@@ -144,7 +172,7 @@ export default function PokerBackground() {
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, []);
+  }, [variant]);
 
   return (
     <canvas
