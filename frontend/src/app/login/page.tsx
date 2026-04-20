@@ -7,7 +7,6 @@ import GoogleLogin from "@/components/GoogleLogin";
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
@@ -23,7 +22,6 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">
         <h1 className="text-2xl font-bold text-center">Login</h1>
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
         <input
           type="text"
           placeholder="Email or Username"

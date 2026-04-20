@@ -57,6 +57,14 @@ function resolveFileExtension(file: File) {
   return null;
 }
 
+function resolveExtensionFromMimeType(mimeType: string) {
+  if (mimeType === "image/jpeg") return ".jpg";
+  if (mimeType === "image/png") return ".png";
+  if (mimeType === "image/webp") return ".webp";
+  if (mimeType === "image/gif") return ".gif";
+  return null;
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -101,6 +109,18 @@ function getNextUploadedIndex(existingFiles: string[], userUploadPrefix: string)
   return maxIndex + 1;
 }
 
+async function saveBufferAsUploaded(buffer: Buffer, ext: string, userId: string) {
+  const existingFiles = await readAvatarFiles();
+  const userUploadPrefix = getUserUploadPrefix(userId);
+  const nextIndex = getNextUploadedIndex(existingFiles, userUploadPrefix);
+  const fileName = `${userUploadPrefix}${nextIndex}${ext}`;
+  const filePath = path.join(AVATARS_DIR, fileName);
+
+  await fs.writeFile(filePath, buffer);
+
+  return fileName;
+}
+
 export async function saveUploadedAvatar(file: File, userId: string) {
   //Validate upload type and size before writing anything to disk
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
@@ -116,17 +136,34 @@ export async function saveUploadedAvatar(file: File, userId: string) {
     throw new Error("Unsupported avatar extension");
   }
 
-  const existingFiles = await readAvatarFiles();
-  const userUploadPrefix = getUserUploadPrefix(userId);
-  const nextIndex = getNextUploadedIndex(existingFiles, userUploadPrefix);
-  const fileName = `${userUploadPrefix}${nextIndex}${ext}`;
-  const filePath = path.join(AVATARS_DIR, fileName);
-
   //Convert the browser File into a Node.js buffer so it can be saved locally
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  await fs.writeFile(filePath, buffer);
+  return saveBufferAsUploaded(buffer, ext, userId);
+}
 
-  return fileName;
+export async function saveRemoteAvatarAsUploaded(imageUrl: string, userId: string) {
+  // Reuse upload rules for remote images so Google avatars are handled like user uploads.
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error("Failed to download remote avatar");
+  }
+
+  const mimeType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    throw new Error("Unsupported file type");
+  }
+
+  const ext = resolveExtensionFromMimeType(mimeType);
+  if (!ext) {
+    throw new Error("Unsupported avatar extension");
+  }
+
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > MAX_UPLOAD_SIZE_BYTES) {
+    throw new Error("File too large");
+  }
+
+  return saveBufferAsUploaded(Buffer.from(bytes), ext, userId);
 }

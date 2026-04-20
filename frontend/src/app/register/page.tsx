@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 export default function Register() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -15,10 +18,22 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
+    // Show persistent inline errors instead of short native validation bubbles.
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
+      setError("Invalid email format");
+      return;
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      return;
+    }
+
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, username, password }),
+      body: JSON.stringify({ email: trimmedEmail, username, password }),
     });
 
     const data = await res.json();
@@ -37,13 +52,12 @@ export default function Register() {
         <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         {/* Use native form validation before the request is sent */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
+        <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
             className="p-3 border rounded"
           />
           <input
@@ -58,8 +72,6 @@ export default function Register() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
             className="p-3 border rounded"
           />
           <button

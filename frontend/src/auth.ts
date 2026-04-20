@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { AVATAR_PREFIX, saveRemoteAvatarAsUploaded, toAvatarPath } from "@/lib/avatar-utils";
 import { authConfig } from "@/auth.config";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -100,15 +101,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     //Ensure users created via OAuth always get project defaults and a username
     async createUser(data) {
       const username = await getUniqueUsername(data.name);
+      const initialImage = data.image ?? DEFAULT_AVATAR;
 
       const created = await prisma.user.create({
         data: {
           email: data.email,
-          image: data.image ?? DEFAULT_AVATAR,
+          image: initialImage,
           emailVerified: data.emailVerified,
           username,
         },
       });
+
+      // Persist OAuth profile image as a local avatar on first account creation.
+      if (typeof initialImage === "string" && !initialImage.startsWith(AVATAR_PREFIX)) {
+        try {
+          const fileName = await saveRemoteAvatarAsUploaded(initialImage, created.id);
+          const localImage = toAvatarPath(fileName);
+
+          await prisma.user.update({
+            where: { id: created.id },
+            data: { image: localImage },
+          });
+
+          created.image = localImage;
+        } catch {
+          // Keep OAuth signup successful even if avatar localization fails.
+        }
+      }
 
       return {
         id: created.id,
@@ -266,8 +285,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
-          select: { id: true, username: true },
+          select: { id: true, username: true, image: true },
         });
+
+        // On first Google sign-in, store provider avatar locally so it appears in this user's picker.
+        if (
+          dbUser &&
+          typeof user.image === "string" &&
+          user.image.length > 0 &&
+          (!dbUser.image || !dbUser.image.startsWith(AVATAR_PREFIX))
+        ) {
+          try {
+            const fileName = await saveRemoteAvatarAsUploaded(user.image, dbUser.id);
+            const localImage = toAvatarPath(fileName);
+
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { image: localImage },
+            });
+
+            user.image = localImage;
+          } catch {
+            // Keep sign-in successful even if remote avatar download/storage fails.
+          }
+        }
 
         if (dbUser && !dbUser.username) {
           const firstName = user.name?.trim().split(/\s+/)[0];

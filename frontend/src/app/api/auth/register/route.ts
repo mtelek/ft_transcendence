@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     });
 
     return jsonOk({ message: "User created", userId: user.id }, 201);
-  } catch (error) {
+  } catch {
     return jsonError("Something went wrong", 500);
   }
 }
