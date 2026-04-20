@@ -316,8 +316,16 @@ export default function Home() {
 
         {isPickerOpen && (
           //Avatar picker modal overlay
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-3xl rounded-xl border border-gray-700 bg-zinc-900 p-5">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            // Close picker when clicking on the backdrop.
+            onClick={() => setIsPickerOpen(false)}
+          >
+            <div
+              className="w-full max-w-3xl rounded-xl border border-gray-700 bg-zinc-900 p-5"
+              // Keep clicks inside the modal from bubbling to the backdrop.
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Choose an avatar</h2>
                 <div className="flex items-center gap-2">
