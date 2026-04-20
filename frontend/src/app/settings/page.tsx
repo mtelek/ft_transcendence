@@ -8,6 +8,10 @@ import EditableFieldRow from "@/components/EditableFieldRow";
 
 type EditableField = "username" | "email" | "password";
 
+function getErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export default function Home() {
   const { data: session, update } = useSession();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -24,7 +28,17 @@ export default function Home() {
   const [passwordValue, setPasswordValue] = useState("");
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  const currentImage = session?.user?.image || DEFAULT_AVATAR;
+  const currentImage = session?.user?.image ?? DEFAULT_AVATAR;
+  const sessionUserEmail = session?.user?.email;
+
+  async function applyAvatarImageOrThrow(image: unknown, invalidMessage: string) {
+    if (typeof image !== "string") {
+      throw new Error(invalidMessage);
+    }
+
+    await update({ image });
+    setIsPickerOpen(false);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -52,21 +66,23 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [session]);
+  }, [sessionUserEmail]);
 
   function startEditing(field: EditableField) {
     setProfileError(null);
     setProfileSuccess(null);
     setEditingField(field);
 
-    if (field === "username") {
-      setUsernameValue(session?.user?.name || "");
-    }
-    if (field === "email") {
-      setEmailValue(session?.user?.email || "");
-    }
-    if (field === "password") {
-      setPasswordValue("");
+    switch (field) {
+      case "username":
+        setUsernameValue(session?.user?.name ?? "");
+        break;
+      case "email":
+        setEmailValue(session?.user?.email ?? "");
+        break;
+      case "password":
+        setPasswordValue("");
+        break;
     }
   }
 
@@ -86,13 +102,11 @@ export default function Home() {
 
     try {
       const payload: { username?: string; email?: string; password?: string } = {};
-
       if (field === "username") payload.username = usernameValue;
-      if (field === "email") payload.email = emailValue;
-      if (field === "password") payload.password = passwordValue;
+      else if (field === "email") payload.email = emailValue;
+      else payload.password = passwordValue;
 
       const data = await apiRequest<{
-        error?: string;
         message?: string;
         user?: { username?: string | null; email?: string | null };
       }>(
@@ -105,8 +119,8 @@ export default function Home() {
         "Failed to update profile"
       );
 
-      const nextName = data.user?.username || session?.user?.name || "";
-      const nextEmail = data.user?.email || session?.user?.email || "";
+      const nextName = data.user?.username ?? session?.user?.name ?? "";
+      const nextEmail = data.user?.email ?? session?.user?.email ?? "";
 
       setUsernameValue(nextName);
       setEmailValue(nextEmail);
@@ -116,7 +130,7 @@ export default function Home() {
       setProfileSuccess(data.message || "Profile updated");
       setEditingField(null);
     } catch (err) {
-      setProfileError(err instanceof Error ? err.message : "Failed to update profile");
+      setProfileError(getErrorMessage(err, "Failed to update profile"));
     } finally {
       setIsSaving(false);
     }
@@ -140,7 +154,7 @@ export default function Home() {
 
       setAvatars(data.avatars);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load avatars");
+      setError(getErrorMessage(err, "Failed to load avatars"));
     } finally {
       setIsLoadingAvatars(false);
     }
@@ -163,14 +177,9 @@ export default function Home() {
         "Failed to update avatar"
       );
 
-      if (typeof data.image !== "string") {
-        throw new Error("Failed to update avatar");
-      }
-
-      await update({ image: data.image });
-      setIsPickerOpen(false);
+      await applyAvatarImageOrThrow(data.image, "Failed to update avatar");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update avatar");
+      setError(getErrorMessage(err, "Failed to update avatar"));
     } finally {
       setIsSaving(false);
     }
@@ -207,14 +216,9 @@ export default function Home() {
         "Failed to upload avatar"
       );
 
-      if (typeof data.image !== "string") {
-        throw new Error("Failed to upload avatar");
-      }
-
-      await update({ image: data.image });
-      setIsPickerOpen(false);
+      await applyAvatarImageOrThrow(data.image, "Failed to upload avatar");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload avatar");
+      setError(getErrorMessage(err, "Failed to upload avatar"));
     } finally {
       event.target.value = "";
       setIsSaving(false);
