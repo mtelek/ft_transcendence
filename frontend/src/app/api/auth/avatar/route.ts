@@ -6,6 +6,7 @@ import { parseAvatarPath, readAvatarFiles, saveUploadedAvatar, toAvatarPath } fr
 
 export async function GET() {
   try {
+    //Return all available predefined/uploaded avatars as public paths
     const files = await readAvatarFiles();
     const avatars = files.map((file) => toAvatarPath(file));
     return jsonOk({ avatars });
@@ -16,6 +17,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    //Avatar selection endpoint: assign an existing avatar file to the current user
     const session = await auth();
 
     if (!session?.user) {
@@ -23,16 +25,20 @@ export async function PATCH(request: Request) {
     }
 
     const { image } = (await request.json()) as { image?: string };
+
+    //Validate path shape and block invalid/non-local avatar values
     const requestedFile = parseAvatarPath(image);
     if (!requestedFile) {
       return jsonError("Invalid avatar path", 400);
     }
 
+    //Ensure the requested file actually exists in the avatars directory
     const files = await readAvatarFiles();
     if (!files.includes(requestedFile)) {
       return jsonError("Avatar not found", 400);
     }
 
+    //Resolve authenticated app user and update avatar path in DB
     const user = await findUserFromSession(session);
 
     if (!user) {
@@ -52,6 +58,7 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    //Avatar upload endpoint: store uploaded image and assign it to current user
     const session = await auth();
 
     if (!session?.user) {
@@ -67,12 +74,14 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
 
+    // Require multipart field named "file".
     if (!(file instanceof File)) {
       return jsonError("No file provided", 400);
     }
 
     let fileName: string;
     try {
+      //saveUploadedAvatar performs type/size checks and writes the file
       fileName = await saveUploadedAvatar(file);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to upload avatar";

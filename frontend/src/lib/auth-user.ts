@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
+//Minimal session shape needed to resolve the matching database user
 type SessionLike = {
   user?: {
     email?: string | null;
@@ -8,6 +9,7 @@ type SessionLike = {
 };
 
 export function getSessionIdentity(session: SessionLike) {
+  //Extract whichever stable identity fields are available from the session
   const email = session.user?.email ?? undefined;
   const username = session.user?.name ?? undefined;
 
@@ -19,6 +21,7 @@ export function getSessionIdentity(session: SessionLike) {
 }
 
 export async function findUserFromSession(session: SessionLike) {
+  //Resolve the app user record from session data without assuming both fields exist
   const identity = getSessionIdentity(session);
 
   if (!identity) {

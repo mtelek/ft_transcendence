@@ -1,3 +1,4 @@
+//General Terms page that defines the legal rules for using the app and gives users a clear agreement reference
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-black text-gray-300 px-6 py-12 flex justify-center">

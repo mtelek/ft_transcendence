@@ -19,7 +19,6 @@ export default function LoginPage() {
     });
   }
 
-  //! comment missing
   return (
     <div className="flex items-center justify-center min-h-screen">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">

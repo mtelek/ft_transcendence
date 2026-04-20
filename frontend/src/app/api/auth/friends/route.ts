@@ -24,6 +24,7 @@ type CurrentUserResult =
   | { currentUser: { id: string } }
   | { error: Response };
 
+//Normalize DB rows into the payload expected by the friends UI
 function mapFriendRows(rows: FriendRow[]): FriendPayload[] {
   return rows.map((row) => ({
     id: row.id,
@@ -33,6 +34,7 @@ function mapFriendRows(rows: FriendRow[]): FriendPayload[] {
   }));
 }
 
+//Shared auth/user guard used by all handlers in this route
 async function getCurrentUserOrError(): Promise<CurrentUserResult> {
   const session = await auth();
   if (!session?.user) {
@@ -49,6 +51,7 @@ async function getCurrentUserOrError(): Promise<CurrentUserResult> {
 
 export async function GET() {
   try {
+    //Return accepted friends for the authenticated user, including online presence
     const authResult = await getCurrentUserOrError();
     if ("error" in authResult) {
       return authResult.error;
@@ -76,6 +79,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    //Add friend flow supports either sending a request or auto-accepting a reciprocal request
     const authResult = await getCurrentUserOrError();
     if ("error" in authResult) {
       return authResult.error;
@@ -104,6 +108,7 @@ export async function POST(request: Request) {
       return jsonError("You cannot add yourself", 400);
     }
 
+    //Existing outgoing relation means request already exists from current -> target
     const existingOutgoing = await prisma.$queryRaw<FriendshipStateRow[]>`
       SELECT "accepted"
       FROM "Friendship"
@@ -119,6 +124,7 @@ export async function POST(request: Request) {
       return jsonError("Friend request already sent", 409);
     }
 
+    //Existing incoming relation means target already has a request toward current user
     const existingIncoming = await prisma.$queryRaw<FriendshipStateRow[]>`
       SELECT "accepted"
       FROM "Friendship"
@@ -129,6 +135,7 @@ export async function POST(request: Request) {
     const incoming = existingIncoming[0];
     if (incoming) {
       if (incoming.accepted) {
+        //Ensure reciprocal edge exists so friendship is symmetrical in both directions
         await prisma.$executeRaw`
           INSERT INTO "Friendship" ("userId", "friendId", "accepted", "createdAt")
           VALUES (${currentUser.id}, ${targetUser.id}, true, NOW())
@@ -137,6 +144,7 @@ export async function POST(request: Request) {
         return jsonOk({ message: "Already friends" });
       }
 
+      //Accept pending incoming request and create/update reciprocal accepted relation
       await prisma.$transaction([
         prisma.$executeRaw`
           UPDATE "Friendship"
@@ -153,6 +161,7 @@ export async function POST(request: Request) {
       return jsonOk({ message: "Friend request accepted" });
     }
 
+    //No existing relation in either direction: create a pending outgoing request
     await prisma.$executeRaw`
       INSERT INTO "Friendship" ("userId", "friendId", "accepted", "createdAt")
       VALUES (${currentUser.id}, ${targetUser.id}, false, NOW())
@@ -167,6 +176,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    //Remove friendship edges in both directions
     const authResult = await getCurrentUserOrError();
     if ("error" in authResult) {
       return authResult.error;

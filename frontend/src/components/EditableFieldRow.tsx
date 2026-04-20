@@ -1,5 +1,6 @@
 type EditableField = "username" | "email" | "password";
 
+//Shared row used by the settings page for editable profile fields
 type EditableFieldRowProps = {
   label: string;
   field: EditableField;
@@ -29,6 +30,7 @@ export default function EditableFieldRow({
   inputType = "text",
   placeholder,
 }: EditableFieldRowProps) {
+  //Only the row matching editingField should render its input/actions in edit mode
   const isEditing = editingField === field;
 
   return (
@@ -36,6 +38,7 @@ export default function EditableFieldRow({
       <div className="flex-1">
         <p className="text-sm text-gray-400">{label}</p>
         {isEditing ? (
+          //In edit mode, show the controlled input for the current field value
           <input
             type={inputType}
             value={value}
@@ -49,6 +52,7 @@ export default function EditableFieldRow({
       </div>
 
       {isEditing ? (
+        //Save/cancel actions replace the default change button while editing
         <div className="flex gap-2">
           <button
             onClick={() => onSave(field)}

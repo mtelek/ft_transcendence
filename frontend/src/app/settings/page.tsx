@@ -6,31 +6,45 @@ import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
 import EditableFieldRow from "@/components/EditableFieldRow";
 
+//Editable profile fields supported by this page
 type EditableField = "username" | "email" | "password";
 
+//Normalize unknown errors into user-friendly strings
 function getErrorMessage(err: unknown, fallback: string) {
   return err instanceof Error ? err.message : fallback;
 }
 
 export default function Home() {
+  //Session gives current user data; update lets us refresh client session values after edits
   const { data: session, update } = useSession();
+
+  //Avatar picker state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [avatars, setAvatars] = useState<string[]>([]);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
+
+  //Shared saving/error state used by profile and avatar actions
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+
+  //Inline edit mode state for profile fields
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [canChangePassword, setCanChangePassword] = useState(false);
   const [usernameValue, setUsernameValue] = useState("");
   const [emailValue, setEmailValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
+
+  //Hidden file input ref used for avatar upload
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
+  //Display helpers derived from session
   const currentImage = session?.user?.image ?? DEFAULT_AVATAR;
   const sessionUserEmail = session?.user?.email;
 
+  //Reused by both avatar select and avatar upload flows
+  //Validates returned image path, updates session avatar, then closes the picker
   async function applyAvatarImageOrThrow(image: unknown, invalidMessage: string) {
     if (typeof image !== "string") {
       throw new Error(invalidMessage);
@@ -41,6 +55,7 @@ export default function Home() {
   }
 
   useEffect(() => {
+    //Guard against state updates after unmount while async request is in flight
     let isMounted = true;
 
     async function loadProfileMeta() {
@@ -59,6 +74,7 @@ export default function Home() {
       }
     }
 
+    //Load capabilities only when a user exists
     if (session?.user) {
       loadProfileMeta();
     }
@@ -69,6 +85,7 @@ export default function Home() {
   }, [sessionUserEmail]);
 
   function startEditing(field: EditableField) {
+    //Enter edit mode for one field and reset old status messages
     setProfileError(null);
     setProfileSuccess(null);
     setEditingField(field);
@@ -87,6 +104,7 @@ export default function Home() {
   }
 
   function cancelEditing() {
+    //Exit edit mode and clear transient values/messages
     setEditingField(null);
     setProfileError(null);
     setProfileSuccess(null);
@@ -94,6 +112,7 @@ export default function Home() {
   }
 
   async function saveField(field: EditableField) {
+    //Prevent overlapping save requests
     if (isSaving) return;
 
     setIsSaving(true);
@@ -101,6 +120,7 @@ export default function Home() {
     setProfileSuccess(null);
 
     try {
+      //Build a minimal PATCH payload containing only the edited field
       const payload: { username?: string; email?: string; password?: string } = {};
       if (field === "username") payload.username = usernameValue;
       else if (field === "email") payload.email = emailValue;
@@ -122,6 +142,7 @@ export default function Home() {
       const nextName = data.user?.username ?? session?.user?.name ?? "";
       const nextEmail = data.user?.email ?? session?.user?.email ?? "";
 
+      //Keep local form values and session in sync with server response
       setUsernameValue(nextName);
       setEmailValue(nextEmail);
       setPasswordValue("");
@@ -137,6 +158,7 @@ export default function Home() {
   }
 
   async function openAvatarPicker() {
+    //Open modal first, then load available avatar options
     setError(null);
     setIsPickerOpen(true);
     setIsLoadingAvatars(true);
@@ -161,6 +183,7 @@ export default function Home() {
   }
 
   async function handleAvatarSelect(avatarPath: string) {
+    //Prevent parallel avatar updates
     if (isSaving) return;
 
     setIsSaving(true);
@@ -186,15 +209,18 @@ export default function Home() {
   }
 
   function openUploadDialog() {
+    //Trigger hidden file input from a styled button
     uploadInputRef.current?.click();
   }
 
   async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+    //Read selected file from hidden input
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
+    //If a save is already running, reset input and ignore this selection
     if (isSaving) {
       event.target.value = "";
       return;
@@ -204,6 +230,7 @@ export default function Home() {
     setError(null);
 
     try {
+      //Send file as multipart/form-data to avatar upload endpoint
       const formData = new FormData();
       formData.append("file", file);
 
@@ -226,6 +253,7 @@ export default function Home() {
   }
 
   return (
+    //Main account settings layout
     <div className="min-h-screen bg-black text-white">
       <div className="ml-[33vw] p-6">
         <h1 className="text-3xl font-bold">Account</h1>
@@ -233,6 +261,7 @@ export default function Home() {
         <div className="border-b border-gray-700 my-4"></div>
 
         <div className="flex items-center gap-4">
+          {/* Current avatar preview with safe fallback if image fails to load */}
           <img
             src={currentImage}
             onError={(e) => {
@@ -250,6 +279,7 @@ export default function Home() {
         </div>
 
         <div className="mt-8 space-y-4 max-w-2xl">
+          {/* Reusable editable rows for profile fields */}
           <EditableFieldRow
             label="Username"
             field="username"
@@ -298,6 +328,7 @@ export default function Home() {
         </div>
 
         {isPickerOpen && (
+          //Avatar picker modal overlay
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="w-full max-w-3xl rounded-xl border border-gray-700 bg-zinc-900 p-5">
               <div className="mb-4 flex items-center justify-between">

@@ -1,14 +1,17 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+//Public URL prefix used when storing avatar paths in user records
 export const AVATAR_PREFIX = "/avatars/";
 
+//Avatar files live in the public folder so they can be served directly by Next.js
 const AVATARS_DIR = path.join(process.cwd(), "public", "avatars");
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 
 export async function readAvatarFiles() {
+  //Return only supported avatar image files in a stable sorted order
   const entries = await fs.readdir(AVATARS_DIR, { withFileTypes: true });
   return entries
     .filter((entry) => entry.isFile())
@@ -22,12 +25,14 @@ export function toAvatarPath(fileName: string) {
 }
 
 export function parseAvatarPath(image: unknown) {
+  //Accept only local avatar paths that use the expected public prefix
   if (typeof image !== "string" || !image.startsWith(AVATAR_PREFIX)) {
     return null;
   }
 
   const requestedFile = image.slice(AVATAR_PREFIX.length);
 
+  //Reject nested paths and traversal attempts so only direct avatar files are allowed
   if (!requestedFile || requestedFile.includes("/") || requestedFile.includes("..")) {
     return null;
   }
@@ -36,6 +41,7 @@ export function parseAvatarPath(image: unknown) {
 }
 
 function resolveFileExtension(file: File) {
+  //Prefer the original extension when valid, otherwise fall back to MIME type mapping
   const extFromName = path.extname(file.name).toLowerCase();
   if (ALLOWED_EXTENSIONS.has(extFromName)) {
     return extFromName;
@@ -50,6 +56,7 @@ function resolveFileExtension(file: File) {
 }
 
 function getNextUploadedIndex(existingFiles: string[]) {
+  //Keep uploaded avatar names sequential so new files do not overwrite old ones
   let maxIndex = 0;
 
   for (const fileName of existingFiles) {
@@ -66,6 +73,7 @@ function getNextUploadedIndex(existingFiles: string[]) {
 }
 
 export async function saveUploadedAvatar(file: File) {
+  //Validate upload type and size before writing anything to disk
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     throw new Error("Unsupported file type");
   }
@@ -83,6 +91,8 @@ export async function saveUploadedAvatar(file: File) {
   const nextIndex = getNextUploadedIndex(existingFiles);
   const fileName = `uploaded${nextIndex}${ext}`;
   const filePath = path.join(AVATARS_DIR, fileName);
+
+  //Convert the browser File into a Node.js buffer so it can be saved locally
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 

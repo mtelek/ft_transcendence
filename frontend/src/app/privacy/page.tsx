@@ -1,3 +1,4 @@
+//General Privacy page that explains which user data is collected, how it is used, and how it is protected
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-black text-gray-300 px-6 py-12 flex justify-center">

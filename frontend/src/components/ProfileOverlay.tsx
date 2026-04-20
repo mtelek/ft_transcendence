@@ -1,5 +1,6 @@
 "use client";
 
+//The ProfileOverlay component uses client-side hooks and APIs, so it must run on the client side
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import LogoutButton from "./LogoutButton";
@@ -8,6 +9,7 @@ import Link from "next/link";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
 
+//Friend object - returned by the friends API
 type Friend = {
   id: string;
   name: string;
@@ -15,9 +17,12 @@ type Friend = {
   isOnline: boolean;
 };
 
+//Interval for refreshing the friend list and online status
 const FRIENDS_REFRESH_MS = 1500;
 
 function areFriendsEqual(a: Friend[], b: Friend[]) {
+  //Keep previous friend array reference when polling returns unchanged data,
+  //so the overlay doesnt rerender every refresh cycle
   if (a.length !== b.length) return false;
 
   for (let i = 0; i < a.length; i += 1) {
@@ -35,15 +40,24 @@ function areFriendsEqual(a: Friend[], b: Friend[]) {
 }
 
 export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
+  //Session data provides the logged in users profile informaation
   const { data: session } = useSession();
+  //Friends currently shown in the overlay
   const [friends, setFriends] = useState<Friend[]>([]);
+  //True only during the inital visible loading state for the friends list
   const [friendsLoading, setFriendsLoading] = useState(false);
+  //Stores API or action errors related to friends
   const [friendsError, setFriendsError] = useState<string | null>(null);
+  //Controlleed input value for the add friend field
   const [friendIdentifier, setFriendIdentifier] = useState("");
+  //Prevents duplicate add friend request while one is already active
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  //Tracks which friend is currently being removed so only that button is disabled.
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
 
   async function loadFriends(showLoading = false) {
+    //Only show the visible loading state when explicitly requested
+    //Background polling refreshes stay invisible to the eye
     if (showLoading) {
       setFriendsLoading(true);
     }
@@ -55,11 +69,14 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         "Failed to load friends"
       );
 
+      //Handle malformed responses by falling back to an empty list
       const incomingFriends = Array.isArray(data.friends) ? data.friends : [];
 
+      //Avoid replacing state when the list has not actually changed.
       setFriends((previousFriends) =>
         areFriendsEqual(previousFriends, incomingFriends) ? previousFriends : incomingFriends
       );
+      //Clear any previous error after a succesful refresh
       setFriendsError(null);
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to load friends");
@@ -72,6 +89,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
   async function handleAddFriend() {
     const identifier = friendIdentifier.trim();
+    //Ignore empty input and block duplicate submissions
     if (!identifier || isAddingFriend) {
       return;
     }
@@ -90,7 +108,9 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         "Failed to add friend"
       );
 
+      //Clear the input after a succesful request
       setFriendIdentifier("");
+      //Refresh the list  so the UI shows the latest friendship state
       await loadFriends();
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to add friend");
@@ -100,6 +120,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   }
 
   async function handleRemoveFriend(friendId: string) {
+    //Prevent overlapping remove actions
     if (removingFriendId) {
       return;
     }
@@ -117,7 +138,8 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         },
         "Failed to remove friend"
       );
-
+      
+       //Refresh the list  so the UI shows the latest friendship state
       await loadFriends();
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to remove friend");
@@ -127,10 +149,13 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   }
 
   useEffect(() => {
+    //Dont start polling until a user session exists
     if (!session?.user) {
       return;
     }
 
+    //Keep updating every few seconds and when you return to the tab so 
+    // online status doesn’t get outdated
     void loadFriends(true);
     const intervalId = window.setInterval(() => {
       void loadFriends();
@@ -149,6 +174,8 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    //Clean up polling and browser listeners when the overlay unmounts or
+    // when the session idenitiy changes
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", handleFocus);
@@ -158,7 +185,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* 🔲 Background overlay */}
+      {/* Backdrop closes the overlay when the user clicks outside the panel*/}
       <motion.div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={onClose}
@@ -167,7 +194,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 		exit={{ opacity: 0}}
       />
 
-      {/* 📦 Profile panel */}
+      {/* Sliding side panel containing  profile details and friend management UI*/}
       <motion.div className="fixed top-16 bottom-0 right-0 w-80 bg-white shadow-lg z-50 p-4 overflow-y-auto"
 	  	initial={{ x: 300, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -178,6 +205,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
         {session?.user ? (
           <div className="flex flex-col gap-2 text-gray-800">
+            {/* Show the currently authenticated user's profile fields. */}
             <p><b>Name:</b> {session.user.name}</p>
             <p><b>Email:</b> {session.user.email}</p>
           </div>
@@ -185,6 +213,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
           <p className="text-gray-800">Not logged in</p>
         )}
 
+    {/* Main profile actions. */}
 		<div className="mt-4 flex flex-col items-start gap-3">
 			<Link 
         href="/settings"
@@ -203,6 +232,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 			<LogoutButton/>
 		</div>
 
+        {/* Friends area allows searching, adding, viewing presence, and removing friends. */}
         <div className="mt-6 border-t border-gray-300 pt-4">
           <h3 className="text-md font-bold text-gray-800">Friends</h3>
 
@@ -222,6 +252,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
+          {/* Surface friend-related API errors near the form and list. */}
           {friendsError && (
             <p className="mt-2 text-xs text-red-600">{friendsError}</p>
           )}
@@ -239,10 +270,12 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
                     alt={`${friend.name} avatar`}
                     className="h-8 w-8 rounded-full object-cover"
                     onError={(event) => {
+                      //User avatars may be missing or broken, always fall back to a safe default avatar
                       event.currentTarget.src = DEFAULT_AVATAR;
                     }}
                   />
                   <span className="text-sm text-gray-900">{friend.name}</span>
+                  {/* Avalaible dot reflects the server-computed online status. */}
                   <span
                     className={`ml-auto h-2.5 w-2.5 rounded-full ${friend.isOnline ? "bg-green-500" : "bg-gray-400"}`}
                     title={friend.isOnline ? "Online" : "Offline"}

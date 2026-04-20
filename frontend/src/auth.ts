@@ -7,9 +7,10 @@ import { authConfig } from "@/auth.config";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
-//! comment missing
+//Base adapter is extended below to enforce project-specific user/session behavior
 const adapter = PrismaAdapter(prisma);
 
+//Prefer a readable username from OAuth name; otherwise fall back to playerN
 async function getUniqueUsername(base?: string | null) {
   const firstName = base?.trim().split(/\s+/)[0];
   if (firstName) {
@@ -40,6 +41,7 @@ type UserShape = {
   image?: unknown;
 };
 
+//Keep token/session synchronization logic in small helpers to avoid callback bloat
 function applyUserToToken(token: TokenShape, user: UserShape) {
   token.id = user.id;
   token.name = user.name;
@@ -85,6 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   adapter: {
     ...adapter,
+    //Ensure users created via OAuth always get project defaults and a username
     async createUser(data) {
       const username = await getUniqueUsername(data.name);
 
@@ -105,14 +108,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         emailVerified: created.emailVerified,
       };
     },
-    //needed when automatically logged in and then try to log out
+    //Treat missing/deleted session records as successful sign-out
     async deleteSession(sessionToken) {
       try {
         return await prisma.session.delete({
           where: { sessionToken },
         });
       } catch {
-        // Session already deleted or missing, treat sign-out as successful.
+        //Session already deleted or missing, treat sign-out as successful
         return null;
       }
     },
@@ -181,7 +184,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
   },
-  //signalling error=CredentialsSignin&code=credentials correctly
+  //Signalling error=CredentialsSignin&code=credentials correctly
   logger: {
     error(error) {
       const authError = error as Error & { type?: string };
@@ -190,7 +193,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   callbacks: {
-    //to make sure session data is consistently populated
+    //Keep token fields in sync with user data and client-triggered profile updates
     async jwt({ token, user, trigger, session }) {
       if (user) {
         applyUserToToken(token, user);
@@ -200,6 +203,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         applySessionUpdateToToken(token, session as { image?: unknown; name?: unknown; email?: unknown });
       }
 
+      //Refresh name/avatar from DB so sessions reflect profile edits across devices
       if (typeof token.email === "string") {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
@@ -215,9 +219,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
     async signIn({ user, account }) {
-      // Auto-link Google account with existing email
+      //Auto-link Google account with existing email
       if (account?.provider === "google" && user.email) {
-        // Check if user already has this provider linked
+        //Check if user already has this provider linked
         const existingAccount = await prisma.account.findUnique({
           where: {
             provider_providerAccountId: {
@@ -228,7 +232,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!existingAccount) {
-          // Find user by email and link Google account
+          //Find user by email and link Google account
           const existingUser = await prisma.user.findUnique({
             where: { email: user.email },
           });
