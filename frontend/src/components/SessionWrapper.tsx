@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { SessionProvider, useSession } from "next-auth/react";
+import type { Session } from "next-auth";
 
 function PresenceHeartbeat() {
   const { data: session } = useSession();
@@ -30,9 +31,15 @@ function PresenceHeartbeat() {
   return null;
 }
 
-export default function SessionWrapper({ children }: { children: React.ReactNode }) {
+type SessionWrapperProps = {
+  children: React.ReactNode;
+  initialSession?: Session | null;
+};
+
+export default function SessionWrapper({ children, initialSession }: SessionWrapperProps) {
   return (
-    <SessionProvider>
+    // Seed SessionProvider with server session to prevent first-paint fallback values.
+    <SessionProvider session={initialSession}>
       <PresenceHeartbeat />
       {children}
     </SessionProvider>

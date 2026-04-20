@@ -32,6 +32,7 @@ type TokenShape = {
   name?: unknown;
   email?: unknown;
   image?: unknown;
+  hasPassword?: unknown;
 };
 
 type UserShape = {
@@ -61,14 +62,22 @@ function applySessionUpdateToToken(token: TokenShape, session: { image?: unknown
   }
 }
 
-function applyDbUserToToken(token: TokenShape, dbUser: { username: string | null; image: string | null } | null) {
+function applyDbUserToToken(
+  token: TokenShape,
+  dbUser: { username: string | null; image: string | null; password: string | null } | null
+) {
   if (dbUser?.username) {
     token.name = dbUser.username;
   }
   token.image = dbUser?.image ?? (typeof token.image === "string" ? token.image : DEFAULT_AVATAR);
+  // Expose whether this account has a local password so UI can avoid post-render capability fetches.
+  token.hasPassword = Boolean(dbUser?.password);
 }
 
-function applyTokenToSession(session: { user?: { name?: string | null; email?: string | null; image?: string | null } }, token: TokenShape) {
+function applyTokenToSession(
+  session: { user?: { name?: string | null; email?: string | null; image?: string | null; hasPassword?: boolean } },
+  token: TokenShape
+) {
   if (!session.user) {
     return;
   }
@@ -80,6 +89,7 @@ function applyTokenToSession(session: { user?: { name?: string | null; email?: s
     session.user.email = token.email;
   }
   session.user.image = typeof token.image === "string" ? token.image : DEFAULT_AVATAR;
+  session.user.hasPassword = Boolean(token.hasPassword);
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -207,7 +217,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (typeof token.email === "string") {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { username: true, image: true },
+          select: { username: true, image: true, password: true },
         });
         applyDbUserToToken(token, dbUser);
       }

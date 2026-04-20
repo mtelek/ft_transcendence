@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
@@ -8,6 +8,8 @@ import EditableFieldRow from "@/components/EditableFieldRow";
 
 //Editable profile fields supported by this page
 type EditableField = "username" | "email" | "password";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
 
 //Normalize unknown errors into user-friendly strings
 function getErrorMessage(err: unknown, fallback: string) {
@@ -31,7 +33,6 @@ export default function Home() {
 
   //Inline edit mode state for profile fields
   const [editingField, setEditingField] = useState<EditableField | null>(null);
-  const [canChangePassword, setCanChangePassword] = useState(false);
   const [usernameValue, setUsernameValue] = useState("");
   const [emailValue, setEmailValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
@@ -41,7 +42,10 @@ export default function Home() {
 
   //Display helpers derived from session
   const currentImage = session?.user?.image ?? DEFAULT_AVATAR;
-  const sessionUserEmail = session?.user?.email;
+  // Read password capability from the hydrated session to avoid refresh-time UI flicker.
+  const canChangePassword = Boolean(
+    (session?.user as { hasPassword?: unknown } | undefined)?.hasPassword
+  );
 
   //Reused by both avatar select and avatar upload flows
   //Validates returned image path, updates session avatar, then closes the picker
@@ -53,36 +57,6 @@ export default function Home() {
     await update({ image });
     setIsPickerOpen(false);
   }
-
-  useEffect(() => {
-    //Guard against state updates after unmount while async request is in flight
-    let isMounted = true;
-
-    async function loadProfileMeta() {
-      try {
-        const data = await apiRequest<{ canChangePassword?: boolean }>(
-          "/api/auth/profile",
-          { method: "GET" },
-          "Failed to load profile"
-        );
-
-        if (!isMounted) return;
-        setCanChangePassword(Boolean(data.canChangePassword));
-      } catch {
-        if (!isMounted) return;
-        setCanChangePassword(false);
-      }
-    }
-
-    //Load capabilities only when a user exists
-    if (session?.user) {
-      loadProfileMeta();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionUserEmail]);
 
   function startEditing(field: EditableField) {
     //Enter edit mode for one field and reset old status messages
@@ -114,6 +88,19 @@ export default function Home() {
   async function saveField(field: EditableField) {
     //Prevent overlapping save requests
     if (isSaving) return;
+
+    // Give immediate client feedback before making a network request.
+    if (field === "email" && emailValue.trim() && !EMAIL_RE.test(emailValue.trim())) {
+      setProfileError("Invalid email format");
+      setProfileSuccess(null);
+      return;
+    }
+
+    if (field === "password" && passwordValue.trim().length < MIN_PASSWORD_LENGTH) {
+      setProfileError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      setProfileSuccess(null);
+      return;
+    }
 
     setIsSaving(true);
     setProfileError(null);
@@ -258,7 +245,7 @@ export default function Home() {
       <div className="ml-[33vw] p-6">
         <h1 className="text-3xl font-bold">Account</h1>
 
-        <div className="border-b border-gray-700 my-4"></div>
+        <div className="my-4 max-w-2xl border-b border-gray-700"></div>
 
         <div className="flex items-center gap-4">
           {/* Current avatar preview with safe fallback if image fails to load */}
@@ -272,7 +259,7 @@ export default function Home() {
 
           <button
             onClick={openAvatarPicker}
-            className="bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition"
+            className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition"
           >
             Change profile picture
           </button>

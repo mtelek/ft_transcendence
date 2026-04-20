@@ -36,12 +36,14 @@ export default function Register() {
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        <div className="flex flex-col gap-4 text-black">
+        {/* Use native form validation before the request is sent */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
             className="p-3 border rounded"
           />
           <input
@@ -56,15 +58,17 @@ export default function Register() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
             className="p-3 border rounded"
           />
           <button
-            onClick={handleSubmit}
+            type="submit"
             className="p-3 bg-black text-white rounded hover:bg-gray-800"
           >
             Register
           </button>
-        </div>
+        </form>
         <p className="text-center mt-4 text-black">
           Already have an account?{" "}
           <Link href="/login" className="underline">

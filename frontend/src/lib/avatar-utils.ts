@@ -9,6 +9,8 @@ const AVATARS_DIR = path.join(process.cwd(), "public", "avatars");
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const LEGACY_UPLOAD_RE = /^uploaded\d+\.[a-z0-9]+$/i;
+const USER_UPLOAD_RE = /^user-[a-z0-9_-]+-uploaded\d+\.[a-z0-9]+$/i;
 
 export async function readAvatarFiles() {
   //Return only supported avatar image files in a stable sorted order
@@ -55,12 +57,39 @@ function resolveFileExtension(file: File) {
   return null;
 }
 
-function getNextUploadedIndex(existingFiles: string[]) {
-  //Keep uploaded avatar names sequential so new files do not overwrite old ones
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeUserIdForFile(userId: string) {
+  return userId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+
+function getUserUploadPrefix(userId: string) {
+  const safeUserId = normalizeUserIdForFile(userId);
+  if (!safeUserId) {
+    throw new Error("Invalid user id");
+  }
+  return `user-${safeUserId}-uploaded`;
+}
+
+export function isSharedAvatarFile(fileName: string) {
+  // Shared avatars are predefined assets, not uploaded-* files.
+  return !LEGACY_UPLOAD_RE.test(fileName) && !USER_UPLOAD_RE.test(fileName);
+}
+
+export function isUserOwnedAvatarFile(fileName: string, userId: string) {
+  const prefix = getUserUploadPrefix(userId);
+  return new RegExp(`^${escapeRegExp(prefix)}\\d+\\.[a-z0-9]+$`, "i").test(fileName);
+}
+
+function getNextUploadedIndex(existingFiles: string[], userUploadPrefix: string) {
+  // Keep each user's uploaded names sequential so files stay owner-scoped.
   let maxIndex = 0;
+  const pattern = new RegExp(`^${escapeRegExp(userUploadPrefix)}(\\d+)\\.[a-z0-9]+$`, "i");
 
   for (const fileName of existingFiles) {
-    const match = /^uploaded(\d+)\.[a-z0-9]+$/i.exec(fileName);
+    const match = pattern.exec(fileName);
     if (!match) continue;
 
     const index = Number.parseInt(match[1], 10);
@@ -72,7 +101,7 @@ function getNextUploadedIndex(existingFiles: string[]) {
   return maxIndex + 1;
 }
 
-export async function saveUploadedAvatar(file: File) {
+export async function saveUploadedAvatar(file: File, userId: string) {
   //Validate upload type and size before writing anything to disk
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     throw new Error("Unsupported file type");
@@ -88,8 +117,9 @@ export async function saveUploadedAvatar(file: File) {
   }
 
   const existingFiles = await readAvatarFiles();
-  const nextIndex = getNextUploadedIndex(existingFiles);
-  const fileName = `uploaded${nextIndex}${ext}`;
+  const userUploadPrefix = getUserUploadPrefix(userId);
+  const nextIndex = getNextUploadedIndex(existingFiles, userUploadPrefix);
+  const fileName = `${userUploadPrefix}${nextIndex}${ext}`;
   const filePath = path.join(AVATARS_DIR, fileName);
 
   //Convert the browser File into a Node.js buffer so it can be saved locally
