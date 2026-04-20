@@ -18,26 +18,42 @@ type FriendPayload = {
   isOnline: boolean;
 };
 
+type FriendshipStateRow = { accepted: boolean };
+
+type CurrentUserResult =
+  | { currentUser: { id: string } }
+  | { error: Response };
+
 function mapFriendRows(rows: FriendRow[]): FriendPayload[] {
   return rows.map((row) => ({
     id: row.id,
-    name: row.name || row.email || "Unknown player",
+    name: row.name ?? row.email ?? "Unknown player",
     image: row.image,
     isOnline: row.isOnline,
   }));
 }
 
+async function getCurrentUserOrError(): Promise<CurrentUserResult> {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: jsonError("Unauthorized", 401) };
+  }
+
+  const currentUser = await findUserFromSession(session);
+  if (!currentUser) {
+    return { error: jsonError("User not found", 404) };
+  }
+
+  return { currentUser: { id: currentUser.id } };
+}
+
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return jsonError("Unauthorized", 401);
+    const authResult = await getCurrentUserOrError();
+    if ("error" in authResult) {
+      return authResult.error;
     }
-
-    const currentUser = await findUserFromSession(session);
-    if (!currentUser) {
-      return jsonError("User not found", 404);
-    }
+    const { currentUser } = authResult;
 
     const rows = await prisma.$queryRaw<FriendRow[]>`
       SELECT
@@ -60,15 +76,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return jsonError("Unauthorized", 401);
+    const authResult = await getCurrentUserOrError();
+    if ("error" in authResult) {
+      return authResult.error;
     }
-
-    const currentUser = await findUserFromSession(session);
-    if (!currentUser) {
-      return jsonError("User not found", 404);
-    }
+    const { currentUser } = authResult;
 
     const { identifier } = (await request.json()) as { identifier?: string };
     const normalizedIdentifier = identifier?.trim();
@@ -81,7 +93,7 @@ export async function POST(request: Request) {
       where: {
         OR: [{ username: normalizedIdentifier }, { email: normalizedIdentifier }],
       },
-      select: { id: true, username: true, email: true },
+      select: { id: true },
     });
 
     if (!targetUser) {
@@ -92,29 +104,31 @@ export async function POST(request: Request) {
       return jsonError("You cannot add yourself", 400);
     }
 
-    const existingOutgoing = await prisma.$queryRaw<Array<{ accepted: boolean }>>`
+    const existingOutgoing = await prisma.$queryRaw<FriendshipStateRow[]>`
       SELECT "accepted"
       FROM "Friendship"
       WHERE "userId" = ${currentUser.id} AND "friendId" = ${targetUser.id}
       LIMIT 1
     `;
 
-    if (existingOutgoing.length > 0) {
-      if (existingOutgoing[0].accepted) {
+    const outgoing = existingOutgoing[0];
+    if (outgoing) {
+      if (outgoing.accepted) {
         return jsonError("Already friends", 409);
       }
       return jsonError("Friend request already sent", 409);
     }
 
-    const existingIncoming = await prisma.$queryRaw<Array<{ accepted: boolean }>>`
+    const existingIncoming = await prisma.$queryRaw<FriendshipStateRow[]>`
       SELECT "accepted"
       FROM "Friendship"
       WHERE "userId" = ${targetUser.id} AND "friendId" = ${currentUser.id}
       LIMIT 1
     `;
 
-    if (existingIncoming.length > 0) {
-      if (existingIncoming[0].accepted) {
+    const incoming = existingIncoming[0];
+    if (incoming) {
+      if (incoming.accepted) {
         await prisma.$executeRaw`
           INSERT INTO "Friendship" ("userId", "friendId", "accepted", "createdAt")
           VALUES (${currentUser.id}, ${targetUser.id}, true, NOW())
@@ -153,15 +167,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return jsonError("Unauthorized", 401);
+    const authResult = await getCurrentUserOrError();
+    if ("error" in authResult) {
+      return authResult.error;
     }
-
-    const currentUser = await findUserFromSession(session);
-    if (!currentUser) {
-      return jsonError("User not found", 404);
-    }
+    const { currentUser } = authResult;
 
     const { friendId } = (await request.json()) as { friendId?: string };
     if (!friendId) {

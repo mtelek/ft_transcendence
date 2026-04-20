@@ -43,8 +43,8 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
 
-  async function loadFriends(options?: { showLoading?: boolean }) {
-    if (options?.showLoading) {
+  async function loadFriends(showLoading = false) {
+    if (showLoading) {
       setFriendsLoading(true);
     }
 
@@ -64,7 +64,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to load friends");
     } finally {
-      if (options?.showLoading) {
+      if (showLoading) {
         setFriendsLoading(false);
       }
     }
@@ -80,7 +80,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     setFriendsError(null);
 
     try {
-      await apiRequest<{ message?: string }>(
+      await apiRequest(
         "/api/auth/friends",
         {
           method: "POST",
@@ -108,7 +108,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     setFriendsError(null);
 
     try {
-      await apiRequest<{ message?: string }>(
+      await apiRequest(
         "/api/auth/friends",
         {
           method: "DELETE",
@@ -131,20 +131,18 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const refreshFriends = () => {
+    void loadFriends(true);
+    const intervalId = window.setInterval(() => {
       void loadFriends();
-    };
-
-    void loadFriends({ showLoading: true });
-    const intervalId = window.setInterval(refreshFriends, FRIENDS_REFRESH_MS);
+    }, FRIENDS_REFRESH_MS);
 
     const handleFocus = () => {
-      refreshFriends();
+      void loadFriends();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        refreshFriends();
+        void loadFriends();
       }
     };
 
