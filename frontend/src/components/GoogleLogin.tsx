@@ -7,7 +7,7 @@ export default function LoginButton() {
   const handleGoogleSignIn = async () => {
     // Start Google OAuth flow and return user to home page after auth
     await signIn("google", {
-      callbackUrl: "/",
+      callbackUrl: "/dashboard",
     });
   };
 

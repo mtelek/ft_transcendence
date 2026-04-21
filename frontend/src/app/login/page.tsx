@@ -14,7 +14,7 @@ export default function LoginPage() {
     await signIn("credentials", {
       identifier,
       password,
-      callbackUrl: "/",
+      callbackUrl: "/dashboard",
     });
   }
 
