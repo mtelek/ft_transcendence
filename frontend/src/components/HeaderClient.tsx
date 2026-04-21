@@ -21,8 +21,16 @@ export default function HeaderClient({ session }: any) {
   return (
     //Top navigation container used across authenticated and guest states
     <header className="h-16 flex items-center justify-between px-6 py-4 bg-white border-b">
-      <Link href="/" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-        ft_transcendence
+      <Link href="/" className="shrink-0">
+        {/* Use the project logo as the home link in the top-left corner. */}
+        <Image
+          src="/logos/logo4_ft_transcendence.png"
+          alt="ft_transcendence"
+          width={108}
+          height={48}
+          className="h-10 w-auto"
+          priority
+        />
       </Link>
 
       <nav className="flex gap-4 items-center">
