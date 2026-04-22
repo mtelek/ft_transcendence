@@ -41,8 +41,8 @@ export default function HeaderClient({ session }: any) {
               Hey, {activeSession.user?.name}
             </span>
 
-            <Link href="/poker" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-              Poker
+            <Link href="/dashboard" className="px-4 py-2 rounded-lg bg-black text-white rounded hover:bg-gray-800">
+              Games
             </Link>
 
             {/* Avatar button opens/closes the profile overlay */}
