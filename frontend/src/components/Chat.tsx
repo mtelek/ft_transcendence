@@ -15,14 +15,30 @@ export default function Chat({ username }: { username: string }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:3000");
+    const socket = io("http://localhost:3000");
+    socketRef.current = socket;
 
-    socketRef.current.on("message", (data: Message) => {
+    const onMessage = (data: Message) => {
       setMessages((prev) => [...prev, data]);
-    });
+    };
+
+    const onConnect = () => {
+      console.log("[Socket.io][Client] Connected:", socket.id);
+    };
+
+    const onDisconnect = (reason: Socket.DisconnectReason) => {
+      console.log("[Socket.io][Client] Disconnected. Reason:", reason);
+    };
+
+    socket.on("message", onMessage);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     return () => {
-      socketRef.current?.disconnect();
+      socket.off("message", onMessage);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.disconnect();
     };
   }, []);
 

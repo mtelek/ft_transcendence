@@ -5,6 +5,7 @@ import next from "next";
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
+const activeSocketIds = new Set<string>();
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
@@ -18,14 +19,17 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+    activeSocketIds.add(socket.id);
+    console.log("[Socket.io] User connected:", socket.id);
 
     socket.on("message", (data: { username: string; text: string }) => {
       io.emit("message", data);
     });
 
-    socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
+    socket.on("disconnect", (reason) => {
+      activeSocketIds.delete(socket.id);
+      console.log("[Socket.io] User disconnected:", socket.id, "Reason:", reason);
+      console.log("[Socket.io] Active sockets:", activeSocketIds.size);
     });
   });
 
