@@ -293,3 +293,9 @@ Game statistics and match history (requires a game module). (1 pt Minor)
     ❌ Display match history (1v1 games, dates, results, opponents).
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
+
+Add another game with user history and matchmaking. (Blackjack)
+    ❌ Implement a second distinct game.
+    ❌ Track user history and statistics for this game.
+    ❌ Implement a matchmaking system.
+    ❌ Maintain performance and responsiveness.
