@@ -265,9 +265,19 @@ app.prepare().then(() => {
     activeSocketIds.add(socket.id);
     console.log("[Socket.io] User connected:", socket.id);
 
-    // global chat message — broadcast to everyone connected
-    socket.on("message", (data: { username: string; text: string }) => {
-      io.emit("message", data);
+    // chat message — scoped to a game room if gameId is provided, otherwise global
+    socket.on("message", (data: { username: string; text: string; gameId?: string }) => {
+      const { gameId, ...msg } = data;
+      if (gameId) {
+        io.to(gameId).emit("message", msg);
+      } else {
+        io.emit("message", msg);
+      }
+    });
+
+    // join the Socket.IO room for game-scoped chat (Chat component connects separately from GameTable)
+    socket.on("joinGameRoom", ({ gameId }: { gameId: string }) => {
+      socket.join(gameId);
     });
 
     // player wants to find a game. Either match them with a waiting player or put them in the queue

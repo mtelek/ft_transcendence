@@ -8,7 +8,7 @@ interface Message {
   text: string;
 }
 
-export default function Chat({ username }: { username: string }) {
+export default function Chat({ username, gameId }: { username: string; gameId?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const socketRef = useRef<Socket | null>(null);
@@ -24,6 +24,7 @@ export default function Chat({ username }: { username: string }) {
 
     const onConnect = () => {
       console.log("[Socket.io][Client] Connected:", socket.id);
+      if (gameId) socket.emit("joinGameRoom", { gameId });
     };
 
     const onDisconnect = (reason: Socket.DisconnectReason) => {
@@ -40,7 +41,7 @@ export default function Chat({ username }: { username: string }) {
       socket.off("disconnect", onDisconnect);
       socket.disconnect();
     };
-  }, []);
+  }, [gameId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,7 +50,7 @@ export default function Chat({ username }: { username: string }) {
   function sendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!input.trim()) return;
-    socketRef.current?.emit("message", { username, text: input });
+    socketRef.current?.emit("message", { username, text: input, gameId });
     setInput("");
   }
 

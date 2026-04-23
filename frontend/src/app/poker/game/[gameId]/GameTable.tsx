@@ -501,7 +501,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
 
       {/* Chat */}
       <div className="fixed bottom-4 left-4 w-80 z-50">
-        <Chat username={username} />
+        <Chat username={username} gameId={gameId} />
       </div>
     </div>
   );
