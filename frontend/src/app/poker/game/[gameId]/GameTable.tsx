@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
 import Chat from "@/components/Chat";
+import { usePokerSettings } from "@/lib/poker-settings/context";
+import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
+import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
+import PokerBackground from "@/components/PokerBackground";
 
 // CARD DISPLAY HELPERS
 
@@ -29,12 +33,13 @@ function CardFaceUp({ card }: { card: PokerCard }) {
   );
 }
 
-function CardFaceDown() {
+function CardFaceDown({ filter = "" }: { filter?: string }) {
   return (
     <img
       src="/card-back-red.png"
       alt="Card back"
       className="w-14 h-20 rounded-md shadow-lg object-cover"
+      style={filter ? { filter } : undefined}
     />
   );
 }
@@ -62,11 +67,15 @@ function ActionBar({
   myStack,
   pot,
   onAction,
+  actionBarGradient,
+  frameColor,
 }: {
   legalActions: GameSnapshot["legalActions"];
   myStack: number;
   pot: number;
   onAction: (action: string, betSize?: number) => void;
+  actionBarGradient: string;
+  frameColor: string;
 }) {
   const { actions, chipRange } = legalActions;
   const [raiseAmount, setRaiseAmount] = useState(chipRange?.min ?? 0);
@@ -93,9 +102,10 @@ function ActionBar({
     <div
       className="flex items-center gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
       style={{
-        background: "linear-gradient(180deg, #8B5E3C 0%, #6B3F1F 30%, #7A4A28 70%, #5C3317 100%)",
+        background: actionBarGradient,
         boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
-        border: "2px solid #3d1f0a",
+        border: `2px solid ${frameColor}`,
+        transition: "background 400ms ease, border-color 400ms ease",
       }}
     >
       {/* Quick bet buttons — left */}
@@ -229,6 +239,8 @@ const PHASE_LABELS: Record<string, string> = {
 // MAIN GAME
 
 export default function GameTable({ gameId, username }: { gameId: string; username: string }) {
+  const { visuals } = usePokerSettings();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
@@ -313,13 +325,19 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
   return (
     <div className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
       {/* Background */}
-      <img
-        src="/dark-poker-background-of-spades-and-clubs.jpg"
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ filter: "sepia(1) hue-rotate(90deg) saturate(2) brightness(0.6)", zIndex: 0 }}
-      />
+      {visuals.backgroundVariant === "static" ? (
+        <img
+          src="/dark-poker-background-of-spades-and-clubs.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
+        />
+      ) : (
+        <div className="absolute inset-0" style={{ zIndex: 0 }}>
+          <PokerBackground variant={visuals.backgroundVariant} />
+        </div>
+      )}
       <div
         className="absolute inset-0"
         style={{
@@ -327,6 +345,8 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
           zIndex: 1,
         }}
       />
+      <SettingsGearButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
+      <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative z-10 flex flex-col items-center w-full">
         {/* Phase + game ID */}
@@ -353,6 +373,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
             src="/pokertable_no_bg.png"
             alt="Poker table"
             className="absolute inset-0 w-full h-full object-contain"
+            style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
           {/* Result overlay */}
@@ -368,7 +389,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
           {/* Pot */}
           <div className="absolute top-[28%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium">
             {pot > 0 && (
-              <>Pot <span className="text-green-400 font-bold">${pot.toLocaleString()}</span></>
+              <>Pot <span className="font-bold" style={{ color: visuals.accent }}>${pot.toLocaleString()}</span></>
             )}
           </div>
 
@@ -386,7 +407,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
           >
             <div className="flex gap-1 mb-1">
               {opponent.holeCards.map((card, i) =>
-                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} />
+                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
               )}
             </div>
             <div className="flex items-center gap-1.5">
@@ -417,7 +438,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
           >
             <div className="flex gap-1 mb-1">
               {me.holeCards.map((card, i) =>
-                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} />
+                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
               )}
             </div>
             <div className="flex items-center gap-1.5">
@@ -449,6 +470,8 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
             myStack={me.stack}
             pot={pot}
             onAction={sendAction}
+            actionBarGradient={visuals.actionBarGradient}
+            frameColor={visuals.frameColor}
           />
         )}
 

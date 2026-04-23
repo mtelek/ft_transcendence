@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { PokerSettingsProvider } from "@/lib/poker-settings/context";
 import GameTable from "./GameTable";
 
 // Check if user is authenticated, if not ->login page
@@ -11,5 +12,9 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
 
   const { gameId } = await params;
 
-  return <GameTable gameId={gameId} username={session.user?.name ?? "Player"} />;
+  return (
+    <PokerSettingsProvider>
+      <GameTable gameId={gameId} username={session.user?.name ?? "Player"} />
+    </PokerSettingsProvider>
+  );
 }
