@@ -264,13 +264,25 @@ Technology          Module                           Points
     ❌ Tournament registration and management.
 
 ❌ Game customization                             1 pt (Minor)
-    ❌ Power-ups, attacks, or special abilities.
+    ❌ Power-ups, attacks, or special abilities. Joker? Special Chip?
     ✅ Different maps or themes.
     ✅ Customizable game settings.
     ✅ Default options must be available.
 
+❌ AI opponent                                    2 pts (Major)
+    ❌ The AI must be challenging and able to win occasionally.
+    ❌ The AI should simulate human-like behavior (not perfect play).
+    ❌ If you implement game customization options, the AI must be able to usethem.
+    ❌ You must be able to explain your AI implementation during evaluation.
+
+❌ Game statistics and match history              1 pt (Minor)
+    ❌ Track user game statistics (wins, losses, ranking, level, etc.).
+    ❌ Display match history (1v1 games, dates, results, opponents).
+    ❌ Show achievements and progression.
+    ❌ Leaderboard integration.
+
                                         ------------------------
-                                         TOTAL:  14 pts
+                                         TOTAL:  17 pts
 
 ❗Note: We need 14 points minimum to pass. Adding one more ❗
 ❗minor module will cover us. Aiming for 16+ is recommended❗
@@ -282,17 +294,6 @@ WHAT WE HAVE NOT DECIDED YET (Possible module points)
 ----------------------------------------------------------------
 
 
-- AI opponent (2 pts Major) - requires a game first
-    ❌ The AI must be challenging and able to win occasionally.
-    ❌ The AI should simulate human-like behavior (not perfect play).
-    ❌ If you implement game customization options, the AI must be able to usethem.
-    ❌ You must be able to explain your AI implementation during evaluation.
-
-Game statistics and match history (requires a game module). (1 pt Minor)
-    ❌ Track user game statistics (wins, losses, ranking, level, etc.).
-    ❌ Display match history (1v1 games, dates, results, opponents).
-    ❌ Show achievements and progression.
-    ❌ Leaderboard integration.
 
 Add another game with user history and matchmaking. (Blackjack)
     ❌ Implement a second distinct game.
