@@ -18,7 +18,15 @@ export default function LoginButton() {
       onClick={handleGoogleSignIn}
       className="w-full px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
     >
-      Login with Google
+      <span>Login with </span>
+      <span className="font-semibold" aria-label="Google">
+        <span className="text-[#4285F4]">G</span>
+        <span className="text-[#DB4437]">o</span>
+        <span className="text-[#F4B400]">o</span>
+        <span className="text-[#4285F4]">g</span>
+        <span className="text-[#0F9D58]">l</span>
+        <span className="text-[#DB4437]">e</span>
+      </span>
     </button>
   );
 }
