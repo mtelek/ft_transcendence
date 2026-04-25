@@ -14,7 +14,7 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
 
   return (
     <PokerSettingsProvider>
-      <GameTable gameId={gameId} username={session.user?.name ?? "Player"} />
+      <GameTable gameId={gameId} username={session.user?.name ?? "Player"} image={session.user?.image ?? ""} />
     </PokerSettingsProvider>
   );
 }

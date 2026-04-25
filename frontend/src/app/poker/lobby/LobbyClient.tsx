@@ -8,7 +8,7 @@ type Status = "connecting" | "waiting" | "matched";
 
 // Rendering when a user clicks on Poker (navigates to /poker/lobby) 
 
-export default function LobbyClient({ username }: { username: string }) {
+export default function LobbyClient({ username, image }: { username: string; image: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("connecting");
 
@@ -18,7 +18,7 @@ export default function LobbyClient({ username }: { username: string }) {
 
     // when connected, tell server who connected and tell client "Waiting ..."
     socket.on("connect", () => {
-      socket.emit("joinLobby", { username });
+      socket.emit("joinLobby", { username, image });
       setStatus("waiting");
     });
 

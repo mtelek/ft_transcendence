@@ -16,8 +16,9 @@ export type PokerCard = { rank: string; suit: string };
 // player
 interface PlayerEntry {
   socketId: string;
-  username: string; 
-  seatIndex: number; 
+  username: string;
+  image?: string;
+  seatIndex: number;
 }
 
 // info about who won a hand and with what
@@ -54,6 +55,7 @@ export type GameSnapshot = {
 
   me: {
     username: string;
+    image?: string;
     stack: number;       // chips not yet bet this round
     betSize: number;     // chips bet so far this round
     totalChips: number;  // stack + betSize (total chips the player owns)
@@ -63,6 +65,7 @@ export type GameSnapshot = {
 
   opponent: {
     username: string;
+    image?: string;
     stack: number;
     betSize: number;
     totalChips: number;
@@ -104,7 +107,7 @@ app.prepare().then(() => {
   // Memory (things/information that will be saved relevant for the game but no database needed)
 
   // players waiting in the lobby for a game
-  const lobby: Array<{ socketId: string; username: string }> = [];
+  const lobby: Array<{ socketId: string; username: string; image?: string }> = [];
 
   // all active game sessions, key is by gameId
   const games = new Map<string, GameSession>();
@@ -183,6 +186,7 @@ app.prepare().then(() => {
       phase,
       me: {
         username: myEntry.username,
+        image: myEntry.image,
         stack: mySeat?.stack ?? 0,
         betSize: mySeat?.betSize ?? 0,
         totalChips: mySeat?.totalChips ?? 0,
@@ -191,6 +195,7 @@ app.prepare().then(() => {
       },
       opponent: {
         username: oppEntry.username,
+        image: oppEntry.image,
         stack: oppSeat?.stack ?? 0,
         betSize: oppSeat?.betSize ?? 0,
         totalChips: oppSeat?.totalChips ?? 0,
@@ -281,7 +286,7 @@ app.prepare().then(() => {
     });
 
     // player wants to find a game. Either match them with a waiting player or put them in the queue
-    socket.on("joinLobby", ({ username }: { username: string }) => {
+    socket.on("joinLobby", ({ username, image }: { username: string; image?: string }) => {
       // if this player already has an active game  send them back to active table
       if (pendingGames.has(username)) {
         const pending = pendingGames.get(username)!;
@@ -310,8 +315,8 @@ app.prepare().then(() => {
         const session: GameSession = {
           table,
           players: [
-            { socketId: opponent.socketId, username: opponent.username, seatIndex: 0 },
-            { socketId: socket.id, username, seatIndex: 1 },
+            { socketId: opponent.socketId, username: opponent.username, image: opponent.image, seatIndex: 0 },
+            { socketId: socket.id, username, image, seatIndex: 1 },
           ],
           lastCommunityCards: [],
           lastHoleCards: [null, null],
@@ -333,7 +338,7 @@ app.prepare().then(() => {
         const dup = lobby.findIndex((p) => p.username === username);
         if (dup !== -1) lobby.splice(dup, 1); // remove duplicate entry first
 
-        lobby.push({ socketId: socket.id, username });
+        lobby.push({ socketId: socket.id, username, image });
         socket.emit("waitingForOpponent");
       }
     });
@@ -346,7 +351,7 @@ app.prepare().then(() => {
 
     // game page loaded, wire new socket connection to existing game session
     // (socket ID changes everytime the page navigates, so we need to relink with username)
-    socket.on("joinGame", ({ gameId, username }: { gameId: string; username: string }) => {
+    socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
       const pending = pendingGames.get(username);
       if (!pending || pending.gameId !== gameId) {
         socket.emit("error", { message: "Not authorized for this game" });
@@ -364,6 +369,7 @@ app.prepare().then(() => {
       if (entry) {
         socketToGame.delete(entry.socketId); // remove the old socket mapping
         entry.socketId = socket.id;
+        if (image) entry.image = image;
       }
 
       socketToGame.set(socket.id, { gameId, seatIndex: pending.seatIndex });

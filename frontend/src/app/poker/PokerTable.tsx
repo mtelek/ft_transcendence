@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, getCardDisplay, DECK } from "@/lib/cards";
 import Chat from "@/components/Chat";
 import { usePokerSettings } from "@/lib/poker-settings/context";
@@ -8,6 +9,7 @@ import { ANIMATION_DURATION_MS } from "@/lib/poker-settings/defaults";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import type { TableSize } from "@/lib/poker-settings/types";
 
 const COMMUNITY_CARDS: Card[] = [
@@ -34,14 +36,24 @@ type Player = {
   chips: number;
   cards: Card[];
   isCurrentPlayer: boolean;
+  image: string;
 };
 
-function buildPlayers(count: TableSize, startingStack: number): Player[] {
+const MOCK_AVATARS = [
+  "/avatars/gentleman.jpg",
+  "/avatars/lady.jpg",
+  "/avatars/king_red.jpg",
+  "/avatars/queen_black.jpg",
+  "/avatars/funny_black.jpg",
+];
+
+function buildPlayers(count: TableSize, startingStack: number, myImage: string): Player[] {
   return PLAYER_NAMES.slice(0, count).map((name, i) => ({
     name,
     chips: Math.round(startingStack * STACK_RATIOS[i]),
     cards: [PLAYER_CARDS[i][0], PLAYER_CARDS[i][1]],
     isCurrentPlayer: i === 0,
+    image: i === 0 ? myImage : MOCK_AVATARS[(i - 1) % MOCK_AVATARS.length],
   }));
 }
 
@@ -173,13 +185,15 @@ function PlayerSeat({
           : player.cards.map((_, i) => <CardFaceDown key={i} filter={cardBackFilter} />)}
       </div>
       <div className="relative w-10 h-10">
-        <div className="w-10 h-10 rounded-full bg-slate-600 border-2 border-slate-400 flex items-center justify-center text-xs font-bold text-white">
-          {player.name[0]}
-        </div>
+        <PlayerAvatar
+          src={player.image}
+          fallback={player.name}
+          className="w-10 h-10 rounded-full border-2 border-slate-400"
+        />
         {showTimer && player.isCurrentPlayer && <TimerRing seconds={timerSeconds} />}
       </div>
       <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
-        ${player.chips.toLocaleString()}
+        €{player.chips.toLocaleString()}
       </div>
     </div>
   );
@@ -187,14 +201,18 @@ function PlayerSeat({
 
 export default function PokerTable({ username }: { username: string }) {
   const { settings, visuals } = usePokerSettings();
+  const { data: session } = useSession();
+  const myImage = session?.user?.image ?? "/avatars/funny_white.jpg";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [betAmount, setBetAmount] = useState(
     Math.max(settings.blinds.small * 10, 100),
   );
+  const [isEditingBet, setIsEditingBet] = useState(false);
+  const [editBetValue, setEditBetValue] = useState("");
 
   const players = useMemo(
-    () => buildPlayers(settings.tableSize, settings.startingStack),
-    [settings.tableSize, settings.startingStack],
+    () => buildPlayers(settings.tableSize, settings.startingStack, myImage),
+    [settings.tableSize, settings.startingStack, myImage],
   );
   const positions = SEAT_POSITIONS[settings.tableSize];
   const pot = Math.round(settings.startingStack * 0.69 * players.length / 6);
@@ -246,7 +264,7 @@ export default function PokerTable({ username }: { username: string }) {
           >
             Pot{" "}
             <span className="font-bold" style={{ color: visuals.accent }}>
-              ${pot.toLocaleString()}
+              €{pot.toLocaleString()}
             </span>
           </div>
 
@@ -269,7 +287,7 @@ export default function PokerTable({ username }: { username: string }) {
         </div>
 
         <div
-          className="flex items-center gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
+          className="flex flex-col gap-2 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
           style={{
             background: visuals.actionBarGradient,
             boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
@@ -277,52 +295,66 @@ export default function PokerTable({ username }: { username: string }) {
             transition: "background 400ms ease, border-color 400ms ease",
           }}
         >
-          <div className="flex flex-col gap-1">
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">Min</button>
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">1/2</button>
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">Call</button>
+          {/* Top row: preset chips (left) + slider (right) */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex gap-2">
+              <button onClick={() => setBetAmount(settings.blinds.big * 2)} className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 transition-colors">Min</button>
+              <button onClick={() => setBetAmount(Math.round(pot / 2))} className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 transition-colors">½ Pot</button>
+              <button onClick={() => setBetAmount(pot)} className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 transition-colors">Pot</button>
+              <button onClick={() => setBetAmount(settings.startingStack)} className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 transition-colors">Max</button>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={settings.startingStack}
+              step={step}
+              value={betAmount}
+              onChange={(e) => setBetAmount(Number(e.target.value))}
+              className="w-36 accent-lime-400 cursor-pointer"
+            />
           </div>
 
-          <button
-            className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
-          >
-            FOLD
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setBetAmount(Math.max(0, betAmount - step))}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center transition-colors"
-            >
-              -
+          {/* Primary action buttons — equal height via items-stretch */}
+          <div className="flex items-stretch gap-3">
+            <button className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-full text-lg transition-colors">
+              FOLD
             </button>
-            <span className="text-white font-bold text-xl min-w-[80px] text-center">
-              ${betAmount.toLocaleString()}
-            </span>
-            <button
-              onClick={() => setBetAmount(betAmount + step)}
-              className="w-8 h-8 rounded-full bg-slate-600 hover:bg-slate-500 text-white font-bold flex items-center justify-center transition-colors"
-            >
-              +
+            <button className="flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-full text-lg transition-colors">
+              CALL
             </button>
-          </div>
-
-          <button
-            className="font-bold px-8 py-3 rounded-full text-lg transition-colors text-slate-900"
-            style={{ background: visuals.accent }}
-          >
-            RAISE
-          </button>
-
-          <div className="flex flex-col gap-1">
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">Max</button>
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">POT</button>
-            <button className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600">Check</button>
+            <button className="flex-1 flex flex-col items-center justify-center bg-lime-500 hover:bg-lime-600 text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors">
+              <span className="leading-none">BET</span>
+              {isEditingBet ? (
+                <input
+                  type="number"
+                  className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
+                  value={editBetValue}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setEditBetValue(e.target.value)}
+                  onBlur={() => {
+                    const parsed = parseInt(editBetValue, 10);
+                    if (!isNaN(parsed)) setBetAmount(Math.max(0, Math.min(settings.startingStack, parsed)));
+                    setIsEditingBet(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur();
+                  }}
+                />
+              ) : (
+                <span
+                  className="mt-1 text-sm font-semibold leading-none cursor-pointer hover:underline inline-block w-[4.5rem] text-center tabular-nums"
+                  onClick={(e) => { e.stopPropagation(); setEditBetValue(String(betAmount)); setIsEditingBet(true); }}
+                >
+                  €{betAmount.toLocaleString()}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
         <p className="text-slate-500 text-xs mt-4">
-          ft_transcendence | Room 42 | Seats {settings.tableSize} | Blinds ${settings.blinds.small}/${settings.blinds.big}
+          ft_transcendence | Room 42 | Seats {settings.tableSize} | Blinds €{settings.blinds.small}/€{settings.blinds.big}
         </p>
       </div>
 

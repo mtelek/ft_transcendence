@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
 import Chat from "@/components/Chat";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
@@ -66,6 +67,7 @@ function ActionBar({
   legalActions,
   myStack,
   pot,
+  callAmount,
   onAction,
   actionBarGradient,
   frameColor,
@@ -73,12 +75,15 @@ function ActionBar({
   legalActions: GameSnapshot["legalActions"];
   myStack: number;
   pot: number;
+  callAmount: number;
   onAction: (action: string, betSize?: number) => void;
   actionBarGradient: string;
   frameColor: string;
 }) {
   const { actions, chipRange } = legalActions;
   const [raiseAmount, setRaiseAmount] = useState(chipRange?.min ?? 0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     setRaiseAmount(chipRange?.min ?? 0);
@@ -100,7 +105,7 @@ function ActionBar({
 
   return (
     <div
-      className="flex items-center gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
+      className="flex flex-col gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
       style={{
         background: actionBarGradient,
         boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
@@ -108,57 +113,91 @@ function ActionBar({
         transition: "background 400ms ease, border-color 400ms ease",
       }}
     >
-      {/* Quick bet buttons — left */}
-      <div className="flex flex-col gap-1">
-        <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(minBet)} className={quickBtn}>Min</button>
-        <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round(maxBet / 2))))} className={quickBtn}>1/2</button>
-        <button disabled={!canCall} onClick={() => onAction("call")} className={quickBtn}>Call</button>
-      </div>
+      {/* Top row: preset chips (left) + slider (right) — only when canBetOrRaise */}
+      {canBetOrRaise && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex gap-2">
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(minBet)} className={quickBtn}>Min</button>
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round(maxBet / 2))))} className={quickBtn}>½ Pot</button>
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, pot)))} className={quickBtn}>Pot</button>
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
+          </div>
+          <input
+            type="range"
+            min={minBet}
+            max={maxBet}
+            step={step}
+            value={raiseAmount}
+            disabled={!canBetOrRaise}
+            onChange={(e) => setRaiseAmount(Number(e.target.value))}
+            className="w-36 accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+          />
+        </div>
+      )}
 
-      {/* Fold */}
-      <button
-        disabled={!canFold}
-        onClick={() => onAction("fold")}
-        className="bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
-      >
-        FOLD
-      </button>
-
-      {/* Bet amount stepper */}
-      <div className="flex items-center gap-2">
-        <button
-          disabled={!canBetOrRaise}
-          onClick={() => setRaiseAmount((v) => Math.max(minBet, v - step))}
-          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold flex items-center justify-center transition-colors"
-        >
-          −
-        </button>
-        <span className="text-white font-bold text-xl min-w-[80px] text-center">
-          ${raiseAmount.toLocaleString()}
-        </span>
-        <button
-          disabled={!canBetOrRaise}
-          onClick={() => setRaiseAmount((v) => Math.min(maxBet, v + step))}
-          className="w-8 h-8 rounded-full bg-slate-600 hover:bg-slate-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold flex items-center justify-center transition-colors"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Raise / Bet */}
-      <button
-        disabled={!canBetOrRaise}
-        onClick={() => onAction(betAction, raiseAmount)}
-        className="bg-lime-500 hover:bg-lime-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors"
-      >
-        {canBet ? "BET" : "RAISE"}
-      </button>
-
-      {/* Quick bet buttons — right */}
-      <div className="flex flex-col gap-1">
-        <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
-        <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, pot)))} className={quickBtn}>POT</button>
-        <button disabled={!canCheck} onClick={() => onAction("check")} className={quickBtn}>Check</button>
+      {/* Primary action buttons — equal height via items-stretch */}
+      <div className="flex items-stretch gap-3">
+        {canFold && (
+          <button
+            disabled={!canFold}
+            onClick={() => onAction("fold")}
+            className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
+          >
+            FOLD
+          </button>
+        )}
+        {canCheck && (
+          <button
+            disabled={!canCheck}
+            onClick={() => onAction("check")}
+            className="flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
+          >
+            CHECK
+          </button>
+        )}
+        {canCall && (
+          <button
+            disabled={!canCall}
+            onClick={() => onAction("call")}
+            className="flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
+          >
+            CALL €{callAmount.toLocaleString()}
+          </button>
+        )}
+        {canBetOrRaise && (
+          <button
+            disabled={!canBetOrRaise}
+            onClick={() => onAction(betAction, raiseAmount)}
+            className="flex-1 flex flex-col items-center justify-center bg-lime-500 hover:bg-lime-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors"
+          >
+            <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
+            {isEditing ? (
+              <input
+                type="number"
+                className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
+                value={editValue}
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseInt(editValue, 10);
+                  if (!isNaN(parsed)) setRaiseAmount(Math.max(minBet, Math.min(maxBet, parsed)));
+                  setIsEditing(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur();
+                }}
+              />
+            ) : (
+              <span
+                className="mt-1 text-sm font-semibold leading-none cursor-pointer hover:underline inline-block w-[4.5rem] text-center tabular-nums"
+                onClick={(e) => { e.stopPropagation(); setEditValue(String(raiseAmount)); setIsEditing(true); }}
+              >
+                €{raiseAmount.toLocaleString()}
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -189,7 +228,7 @@ function ResultOverlay({
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
         <div className="text-5xl">{iWonGame ? "🏆" : "💸"}</div>
         <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You're busted!"}</h2>
-        <p className="text-slate-300">Final chips — {me.username}: ${me.totalChips} | {opponent.username}: ${opponent.totalChips}</p>
+        <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
         <p className="text-slate-500 text-sm">
           Window closes in {closeCountdown ?? 5}s…
         </p>
@@ -238,7 +277,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 // MAIN GAME
 
-export default function GameTable({ gameId, username }: { gameId: string; username: string }) {
+export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
   const { visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -268,7 +307,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("joinGame", { gameId, username });
+      socket.emit("joinGame", { gameId, username, image });
     });
 
     socket.on("gameState", (state: GameSnapshot) => {
@@ -389,7 +428,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
           {/* Pot */}
           <div className="absolute top-[28%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium">
             {pot > 0 && (
-              <>Pot <span className="font-bold" style={{ color: visuals.accent }}>${pot.toLocaleString()}</span></>
+              <>Pot <span className="font-bold" style={{ color: visuals.accent }}>€{pot.toLocaleString()}</span></>
             )}
           </div>
 
@@ -414,18 +453,20 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
               {opponent.isDealer && (
                 <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
               )}
-              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold text-white ${!myTurn && phase !== "finished" ? "border-green-400 bg-green-900/60 animate-pulse" : "border-slate-400 bg-slate-600"}`}>
-                {opponent.username[0]?.toUpperCase()}
-              </div>
+              <PlayerAvatar
+                src={opponent.image}
+                fallback={opponent.username}
+                className={`w-10 h-10 rounded-full border-2 ${!myTurn && phase !== "finished" ? "border-green-400" : "border-slate-400"}`}
+              />
             </div>
             <span className="text-white text-xs font-medium">{opponent.username}</span>
             <div className="flex flex-col items-center gap-0.5">
               <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
-                ${opponent.stack.toLocaleString()}
+                €{opponent.stack.toLocaleString()}
               </div>
               {opponent.betSize > 0 && (
                 <div className="bg-yellow-700/80 px-2 py-0.5 rounded-full text-xs text-yellow-200">
-                  bet ${opponent.betSize.toLocaleString()}
+                  bet €{opponent.betSize.toLocaleString()}
                 </div>
               )}
             </div>
@@ -445,18 +486,20 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
               {me.isDealer && (
                 <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
               )}
-              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold text-white ${myTurn ? "border-green-400 bg-green-900/60 animate-pulse" : "border-slate-400 bg-slate-600"}`}>
-                {me.username[0]?.toUpperCase()}
-              </div>
+              <PlayerAvatar
+                src={me.image}
+                fallback={me.username}
+                className={`w-10 h-10 rounded-full border-2 ${myTurn ? "border-green-400" : "border-slate-400"}`}
+              />
             </div>
             <span className="text-white text-xs font-medium">{me.username} (you)</span>
             <div className="flex flex-col items-center gap-0.5">
               <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
-                ${me.stack.toLocaleString()}
+                €{me.stack.toLocaleString()}
               </div>
               {me.betSize > 0 && (
                 <div className="bg-yellow-700/80 px-2 py-0.5 rounded-full text-xs text-yellow-200">
-                  bet ${me.betSize.toLocaleString()}
+                  bet €{me.betSize.toLocaleString()}
                 </div>
               )}
             </div>
@@ -469,6 +512,7 @@ export default function GameTable({ gameId, username }: { gameId: string; userna
             legalActions={legalActions}
             myStack={me.stack}
             pot={pot}
+            callAmount={Math.min(me.stack, Math.max(0, opponent.betSize - me.betSize))}
             onAction={sendAction}
             actionBarGradient={visuals.actionBarGradient}
             frameColor={visuals.frameColor}
