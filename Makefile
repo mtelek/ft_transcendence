@@ -1,4 +1,4 @@
-SRCS_DIR = srcs
+jSRCS_DIR = srcs
 ENV_FILE = $(SRCS_DIR)/.env
 
 setup:
