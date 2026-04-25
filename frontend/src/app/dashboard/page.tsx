@@ -1,12 +1,9 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 import Link from "next/link";
 import PokerBackground from "@/components/PokerBackground";
 
 export default async function DashboardPage() {
-  const session = await auth();
-
-  if (!session) redirect("/login");
+  const { session } = await requireExistingUserSession();
 
   return (
     <div className="relative min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8">
@@ -17,7 +14,7 @@ export default async function DashboardPage() {
         </h1>
 
         <div className="flex flex-wrap justify-center" style={{ gap: "40px" }}>
-          <Link href="/poker/lobby" target="_blank" rel="noopener noreferrer" className="group flex flex-col" style={{ width: "600px" }}>
+          <Link href="/poker/lobby" prefetch={false} target="_blank" rel="noopener noreferrer" className="group flex flex-col" style={{ width: "600px" }}>
             <img
               src="/poker-preview.png"
               alt="Poker"

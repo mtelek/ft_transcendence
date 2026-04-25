@@ -1,11 +1,9 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 import { PokerSettingsProvider } from "@/lib/poker-settings/context";
 import PokerTable from "./PokerTable";
 
 export default async function PokerPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
+  const { session } = await requireExistingUserSession();
 
   return (
     <PokerSettingsProvider>

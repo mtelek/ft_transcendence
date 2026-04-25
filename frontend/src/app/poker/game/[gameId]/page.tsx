@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 import { PokerSettingsProvider } from "@/lib/poker-settings/context";
 import GameTable from "./GameTable";
 
@@ -7,8 +6,7 @@ import GameTable from "./GameTable";
 // if yes pass gameID and username to GameTable to start the game
 
 export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
-  const session = await auth();
-  if (!session) redirect("/login");
+  const { session } = await requireExistingUserSession();
 
   const { gameId } = await params;
 

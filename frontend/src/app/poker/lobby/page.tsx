@@ -1,10 +1,8 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 import LobbyClient from "./LobbyClient";
 
 export default async function LobbyPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
+  const { session } = await requireExistingUserSession();
 
   return <LobbyClient username={session.user?.name ?? "Player"} image={session.user?.image ?? ""} />;
 }
