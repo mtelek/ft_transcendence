@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { Card, getCardDisplay, DECK } from "@/lib/cards";
 import Chat from "@/components/Chat";
@@ -10,7 +11,10 @@ import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { ChipStack } from "@/components/ChipStack";
 import type { TableSize } from "@/lib/poker-settings/types";
+import { DealingCard } from "@/components/poker/DealingCard";
+import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 
 const COMMUNITY_CARDS: Card[] = [
   DECK[6],
@@ -167,22 +171,41 @@ function PlayerSeat({
   cardBackFilter,
   showTimer,
   timerSeconds,
+  startingStack,
+  chipPalette,
+  showCards,
+  getCardSlotRef,
 }: {
   player: Player;
   position: [number, number];
   cardBackFilter: string;
   showTimer: boolean;
   timerSeconds: number;
+  startingStack: number;
+  chipPalette: readonly [string, string, string, string];
+  showCards: boolean;
+  getCardSlotRef?: (cardIndex: number) => (el: HTMLDivElement | null) => void;
 }) {
   return (
     <div
       className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
       style={{ top: `${position[0]}%`, left: `${position[1]}%` }}
     >
-      <div className="flex gap-1">
-        {player.isCurrentPlayer
-          ? player.cards.map((card, i) => <CardFaceUp key={i} card={card} />)
-          : player.cards.map((_, i) => <CardFaceDown key={i} filter={cardBackFilter} />)}
+      <div className="flex items-end gap-2">
+        <div className="flex gap-1">
+          {showCards
+            ? player.isCurrentPlayer
+              ? player.cards.map((card, i) => <CardFaceUp key={i} card={card} />)
+              : player.cards.map((_, i) => <CardFaceDown key={i} filter={cardBackFilter} />)
+            : player.cards.map((_, i) => (
+                <div
+                  key={i}
+                  ref={getCardSlotRef?.(i)}
+                  className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30"
+                />
+              ))}
+        </div>
+        <ChipStack startingStack={startingStack} chipPalette={chipPalette} />
       </div>
       <div className="relative w-10 h-10">
         <PlayerAvatar
@@ -199,6 +222,22 @@ function PlayerSeat({
   );
 }
 
+type DealEntry = {
+  id: string;
+  card: Card;
+  playerIndex: number;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  delay: number;
+  faceUp: boolean;
+};
+
+type DealPhase = "idle" | "dealing" | "done";
+
+const DEAL_CARD_INTERVAL = 0.2; // seconds between each card
+
 export default function PokerTable({ username }: { username: string }) {
   const { settings, visuals } = usePokerSettings();
   const { data: session } = useSession();
@@ -210,12 +249,91 @@ export default function PokerTable({ username }: { username: string }) {
   const [isEditingBet, setIsEditingBet] = useState(false);
   const [editBetValue, setEditBetValue] = useState("");
 
+  // Dealing animation state
+  const [dealPhase, setDealPhase] = useState<DealPhase>("idle");
+  const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
+  const [settledCount, setSettledCount] = useState(0);
+  const tableRef = useRef<HTMLDivElement>(null);
+  // Flat array of ghost card slot refs: index = playerIndex * 2 + cardIndex
+  const cardSlotRefs = useRef<(HTMLDivElement | null)[]>(new Array(12).fill(null));
+
   const players = useMemo(
     () => buildPlayers(settings.tableSize, settings.startingStack, myImage),
     [settings.tableSize, settings.startingStack, myImage],
   );
   const positions = SEAT_POSITIONS[settings.tableSize];
   const pot = Math.round(settings.startingStack * 0.69 * players.length / 6);
+
+  // When all cards have settled, transition to done after a short pause
+  useEffect(() => {
+    if (dealPhase === "dealing" && dealEntries.length > 0 && settledCount >= dealEntries.length) {
+      const t = setTimeout(() => setDealPhase("done"), 300);
+      return () => clearTimeout(t);
+    }
+  }, [settledCount, dealEntries.length, dealPhase]);
+
+  // Reset deal state when table size or players change
+  useEffect(() => {
+    setDealPhase("idle");
+    setDealEntries([]);
+    setSettledCount(0);
+  }, [settings.tableSize]);
+
+  const startDealing = useCallback(() => {
+    if (!tableRef.current || dealPhase !== "idle") return;
+
+    const tableRect = tableRef.current.getBoundingClientRect();
+    const deckX = tableRef.current.offsetWidth * 0.5;
+    const deckY = tableRef.current.offsetHeight * 0.5;
+
+    // Measure the exact center of each ghost card slot relative to the table container
+    function slotCenter(pi: number, ci: number): { x: number; y: number } {
+      const el = cardSlotRefs.current[pi * 2 + ci];
+      if (el) {
+        const r = el.getBoundingClientRect();
+        return {
+          x: r.left + r.width / 2 - tableRect.left,
+          y: r.top + r.height / 2 - tableRect.top,
+        };
+      }
+      // Fallback: seat percentage center
+      const [top, left] = SEAT_POSITIONS[settings.tableSize][pi];
+      return {
+        x: tableRef.current!.offsetWidth * (left / 100),
+        y: tableRef.current!.offsetHeight * (top / 100),
+      };
+    }
+
+    const entries: DealEntry[] = [];
+    let cardIndex = 0;
+    for (let round = 0; round < 2; round++) {
+      for (let pi = 0; pi < players.length; pi++) {
+        const { x: toX, y: toY } = slotCenter(pi, round);
+        entries.push({
+          id: `${pi}-${round}`,
+          card: players[pi].cards[round],
+          playerIndex: pi,
+          fromX: deckX,
+          fromY: deckY,
+          toX,
+          toY,
+          delay: cardIndex * DEAL_CARD_INTERVAL,
+          faceUp: players[pi].isCurrentPlayer,
+        });
+        cardIndex++;
+      }
+    }
+
+    setDealEntries(entries);
+    setSettledCount(0);
+    setDealPhase("dealing");
+  }, [dealPhase, players, settings.tableSize]);
+
+  const resetDeal = useCallback(() => {
+    setDealPhase("idle");
+    setDealEntries([]);
+    setSettledCount(0);
+  }, []);
 
   const step = settings.blinds.small;
   const animDurationMs = ANIMATION_DURATION_MS[settings.animationSpeed];
@@ -251,7 +369,7 @@ export default function PokerTable({ username }: { username: string }) {
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative z-10 flex flex-col items-center w-full">
-        <div className="relative w-full max-w-4xl aspect-[16/10]">
+        <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]">
           <img
             src="/pokertable_no_bg.png"
             alt="Poker table"
@@ -270,20 +388,65 @@ export default function PokerTable({ username }: { username: string }) {
 
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2">
             {COMMUNITY_CARDS.map((card, i) => (
-              <CommunityCard key={i} card={card} />
+              <FlipCommunityCard
+                key={i}
+                card={card}
+                delay={i * 0.12}
+                cardBackFilter={visuals.cardBackFilter}
+              />
             ))}
           </div>
 
-          {players.map((player, i) => (
+          {players.map((player, pi) => (
             <PlayerSeat
-              key={i}
+              key={pi}
               player={player}
-              position={positions[i]}
+              position={positions[pi]}
               cardBackFilter={visuals.cardBackFilter}
               showTimer={settings.timer !== "off"}
               timerSeconds={timerSeconds}
+              startingStack={settings.startingStack}
+              chipPalette={visuals.chipPalette}
+              showCards={dealPhase === "done"}
+              getCardSlotRef={(ci) => (el) => { cardSlotRefs.current[pi * 2 + ci] = el; }}
             />
           ))}
+
+          {/* Animated dealing cards overlay */}
+          {dealPhase === "dealing" && dealEntries.map((entry) => (
+            <DealingCard
+              key={entry.id}
+              card={entry.card}
+              fromX={entry.fromX}
+              fromY={entry.fromY}
+              toX={entry.toX}
+              toY={entry.toY}
+              delay={entry.delay}
+              faceUp={entry.faceUp}
+              cardBackFilter={visuals.cardBackFilter}
+              onSettled={() => setSettledCount((n) => n + 1)}
+            />
+          ))}
+        </div>
+
+        {/* Deal / Re-deal controls */}
+        <div className="flex gap-3 mt-4">
+          {dealPhase === "idle" && (
+            <button
+              onClick={startDealing}
+              className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-6 py-2 rounded-full text-sm transition-colors shadow-lg"
+            >
+              Deal Cards
+            </button>
+          )}
+          {dealPhase === "done" && (
+            <button
+              onClick={resetDeal}
+              className="bg-slate-600 hover:bg-slate-500 text-white font-semibold px-5 py-2 rounded-full text-sm transition-colors"
+            >
+              Re-deal
+            </button>
+          )}
         </div>
 
         <div

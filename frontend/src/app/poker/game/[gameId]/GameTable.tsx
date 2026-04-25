@@ -5,10 +5,13 @@ import { io, Socket } from "socket.io-client";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
 import Chat from "@/components/Chat";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { ChipStack } from "@/components/ChipStack";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
+import { DealingCard } from "@/components/poker/DealingCard";
+import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 
 // CARD DISPLAY HELPERS
 
@@ -277,13 +280,41 @@ const PHASE_LABELS: Record<string, string> = {
 
 // MAIN GAME
 
+type DealEntry = {
+  id: string;
+  card: PokerCard;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  delay: number;
+  faceUp: boolean;
+};
+
+const DEAL_CARD_INTERVAL = 0.2; // seconds between each card
+// Placeholder card for opponent face-down cards (value never shown)
+const PLACEHOLDER_CARD: PokerCard = { rank: "A", suit: "spades" };
+
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
-  const { visuals } = usePokerSettings();
+  const { settings, visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
   const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
+
+  // Dealing animation state
+  const [dealPhase, setDealPhase] = useState<"idle" | "dealing" | "done">("idle");
+  const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
+  const [settledCount, setSettledCount] = useState(0);
+  const tableRef = useRef<HTMLDivElement>(null);
+  // Tracks which hand (by card fingerprint) has already been animated
+  const lastDealHandRef = useRef<string | null>(null);
+  // Tracks how many community cards were visible before the last update (for stagger delay)
+  const communityCountRef = useRef(0);
+  // Ghost card slot refs for measuring exact final positions
+  const myCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
+  const oppCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
 
   // auto close the tab if game is over (not working correctly?!)
   useEffect(() => {
@@ -326,6 +357,81 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       socket.disconnect();
     };
   }, [gameId, username]);
+
+  // Reset to idle when a hand finishes so ghost slots are mounted before the next deal
+  useEffect(() => {
+    if (snapshot?.phase === "finished" || snapshot?.phase === "gameover") {
+      setDealPhase("idle");
+      setDealEntries([]);
+      setSettledCount(0);
+      lastDealHandRef.current = null;
+    }
+  }, [snapshot?.phase]);
+
+  // Trigger deal animation when a new preflop hand arrives AND ghost slots are in the DOM
+  useEffect(() => {
+    if (!snapshot || snapshot.phase !== "preflop" || dealPhase !== "idle") return;
+    if (!tableRef.current) return;
+
+    const cards = snapshot.me.holeCards.filter(Boolean) as PokerCard[];
+    if (cards.length < 2) return;
+
+    const handId = cards.map((c) => `${c.rank}${c.suit}`).join("");
+    if (handId === lastDealHandRef.current) return;
+    lastDealHandRef.current = handId;
+
+    const tableRect = tableRef.current.getBoundingClientRect();
+    const w = tableRef.current.offsetWidth;
+    const h = tableRef.current.offsetHeight;
+    const deckX = w * 0.5;
+    const deckY = h * 0.5;
+
+    function slotCenter(refs: (HTMLDivElement | null)[], idx: number, fx: number, fy: number) {
+      const el = refs[idx];
+      if (el) {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2 - tableRect.left, y: r.top + r.height / 2 - tableRect.top };
+      }
+      return { x: fx, y: fy };
+    }
+
+    const me0  = slotCenter(myCardSlotRefs.current,  0, w * 0.5, h * 0.88);
+    const me1  = slotCenter(myCardSlotRefs.current,  1, w * 0.5, h * 0.88);
+    const opp0 = slotCenter(oppCardSlotRefs.current, 0, w * 0.5, h * 0.12);
+    const opp1 = slotCenter(oppCardSlotRefs.current, 1, w * 0.5, h * 0.12);
+
+    const entries: DealEntry[] = [
+      { id: "me-0",  card: cards[0],         fromX: deckX, fromY: deckY, toX: me0.x,  toY: me0.y,  delay: 0 * DEAL_CARD_INTERVAL, faceUp: true  },
+      { id: "opp-0", card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp0.x, toY: opp0.y, delay: 1 * DEAL_CARD_INTERVAL, faceUp: false },
+      { id: "me-1",  card: cards[1],         fromX: deckX, fromY: deckY, toX: me1.x,  toY: me1.y,  delay: 2 * DEAL_CARD_INTERVAL, faceUp: true  },
+      { id: "opp-1", card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp1.x, toY: opp1.y, delay: 3 * DEAL_CARD_INTERVAL, faceUp: false },
+    ];
+
+    setDealEntries(entries);
+    setSettledCount(0);
+    setDealPhase("dealing");
+  }, [snapshot, dealPhase]);
+
+  // When all cards have settled, switch to "done" so static cards appear
+  useEffect(() => {
+    if (dealPhase === "dealing" && dealEntries.length > 0 && settledCount >= dealEntries.length) {
+      const t = setTimeout(() => setDealPhase("done"), 300);
+      return () => clearTimeout(t);
+    }
+  }, [settledCount, dealEntries.length, dealPhase]);
+
+  // In non-preflop phases (flop onwards), cards must always be visible
+  useEffect(() => {
+    if (!snapshot) return;
+    if (snapshot.phase !== "preflop" && dealPhase !== "dealing") {
+      setDealPhase("done");
+    }
+  }, [snapshot?.phase, dealPhase]);
+
+  // Update community card count AFTER render so the stagger ref reflects the previous state
+  useEffect(() => {
+    communityCountRef.current = snapshot?.communityCards.length ?? 0;
+  });
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
@@ -406,7 +512,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         </div>
 
         {/* Table container */}
-        <div className="relative w-full max-w-4xl aspect-[16/10]">
+        <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]">
           {/* Table image */}
           <img
             src="/pokertable_no_bg.png"
@@ -435,31 +541,24 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           {/* Community cards */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2">
             {communitySlots.map((card, i) =>
-              card ? <CommunityCard key={i} card={card} /> : <EmptyCommunitySlot key={i} />
+              card ? (
+                <FlipCommunityCard
+                  key={i}
+                  card={card}
+                  delay={Math.max(0, i - communityCountRef.current) * 0.12}
+                  cardBackFilter={visuals.cardBackFilter}
+                />
+              ) : (
+                <EmptyCommunitySlot key={i} />
+              )
             )}
           </div>
 
-          {/* Opponent seat (top) */}
+          {/* Opponent seat (top) — ordered from screen edge → table center */}
           <div
             className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
             style={{ top: "12%", left: "50%" }}
           >
-            <div className="flex gap-1 mb-1">
-              {opponent.holeCards.map((card, i) =>
-                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              {opponent.isDealer && (
-                <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
-              )}
-              <PlayerAvatar
-                src={opponent.image}
-                fallback={opponent.username}
-                className={`w-10 h-10 rounded-full border-2 ${!myTurn && phase !== "finished" ? "border-green-400" : "border-slate-400"}`}
-              />
-            </div>
-            <span className="text-white text-xs font-medium">{opponent.username}</span>
             <div className="flex flex-col items-center gap-0.5">
               <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
                 €{opponent.stack.toLocaleString()}
@@ -470,17 +569,63 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                 </div>
               )}
             </div>
+            <span className="text-white text-xs font-medium">{opponent.username}</span>
+            <div className="flex items-center gap-1.5">
+              {opponent.isDealer && (
+                <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
+              )}
+              <PlayerAvatar
+                src={opponent.image}
+                fallback={opponent.username}
+                className={`w-10 h-10 rounded-full border-2 ${!myTurn && phase !== "finished" ? "border-green-400" : "border-slate-400"}`}
+              />
+            </div>
+            <div className="flex items-end gap-2 mt-1">
+              <ChipStack startingStack={settings.startingStack} chipPalette={visuals.chipPalette} />
+              <div className="flex gap-1">
+                {dealPhase === "done"
+                  ? opponent.holeCards.map((card, i) =>
+                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
+                    )
+                  : [0, 1].map((i) => (
+                      <div key={i} ref={(el) => { oppCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
+                    ))}
+              </div>
+            </div>
           </div>
+
+          {/* Animated dealing cards overlay */}
+          {dealPhase === "dealing" && dealEntries.map((entry) => (
+            <DealingCard
+              key={entry.id}
+              card={entry.card}
+              fromX={entry.fromX}
+              fromY={entry.fromY}
+              toX={entry.toX}
+              toY={entry.toY}
+              delay={entry.delay}
+              faceUp={entry.faceUp}
+              cardBackFilter={visuals.cardBackFilter}
+              onSettled={() => setSettledCount((n) => n + 1)}
+            />
+          ))}
 
           {/* My seat (bottom) */}
           <div
             className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
             style={{ top: "88%", left: "50%" }}
           >
-            <div className="flex gap-1 mb-1">
-              {me.holeCards.map((card, i) =>
-                card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
-              )}
+            <div className="flex items-start gap-2 mb-1">
+              <div className="flex gap-1">
+                {dealPhase === "done"
+                  ? me.holeCards.map((card, i) =>
+                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
+                    )
+                  : [0, 1].map((i) => (
+                      <div key={i} ref={(el) => { myCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
+                    ))}
+              </div>
+              <ChipStack startingStack={settings.startingStack} chipPalette={visuals.chipPalette} />
             </div>
             <div className="flex items-center gap-1.5">
               {me.isDealer && (
