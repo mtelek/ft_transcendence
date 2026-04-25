@@ -1,0 +1,39 @@
+
+services:
+
+  frontend:
+    image: frontend
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: ../docker/srcs/frontend/Dockerfile
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - transcendence
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    build:
+      context: ./docker/srcs/postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - transcendence
+
+networks:
+  transcendence:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local
