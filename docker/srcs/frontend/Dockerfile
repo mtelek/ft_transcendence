@@ -21,5 +21,5 @@ RUN npx prisma generate
 # Tell Docker this container listens on port 3000
 EXPOSE 3000
 
-# Run migrations then start the app
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run dev"]
+# Regenerate Prisma after bind mounts are applied, then run migrations and start dev.
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm run dev"]
