@@ -17,7 +17,7 @@ export default async function DashboardPage() {
         </h1>
 
         <div className="flex flex-wrap justify-center" style={{ gap: "40px" }}>
-          <Link href="/poker/lobby" target="_blank" rel="noopener noreferrer" className="group flex flex-col" style={{ width: "600px" }}>
+          <Link href="/poker/stats" className="group flex flex-col" style={{ width: "600px" }}>
             <img
               src="/poker-preview.png"
               alt="Poker"
