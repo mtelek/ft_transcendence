@@ -1,5 +1,6 @@
 import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 import Link from "next/link";
+import Image from "next/image";
 import PokerBackground from "@/components/PokerBackground";
 
 export default async function DashboardPage() {
@@ -15,9 +16,11 @@ export default async function DashboardPage() {
 
         <div className="flex flex-wrap justify-center" style={{ gap: "40px" }}>
           <Link href="/poker/lobby" prefetch={false} target="_blank" rel="noopener noreferrer" className="group flex flex-col" style={{ width: "600px" }}>
-            <img
+            <Image
               src="/poker-preview.png"
               alt="Poker"
+              width={600}
+              height={375}
               className="rounded-2xl shadow-lg object-cover group-hover:scale-105 transition-transform"
               style={{ width: "600px", height: "375px" }}
             />
@@ -26,9 +29,11 @@ export default async function DashboardPage() {
 
           <div className="flex flex-col cursor-not-allowed" style={{ width: "600px" }}>
             <div className="relative rounded-2xl shadow-lg overflow-hidden" style={{ width: "600px", height: "375px" }}>
-              <img
+              <Image
                 src="/dark-poker-background-of-spades-and-clubs.jpg"
                 alt="Other Game"
+                width={600}
+                height={375}
                 className="w-full h-full object-cover opacity-60"
                 style={{ filter: "sepia(1) hue-rotate(190deg) saturate(3) brightness(0.8)" }}
               />

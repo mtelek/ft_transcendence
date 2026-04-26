@@ -63,7 +63,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-semibold text-white">7. Limitation of Liability</h2>
           <p>
-            This application is provided "as is" without warranties.
+            This application is provided &quot;as is&quot; without warranties.
             We are not responsible for any damages or data loss resulting from its use.
           </p>
         </section>
