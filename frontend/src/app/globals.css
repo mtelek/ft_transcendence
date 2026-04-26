@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.poker-ui, .poker-ui * {
+  cursor: default;
+}
+
+.poker-ui a,
+.poker-ui button,
+.poker-ui [role="button"],
+.poker-ui input,
+.poker-ui select,
+.poker-ui textarea {
+  cursor: pointer;
+}
+
+.poker-ui input[type="range"] {
+  cursor: ew-resize;
+}

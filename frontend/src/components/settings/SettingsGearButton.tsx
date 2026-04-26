@@ -18,7 +18,7 @@ export function SettingsGearButton({
         position: "fixed",
         top: "80px",
         right: "16px",
-        zIndex: 60,
+        zIndex: 80,
         width: "48px",
         height: "48px",
         background: "transparent",

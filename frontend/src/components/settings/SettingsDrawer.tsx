@@ -38,7 +38,7 @@ export function SettingsDrawer({
       <div
         onClick={onClose}
         aria-hidden="true"
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[70]"
       />
 
       <aside
@@ -52,7 +52,7 @@ export function SettingsDrawer({
           transform: "translateY(-50%)",
           height: "70vh",
           width: "min(380px, 90vw)",
-          zIndex: 50,
+          zIndex: 75,
           background: "#020617",
           borderRadius: "12px",
           overflow: "hidden",

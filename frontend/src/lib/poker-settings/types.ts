@@ -35,4 +35,6 @@ export type PokerSettings = {
   startingStack: number;
   timer: TimerOption;
   animationSpeed: AnimationSpeed;
+  cardBackImage: string;
+  bannerImage: string;
 };

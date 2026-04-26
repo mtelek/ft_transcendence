@@ -1,56 +1,76 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
+import Image from "next/image";
 
-export function getChipDenominations(startingStack: number): [number, number, number] {
+type ChipStackData = { id: number; chips: number };
+
+const CHIP_W = 21;
+const CHIP_H = 21;
+const CHIP_OVERLAP = 7;
+const STACK_HEIGHT = CHIP_OVERLAP * 2 + CHIP_H;
+
+const STACK_IMAGES = ["/chips/chips3.png", "/chips/chips4.png", "/chips/chips7.png"];
+
+export function getChipDistribution(balance: number, maxBalance: number): ChipStackData[] {
+  const ratio = maxBalance > 0 ? Math.min(1, Math.max(0, balance / maxBalance)) : 0;
+  const total = Math.round(ratio * 9);
+  const s0 = Math.ceil(total / 3);
+  const s1 = Math.ceil(Math.max(0, total - s0) / 2);
+  const s2 = total - s0 - s1;
   return [
-    Math.round(startingStack * 0.1),
-    Math.round(startingStack * 0.05),
-    Math.round(startingStack * 0.01),
+    { id: 0, chips: s0 },
+    { id: 1, chips: s1 },
+    { id: 2, chips: s2 },
   ];
 }
 
-const CHIPS_PER_STACK = 3;
-const CHIP_SIZE = 22;
-const CHIP_OFFSET = 5;
-
-interface ChipStackProps {
-  startingStack: number;
-  chipPalette: readonly [string, string, string, string];
+function SingleStack({ count, image }: { count: number; image: string }) {
+  return (
+    <div className="relative" style={{ width: CHIP_W, height: STACK_HEIGHT }}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="absolute"
+          style={{
+            bottom: i * CHIP_OVERLAP,
+            left: 0,
+            opacity: i < count ? 1 : 0,
+            transform: i < count ? "scale(1)" : "scale(0.85)",
+            transition: "opacity 300ms ease, transform 300ms ease",
+            pointerEvents: "none",
+          }}
+        >
+          <Image
+            src={image}
+            alt=""
+            width={CHIP_W}
+            height={CHIP_H}
+            unoptimized
+            style={{ display: "block" }}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export const ChipStack = memo(function ChipStack({ startingStack, chipPalette }: ChipStackProps) {
-  const denoms = getChipDenominations(startingStack);
-  const stackHeight = CHIP_SIZE + (CHIPS_PER_STACK - 1) * CHIP_OFFSET;
+interface ChipStacksProps {
+  balance: number;
+  maxBalance: number;
+}
+
+export const ChipStacks = memo(function ChipStacks({ balance, maxBalance }: ChipStacksProps) {
+  const stacks = useMemo(
+    () => getChipDistribution(balance, maxBalance),
+    [balance, maxBalance]
+  );
 
   return (
-    <div className="flex gap-1.5 items-end">
-      {denoms.map((_, stackIndex) => {
-        const color = chipPalette[stackIndex];
-        return (
-          <div
-            key={stackIndex}
-            className="relative flex-shrink-0"
-            style={{ width: CHIP_SIZE, height: stackHeight }}
-          >
-            {Array.from({ length: CHIPS_PER_STACK }, (_, chipIndex) => (
-              <div
-                key={chipIndex}
-                style={{
-                  position: "absolute",
-                  bottom: chipIndex * CHIP_OFFSET,
-                  width: CHIP_SIZE,
-                  height: CHIP_SIZE,
-                  borderRadius: "50%",
-                  backgroundColor: color,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)",
-                  border: "1px solid rgba(0,0,0,0.3)",
-                }}
-              />
-            ))}
-          </div>
-        );
-      })}
+    <div className="flex items-end gap-1.5">
+      {stacks.map((stack, i) => (
+        <SingleStack key={stack.id} count={stack.chips} image={STACK_IMAGES[i]} />
+      ))}
     </div>
   );
 });

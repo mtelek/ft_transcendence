@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
-import { Card, getCardDisplay, DECK } from "@/lib/cards";
+import Image from "next/image";
+import { Card, DECK, getCardImage, getCardBack } from "@/lib/cards";
 import Chat from "@/components/Chat";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { ANIMATION_DURATION_MS } from "@/lib/poker-settings/defaults";
@@ -11,7 +12,7 @@ import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { ChipStack } from "@/components/ChipStack";
+import { ChipStacks } from "@/components/ChipStack";
 import type { TableSize } from "@/lib/poker-settings/types";
 import { DealingCard } from "@/components/poker/DealingCard";
 import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
@@ -82,34 +83,28 @@ const SEAT_POSITIONS: Record<TableSize, [number, number][]> = {
 };
 
 function CardFaceUp({ card }: { card: Card }) {
-  const display = getCardDisplay(card);
   return (
-    <div className="w-14 h-20 bg-slate-700 rounded-md border border-slate-500 flex flex-col items-center justify-center shadow-lg transition-transform hover:scale-105"
+    <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg transition-transform hover:scale-105"
          style={{ transitionDuration: "var(--poker-anim-duration)" }}>
-      <span className="text-sm font-bold text-white leading-none">{display.rank}</span>
-      <span className={`text-lg leading-none ${display.color}`}>{display.symbol}</span>
+      <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
     </div>
   );
 }
 
-function CardFaceDown({ filter }: { filter: string }) {
+function CardFaceDown({ backImage }: { backImage: string }) {
   return (
-    <img
-      src="/card-back-red.png"
-      alt="Card back"
-      className="w-14 h-20 rounded-md shadow-lg object-cover transition-transform hover:scale-105"
-      style={{ filter, transitionDuration: "var(--poker-anim-duration)" }}
-    />
+    <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg transition-transform hover:scale-105"
+         style={{ transitionDuration: "var(--poker-anim-duration)" }}>
+      <Image src={getCardBack(backImage)} alt="Card back" width={56} height={80} className="w-full h-full object-cover" />
+    </div>
   );
 }
 
 function CommunityCard({ card }: { card: Card }) {
-  const display = getCardDisplay(card);
   return (
-    <div className="w-14 h-20 bg-slate-700 rounded-lg border border-slate-500 flex flex-col items-center justify-center shadow-xl transition-transform hover:scale-105"
+    <div className="w-14 h-20 rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-105"
          style={{ transitionDuration: "var(--poker-anim-duration)" }}>
-      <span className="text-lg font-bold text-white leading-none">{display.rank}</span>
-      <span className={`text-xl leading-none ${display.color}`}>{display.symbol}</span>
+      <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
     </div>
   );
 }
@@ -168,22 +163,20 @@ function TimerRing({ seconds }: { seconds: number }) {
 function PlayerSeat({
   player,
   position,
-  cardBackFilter,
+  cardBackImage,
   showTimer,
   timerSeconds,
-  startingStack,
-  chipPalette,
   showCards,
+  maxBalance,
   getCardSlotRef,
 }: {
   player: Player;
   position: [number, number];
-  cardBackFilter: string;
+  cardBackImage: string;
   showTimer: boolean;
   timerSeconds: number;
-  startingStack: number;
-  chipPalette: readonly [string, string, string, string];
   showCards: boolean;
+  maxBalance: number;
   getCardSlotRef?: (cardIndex: number) => (el: HTMLDivElement | null) => void;
 }) {
   return (
@@ -196,7 +189,7 @@ function PlayerSeat({
           {showCards
             ? player.isCurrentPlayer
               ? player.cards.map((card, i) => <CardFaceUp key={i} card={card} />)
-              : player.cards.map((_, i) => <CardFaceDown key={i} filter={cardBackFilter} />)
+              : player.cards.map((_, i) => <CardFaceDown key={i} backImage={cardBackImage} />)
             : player.cards.map((_, i) => (
                 <div
                   key={i}
@@ -205,7 +198,7 @@ function PlayerSeat({
                 />
               ))}
         </div>
-        <ChipStack startingStack={startingStack} chipPalette={chipPalette} />
+        <ChipStacks balance={player.chips} maxBalance={maxBalance} />
       </div>
       <div className="relative w-10 h-10">
         <PlayerAvatar
@@ -341,7 +334,7 @@ export default function PokerTable({ username }: { username: string }) {
 
   return (
     <div
-      className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4"
+      className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4"
       style={{ ["--poker-anim-duration" as string]: `${animDurationMs}ms` }}
     >
       {visuals.backgroundVariant === "static" ? (
@@ -392,7 +385,7 @@ export default function PokerTable({ username }: { username: string }) {
                 key={i}
                 card={card}
                 delay={i * 0.12}
-                cardBackFilter={visuals.cardBackFilter}
+                cardBackImage={settings.cardBackImage}
               />
             ))}
           </div>
@@ -402,12 +395,11 @@ export default function PokerTable({ username }: { username: string }) {
               key={pi}
               player={player}
               position={positions[pi]}
-              cardBackFilter={visuals.cardBackFilter}
+              cardBackImage={settings.cardBackImage}
               showTimer={settings.timer !== "off"}
               timerSeconds={timerSeconds}
-              startingStack={settings.startingStack}
-              chipPalette={visuals.chipPalette}
               showCards={dealPhase === "done"}
+              maxBalance={settings.startingStack}
               getCardSlotRef={(ci) => (el) => { cardSlotRefs.current[pi * 2 + ci] = el; }}
             />
           ))}
@@ -423,7 +415,7 @@ export default function PokerTable({ username }: { username: string }) {
               toY={entry.toY}
               delay={entry.delay}
               faceUp={entry.faceUp}
-              cardBackFilter={visuals.cardBackFilter}
+              cardBackImage={settings.cardBackImage}
               onSettled={() => setSettledCount((n) => n + 1)}
             />
           ))}
@@ -450,12 +442,18 @@ export default function PokerTable({ username }: { username: string }) {
         </div>
 
         <div
-          className="flex flex-col gap-2 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
+          className="flex flex-col gap-3 mt-6"
           style={{
-            background: visuals.actionBarGradient,
-            boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
-            border: `2px solid ${visuals.frameColor}`,
-            transition: "background 400ms ease, border-color 400ms ease",
+            backgroundImage: `url('${settings.bannerImage}')`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+            paddingTop: "20px",
+            paddingBottom: "20px",
+            paddingLeft: "80px",
+            paddingRight: "80px",
+            marginTop: "30px",
+            marginBottom: "10px",
           }}
         >
           {/* Top row: preset chips (left) + slider (right) */}

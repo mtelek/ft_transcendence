@@ -2,21 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
+import { getCardImage, getCardBack } from "@/lib/cards";
 
 type AnyCard = { rank: string; suit: string };
-
-const SUIT_DISPLAY: Record<string, { symbol: string; color: string }> = {
-  hearts:   { symbol: "♥", color: "text-red-500" },
-  diamonds: { symbol: "♦", color: "text-red-500" },
-  clubs:    { symbol: "♣", color: "text-white" },
-  spades:   { symbol: "♠", color: "text-white" },
-};
-
-function displayCard(card: AnyCard) {
-  const rank = card.rank === "T" ? "10" : card.rank;
-  const suit = SUIT_DISPLAY[card.suit] ?? { symbol: "?", color: "text-white" };
-  return { rank, symbol: suit.symbol, color: suit.color };
-}
 
 export type DealingCardProps = {
   card: AnyCard;
@@ -26,7 +15,7 @@ export type DealingCardProps = {
   toY: number;
   delay: number;
   faceUp: boolean;
-  cardBackFilter?: string;
+  cardBackImage?: string;
   onSettled?: () => void;
 };
 
@@ -38,30 +27,26 @@ export function DealingCard({
   toY,
   delay,
   faceUp,
-  cardBackFilter,
+  cardBackImage = "back01",
   onSettled,
 }: DealingCardProps) {
   const [arrived, setArrived] = useState(false);
-  const display = displayCard(card);
 
   const dx = toX - fromX;
   const dy = toY - fromY;
 
-  // All random values are computed once at mount — never change on re-render.
   const tilt    = useMemo(() => (Math.random() - 0.5) * 10, []);
   const jitterX = useMemo(() => (Math.random() - 0.5) * 20, []);
   const jitterY = useMemo(() => (Math.random() - 0.5) * 10, []);
 
-  // The entire animate object is memoized so Framer Motion never sees it change
-  // (which would cause it to replay the animation on every re-render).
   const cardAnimate = useMemo(() => ({
     x:       [0, dx * 0.55 + jitterX, dx],
     y:       [0, dy * 0.55 + jitterY, dy],
-    rotate:  [0, tilt, 0],   // tilt mid-flight, land straight
-    scale:   [0.8, 1.05, 1], // slight overshoot then settle
+    rotate:  [0, tilt, 0],
+    scale:   [0.8, 1.05, 1],
     opacity: [0, 1, 1],
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), []); // deps intentionally empty — all inputs are stable after mount
+  }), []);
 
   return (
     <motion.div
@@ -82,7 +67,6 @@ export function DealingCard({
         onSettled?.();
       }}
     >
-      {/* 3D flip wrapper */}
       <motion.div
         style={{
           width: "100%",
@@ -94,22 +78,30 @@ export function DealingCard({
         transition={{ duration: 0.3 }}
       >
         {/* Back face */}
-        <img
-          src="/card-back-red.png"
-          alt=""
-          className="absolute w-full h-full rounded-md object-cover shadow-xl"
-          style={{
-            backfaceVisibility: "hidden",
-            ...(cardBackFilter ? { filter: cardBackFilter } : {}),
-          }}
-        />
+        <div
+          className="absolute inset-0 rounded-md overflow-hidden shadow-xl"
+          style={{ backfaceVisibility: "hidden" }}
+        >
+          <Image
+            src={getCardBack(cardBackImage)}
+            alt=""
+            width={56}
+            height={80}
+            className="w-full h-full object-cover"
+          />
+        </div>
         {/* Front face */}
         <div
-          className="absolute w-full h-full bg-slate-700 rounded-md border border-slate-500 flex flex-col items-center justify-center shadow-xl"
+          className="absolute inset-0 rounded-md overflow-hidden shadow-xl"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          <span className="text-sm font-bold text-white leading-none">{display.rank}</span>
-          <span className={`text-lg leading-none ${display.color}`}>{display.symbol}</span>
+          <Image
+            src={getCardImage(card)}
+            alt=""
+            width={56}
+            height={80}
+            className="w-full h-full object-cover"
+          />
         </div>
       </motion.div>
     </motion.div>

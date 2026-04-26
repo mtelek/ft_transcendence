@@ -2,58 +2,39 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import Image from "next/image";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
 import Chat from "@/components/Chat";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { ChipStack } from "@/components/ChipStack";
+import { ChipStacks } from "@/components/ChipStack";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
 import { DealingCard } from "@/components/poker/DealingCard";
 import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
-
-// CARD DISPLAY HELPERS
-
-type CardDisplay = { rank: string; symbol: string; color: string };
-
-function cardDisplay(card: PokerCard): CardDisplay {
-  const rank = card.rank === "T" ? "10" : card.rank;
-  const symbols: Record<string, string> = { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" };
-  const colors: Record<string, string> = {
-    hearts: "text-red-500", diamonds: "text-red-500",
-    clubs: "text-white", spades: "text-white",
-  };
-  return { rank, symbol: symbols[card.suit] ?? "?", color: colors[card.suit] ?? "text-white" };
-}
+import { getCardImage, getCardBack } from "@/lib/cards";
 
 function CardFaceUp({ card }: { card: PokerCard }) {
-  const d = cardDisplay(card);
   return (
-    <div className="w-14 h-20 bg-slate-700 rounded-md border border-slate-500 flex flex-col items-center justify-center shadow-lg select-none">
-      <span className="text-sm font-bold text-white leading-none">{d.rank}</span>
-      <span className={`text-lg leading-none ${d.color}`}>{d.symbol}</span>
+    <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg select-none">
+      <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
     </div>
   );
 }
 
-function CardFaceDown({ filter = "" }: { filter?: string }) {
+function CardFaceDown({ backImage = "back01" }: { backImage?: string }) {
   return (
-    <img
-      src="/card-back-red.png"
-      alt="Card back"
-      className="w-14 h-20 rounded-md shadow-lg object-cover"
-      style={filter ? { filter } : undefined}
-    />
+    <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg">
+      <Image src={getCardBack(backImage)} alt="Card back" width={56} height={80} className="w-full h-full object-cover" />
+    </div>
   );
 }
 
 function CommunityCard({ card }: { card: PokerCard }) {
-  const d = cardDisplay(card);
   return (
-    <div className="w-14 h-20 bg-slate-700 rounded-lg border border-slate-500 flex flex-col items-center justify-center shadow-xl select-none">
-      <span className="text-lg font-bold text-white leading-none">{d.rank}</span>
-      <span className={`text-xl leading-none ${d.color}`}>{d.symbol}</span>
+    <div className="w-14 h-20 rounded-lg overflow-hidden shadow-xl select-none">
+      <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
     </div>
   );
 }
@@ -72,16 +53,14 @@ function ActionBar({
   pot,
   callAmount,
   onAction,
-  actionBarGradient,
-  frameColor,
+  bannerImage,
 }: {
   legalActions: GameSnapshot["legalActions"];
   myStack: number;
   pot: number;
   callAmount: number;
   onAction: (action: string, betSize?: number) => void;
-  actionBarGradient: string;
-  frameColor: string;
+  bannerImage: string;
 }) {
   const { actions, chipRange } = legalActions;
   const [raiseAmount, setRaiseAmount] = useState(chipRange?.min ?? 0);
@@ -108,12 +87,18 @@ function ActionBar({
 
   return (
     <div
-      className="flex flex-col gap-3 mt-6 px-8 py-4 rounded-2xl shadow-2xl"
+      className="flex flex-col gap-3 mt-6"
       style={{
-        background: actionBarGradient,
-        boxShadow: "0 4px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.2), inset 0 -2px 4px rgba(0,0,0,0.4)",
-        border: `2px solid ${frameColor}`,
-        transition: "background 400ms ease, border-color 400ms ease",
+        backgroundImage: `url('${bannerImage}')`,
+        backgroundSize: "100% 100%",
+        backgroundRepeat: "no-repeat",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        paddingTop: "20px",
+        paddingBottom: "20px",
+        paddingLeft: "80px",
+        paddingRight: "80px",
+        marginTop: "30px",
+        marginBottom: "10px"
       }}
     >
       {/* Top row: preset chips (left) + slider (right) — only when canBetOrRaise */}
@@ -144,7 +129,10 @@ function ActionBar({
           <button
             disabled={!canFold}
             onClick={() => onAction("fold")}
-            className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
+            className="flex-1 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-full text-lg transition-colors"
+            style={{ backgroundColor: "#ea580c" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#c2410c"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#ea580c"; }}
           >
             FOLD
           </button>
@@ -468,7 +456,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const communitySlots = Array.from({ length: 5 }, (_, i) => communityCards[i] ?? null);
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
+    <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
         <img
@@ -493,7 +481,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsGearButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      <div className="relative z-10 flex flex-col items-center w-full">
+      <div className="relative flex flex-col items-center w-full">
         {/* Phase + game ID */}
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
@@ -512,7 +500,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         </div>
 
         {/* Table container */}
-        <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]">
+        <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
           {/* Table image */}
           <img
             src="/pokertable_no_bg.png"
@@ -546,7 +534,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   key={i}
                   card={card}
                   delay={Math.max(0, i - communityCountRef.current) * 0.12}
-                  cardBackFilter={visuals.cardBackFilter}
+                  cardBackImage={settings.cardBackImage}
                 />
               ) : (
                 <EmptyCommunitySlot key={i} />
@@ -581,11 +569,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               />
             </div>
             <div className="flex items-end gap-2 mt-1">
-              <ChipStack startingStack={settings.startingStack} chipPalette={visuals.chipPalette} />
+              <ChipStacks balance={opponent.totalChips} maxBalance={Math.round((me.totalChips + opponent.totalChips) / 2)} />
               <div className="flex gap-1">
                 {dealPhase === "done"
                   ? opponent.holeCards.map((card, i) =>
-                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
+                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} backImage={settings.cardBackImage} />
                     )
                   : [0, 1].map((i) => (
                       <div key={i} ref={(el) => { oppCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
@@ -605,7 +593,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               toY={entry.toY}
               delay={entry.delay}
               faceUp={entry.faceUp}
-              cardBackFilter={visuals.cardBackFilter}
+              cardBackImage={settings.cardBackImage}
               onSettled={() => setSettledCount((n) => n + 1)}
             />
           ))}
@@ -619,13 +607,13 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               <div className="flex gap-1">
                 {dealPhase === "done"
                   ? me.holeCards.map((card, i) =>
-                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} filter={visuals.cardBackFilter} />
+                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} backImage={settings.cardBackImage} />
                     )
                   : [0, 1].map((i) => (
                       <div key={i} ref={(el) => { myCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
                     ))}
               </div>
-              <ChipStack startingStack={settings.startingStack} chipPalette={visuals.chipPalette} />
+              <ChipStacks balance={me.totalChips} maxBalance={Math.round((me.totalChips + opponent.totalChips) / 2)} />
             </div>
             <div className="flex items-center gap-1.5">
               {me.isDealer && (
@@ -651,45 +639,46 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           </div>
         </div>
 
-        {/* Action bar */}
-        {myTurn && phase !== "finished" && phase !== "gameover" && (
-          <ActionBar
-            legalActions={legalActions}
-            myStack={me.stack}
-            pot={pot}
-            callAmount={Math.min(me.stack, Math.max(0, opponent.betSize - me.betSize))}
-            onAction={sendAction}
-            actionBarGradient={visuals.actionBarGradient}
-            frameColor={visuals.frameColor}
-          />
-        )}
+        {/* Action bar + controls — above chat */}
+        <div style={{ position: "relative", zIndex: 60 }}>
+          {myTurn && phase !== "finished" && phase !== "gameover" && (
+            <ActionBar
+              legalActions={legalActions}
+              myStack={me.stack}
+              pot={pot}
+              callAmount={Math.min(me.stack, Math.max(0, opponent.betSize - me.betSize))}
+              onAction={sendAction}
+              bannerImage={settings.bannerImage}
+            />
+          )}
 
-        {!myTurn && phase !== "finished" && phase !== "gameover" && (
-          <div className="mt-6 px-8 py-4 text-slate-400 text-sm">
-            Waiting for {opponent.username}...
-          </div>
-        )}
+          {!myTurn && phase !== "finished" && phase !== "gameover" && (
+            <div className="mt-6 px-8 py-4 text-slate-400 text-sm">
+              Waiting for {opponent.username}...
+            </div>
+          )}
 
-        {/* Next Hand button — shown below table when hand is over */}
-        {phase === "finished" && !snapshot.isGameOver && (
-          <div className="mt-6 flex flex-col items-center gap-2">
-            <button
-              onClick={sendNextHand}
-              disabled={snapshot.iReadyForNextHand}
-              className="bg-white text-slate-900 font-bold px-10 py-3 rounded-full text-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-            >
-              {snapshot.iReadyForNextHand ? "Waiting for opponent…" : "Next Hand →"}
-            </button>
-          </div>
-        )}
+          {/* Next Hand button — shown below table when hand is over */}
+          {phase === "finished" && !snapshot.isGameOver && (
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <button
+                onClick={sendNextHand}
+                disabled={snapshot.iReadyForNextHand}
+                className="bg-white text-slate-900 font-bold px-10 py-3 rounded-full text-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+              >
+                {snapshot.iReadyForNextHand ? "Waiting for opponent…" : "Next Hand →"}
+              </button>
+            </div>
+          )}
 
-        <p className="text-slate-500 text-xs mt-4">
-          ft_transcendence | {gameId}
-        </p>
+          <p className="text-slate-500 text-xs mt-4">
+            ft_transcendence | {gameId}
+          </p>
+        </div>
       </div>
 
       {/* Chat */}
-      <div className="fixed bottom-4 left-4 w-80 z-50">
+      <div className="fixed bottom-4 left-4 w-80" style={{ zIndex: 40 }}>
         <Chat username={username} gameId={gameId} />
       </div>
     </div>
