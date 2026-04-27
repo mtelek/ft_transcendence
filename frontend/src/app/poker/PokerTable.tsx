@@ -11,6 +11,7 @@ import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import type { TableSize } from "@/lib/poker-settings/types";
+import Image from "next/image";
 
 const COMMUNITY_CARDS: Card[] = [
   DECK[6],
@@ -90,9 +91,11 @@ function CardFaceUp({ card }: { card: Card }) {
 
 function CardFaceDown({ filter }: { filter: string }) {
   return (
-    <img
+    <Image
       src="/card-back-red.png"
       alt="Card back"
+      width={56}
+      height={80}
       className="w-14 h-20 rounded-md shadow-lg object-cover transition-transform hover:scale-105"
       style={{ filter, transitionDuration: "var(--poker-anim-duration)" }}
     />
@@ -227,11 +230,12 @@ export default function PokerTable({ username }: { username: string }) {
       style={{ ["--poker-anim-duration" as string]: `${animDurationMs}ms` }}
     >
       {visuals.backgroundVariant === "static" ? (
-        <img
+        <Image
           src="/dark-poker-background-of-spades-and-clubs.jpg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
           style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
         />
       ) : (
@@ -252,10 +256,11 @@ export default function PokerTable({ username }: { username: string }) {
 
       <div className="relative z-10 flex flex-col items-center w-full">
         <div className="relative w-full max-w-4xl aspect-[16/10]">
-          <img
+          <Image
             src="/pokertable_no_bg.png"
             alt="Poker table"
-            className="absolute inset-0 w-full h-full object-contain"
+            fill
+            className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
