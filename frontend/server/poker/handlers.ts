@@ -5,6 +5,10 @@ import type { GameSession } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame } from "./game-flow";
 
+function hasBustedPlayer(session: GameSession) {
+  return session.table.seats().some((seat) => seat && seat.totalChips === 0);
+}
+
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
   io.on("connection", (socket) => {
     console.log("[Socket.io] User connected:", socket.id);
@@ -144,8 +148,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [] }];
         }
 
-        const seats = table.seats();
-        if (seats.some((s) => s && s.totalChips === 0)) {
+        if (hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);
           endGame(state, info.gameId);
@@ -153,6 +156,12 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         }
       } else {
         advanceRounds(session);
+        if (!table.isHandInProgress() && hasBustedPlayer(session)) {
+          session.isGameOver = true;
+          broadcastState(io, state, info.gameId);
+          endGame(state, info.gameId);
+          return;
+        }
         if (table.isHandInProgress()) {
           session.lastCommunityCards = [...table.communityCards()];
         }
@@ -177,8 +186,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         session.lastCommunityCards = [];
         session.lastHoleCards = [null, null];
 
-        const seats = session.table.seats();
-        if (seats.some((s) => s && s.totalChips === 0)) {
+        if (hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);
           endGame(state, info.gameId);

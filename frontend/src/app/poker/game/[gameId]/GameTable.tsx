@@ -212,29 +212,27 @@ function ActionBar({
 function ResultOverlay({
   snapshot,
   myUsername,
-  onNextHand,
-  closeCountdown,
 }: {
   snapshot: GameSnapshot;
   myUsername: string;
-  onNextHand: () => void;
-  closeCountdown: number | null;
 }) {
   const { handResult, isGameOver, me, opponent } = snapshot;
+  const isMatchOver = isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
 
   const winner = handResult?.[0];
   const iWon = winner?.username === myUsername;
 
-  if (isGameOver) {
+  if (isMatchOver) {
     const iWonGame = me.totalChips > opponent.totalChips;
     return (
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
-        <div className="text-5xl">{iWonGame ? "🏆" : "💸"}</div>
-        <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You're busted!"}</h2>
+        <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You have lost the game!"}</h2>
         <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
-        <p className="text-slate-500 text-sm">
-          Window closes in {closeCountdown ?? 5}s…
-        </p>
+        <a
+          href="/dashboard"
+          className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
+          Exit to Dashboard
+        </a>
       </div>
     );
   }
@@ -286,24 +284,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
-  const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
-
-  // auto close the tab if game is over (not working correctly?!)
-  useEffect(() => {
-    if (!snapshot?.isGameOver) return;
-    setCloseCountdown(5);
-    const interval = setInterval(() => {
-      setCloseCountdown((n) => {
-        if (n === null || n <= 1) {
-          clearInterval(interval);
-          window.close();
-          return null;
-        }
-        return n - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [snapshot?.isGameOver]);
 
   useEffect(() => {
     const socket: Socket = io("http://localhost:3000");
@@ -344,7 +324,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         <div className="text-center">
           <p className="text-white text-2xl mb-4">Opponent disconnected</p>
           <a href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
-            Back to Lobby
+            Back to Dashboard
           </a>
         </div>
       </div>
@@ -360,6 +340,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   }
 
   const { me, opponent, communityCards, pot, myTurn, legalActions, phase } = snapshot;
+  const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
 
   // fill community card slots up to 5
   const communitySlots = Array.from({ length: 5 }, (_, i) => communityCards[i] ?? null);
@@ -421,12 +402,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           />
 
           {/* Result overlay */}
-          {(snapshot.phase === "finished" || snapshot.isGameOver) && (
+          {(snapshot.phase === "finished" || isMatchOver) && (
             <ResultOverlay
               snapshot={snapshot}
               myUsername={username}
-              onNextHand={sendNextHand}
-              closeCountdown={closeCountdown}
             />
           )}
 
@@ -512,7 +491,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         </div>
 
         {/* Action bar */}
-        {myTurn && phase !== "finished" && phase !== "gameover" && (
+        {myTurn && phase !== "finished" && phase !== "gameover" && !isMatchOver && (
           <ActionBar
             legalActions={legalActions}
             myStack={me.stack}
@@ -524,14 +503,14 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           />
         )}
 
-        {!myTurn && phase !== "finished" && phase !== "gameover" && (
+        {!myTurn && phase !== "finished" && phase !== "gameover" && !isMatchOver && (
           <div className="mt-6 px-8 py-4 text-slate-400 text-sm">
             Waiting for {opponent.username}...
           </div>
         )}
 
         {/* Next Hand button — shown below table when hand is over */}
-        {phase === "finished" && !snapshot.isGameOver && (
+        {phase === "finished" && !isMatchOver && (
           <div className="mt-6 flex flex-col items-center gap-2">
             <button
               onClick={sendNextHand}

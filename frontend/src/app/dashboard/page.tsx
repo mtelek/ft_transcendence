@@ -180,7 +180,9 @@ export default function DashboardPage() {
                 />
               </label>
 
-              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <p className="text-red-400 text-sm min-h-[20px]">
+                {error || "\u00A0"}
+              </p>
 
               <button
                 onClick={panel === "host" ? handleHost : handleJoin}
