@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { io, Socket } from "socket.io-client";
 
 type Status = "connecting" | "waiting" | "matched";
@@ -44,11 +45,12 @@ export default function LobbyClient({ username, image }: { username: string; ima
   return (
     <div className="relative min-h-screen bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
       {/* Background */}
-      <img
+      <Image
         src="/dark-poker-background-of-spades-and-clubs.jpg"
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover opacity-30"
+        fill
+        className="absolute inset-0 object-cover opacity-30"
       />
 
       <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4">

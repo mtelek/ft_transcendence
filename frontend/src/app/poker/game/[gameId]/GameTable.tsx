@@ -9,6 +9,7 @@ import { usePokerSettings } from "@/lib/poker-settings/context";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
+import Image from "next/image";
 
 // CARD DISPLAY HELPERS
 
@@ -36,9 +37,11 @@ function CardFaceUp({ card }: { card: PokerCard }) {
 
 function CardFaceDown({ filter = "" }: { filter?: string }) {
   return (
-    <img
+    <Image
       src="/card-back-red.png"
       alt="Card back"
+      width={56}
+      height={80}
       className="w-14 h-20 rounded-md shadow-lg object-cover"
       style={filter ? { filter } : undefined}
     />
@@ -365,11 +368,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     <div className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
-        <img
+        <Image
           src="/dark-poker-background-of-spades-and-clubs.jpg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
           style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
         />
       ) : (
@@ -408,10 +412,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         {/* Table container */}
         <div className="relative w-full max-w-4xl aspect-[16/10]">
           {/* Table image */}
-          <img
+          <Image
             src="/pokertable_no_bg.png"
             alt="Poker table"
-            className="absolute inset-0 w-full h-full object-contain"
+            fill
+            className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
