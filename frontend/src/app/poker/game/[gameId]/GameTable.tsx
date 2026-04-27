@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
 import Chat from "@/components/Chat";
@@ -279,6 +280,7 @@ const PHASE_LABELS: Record<string, string> = {
 // MAIN GAME
 
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
+  const router = useRouter();
   const { visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -302,13 +304,17 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     });
 
     socket.on("error", (err: { message: string }) => {
-      console.error("Socket error:", err.message);
+      if (err.message && err.message.toLowerCase().includes("not authorized")) {
+        router.replace("/dashboard");
+      } else {
+        console.error("Socket error:", err.message);
+      }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [gameId, username]);
+  }, [gameId, username, router]);
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
