@@ -343,7 +343,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <a href="/poker/lobby" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
+          <a href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
             Back to Lobby
           </a>
         </div>
