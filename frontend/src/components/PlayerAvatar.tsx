@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 export function PlayerAvatar({
   src,
@@ -15,11 +16,14 @@ export function PlayerAvatar({
 
   if (!err && src) {
     return (
-      <img
+      <Image
         src={src}
         alt={fallback}
+        width={40}
+        height={40}
         onError={() => setErr(true)}
         className={`${className} object-cover`}
+        unoptimized
       />
     );
   }

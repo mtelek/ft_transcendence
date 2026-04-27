@@ -1,5 +1,5 @@
-jSRCS_DIR = srcs
-ENV_FILE = $(SRCS_DIR)/.env
+SRCS_DIR = frontend
+ENV_FILE = .env
 
 setup:
 	@if [ ! -f "$(ENV_FILE)" ]; then \
@@ -10,17 +10,7 @@ setup:
 		echo " .env file exists"; \
 	fi
 
-secrets:
-	@if [ ! -d "secrets" ]; then \
-		mkdir secrets; \
-		openssl rand -base64 16 > secrets/testing; \
-		chmod 600 secrets/*.txt; \
-		echo "Secrets created and secured"; \
-	else \
-		echo "Secrets directory already exists"; \
-	fi
-
-up: secrets setup
+up: setup
 	cd $(SRCS_DIR) && docker compose up --build
 
 down:
@@ -31,9 +21,8 @@ clean:
 	docker system prune -f
 
 fclean: clean
-	rm -rf secrets
 	rm -f $(ENV_FILE)
 
 reset: clean up
 
-.PHONY: up down clean setup secrets
+.PHONY: up down clean setup

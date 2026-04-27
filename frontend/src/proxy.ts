@@ -1,25 +1,15 @@
-//Proxy runs on the server before matched pages are rendered
-import { auth } from "@/auth";
+import { getExistingUserSessionOrNull } from "@/lib/require-existing-user-session";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
-  //Resolve session for the incoming request
-  const session = await auth();
+  //Gate auth pages only for sessions that still map to a real DB user.
+  //Stale sessions (e.g. after DB reset) must be allowed through to login/register.
+  const existingSession = await getExistingUserSessionOrNull();
 
-  // Determine whether current user is authenticated
-  const isAuthenticated = Boolean(session?.user);
-
-  //Guard only guest-only auth pages.
-  const isAuthPage =
-    request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/register";
-
-  //If an authenticated user tries to access login/register,
-  // redirect to homepage before those pages render
-  if (isAuthenticated && isAuthPage) {
+  if (existingSession) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  //Otherwise continue to the requested route.
   return NextResponse.next();
 }
 

@@ -7,9 +7,10 @@ import ProfileOverlay from "@/components/ProfileOverlay";
 import { AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import type { Session } from "next-auth";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
 
-export default function HeaderClient({ session }: any) {
+export default function HeaderClient({ session }: { session: Session | null }) {
   //Controls whether the profile side overlay is visible
   const [open, setOpen] = useState(false);
 
@@ -42,7 +43,7 @@ export default function HeaderClient({ session }: any) {
             </span>
 
             <Link href="/dashboard" className="px-4 py-2 rounded-lg bg-black text-white rounded hover:bg-gray-800">
-              Games
+              Play Poker
             </Link>
 
             {/* Avatar button opens/closes the profile overlay */}

@@ -1,7 +1,8 @@
 "use client";
 
 //The ProfileOverlay component uses client-side hooks and APIs, so it must run on the client side
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import LogoutButton from "./LogoutButton";
 import { motion } from "framer-motion"
@@ -55,7 +56,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   //Tracks which friend is currently being removed so only that button is disabled.
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
 
-  async function loadFriends(showLoading = false) {
+  const loadFriends = useCallback(async (showLoading = false) => {
     //Only show the visible loading state when explicitly requested
     //Background polling refreshes stay invisible to the eye
     if (showLoading) {
@@ -85,7 +86,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         setFriendsLoading(false);
       }
     }
-  }
+  }, []);
 
   async function handleAddFriend() {
     const identifier = friendIdentifier.trim();
@@ -181,7 +182,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [session?.user?.email, session?.user?.name]);
+  }, [loadFriends, session?.user]);
 
   return (
     <>
@@ -265,14 +266,17 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
             ) : (
               friends.map((friend) => (
                 <div key={friend.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-2 py-2">
-                  <img
+                  <Image
                     src={friend.image || DEFAULT_AVATAR}
                     alt={`${friend.name} avatar`}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 rounded-full object-cover"
                     onError={(event) => {
                       //User avatars may be missing or broken, always fall back to a safe default avatar
                       event.currentTarget.src = DEFAULT_AVATAR;
                     }}
+                    unoptimized
                   />
                   <span className="text-sm text-gray-900">{friend.name}</span>
                   {/* Avalaible dot reflects the server-computed online status. */}

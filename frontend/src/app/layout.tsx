@@ -3,16 +3,18 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import SessionWrapper from "@/components/SessionWrapper";
-import { auth } from "@/auth";
+import { getExistingUserSessionOrNull } from "@/lib/require-existing-user-session";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -25,8 +27,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Resolve session on the server so client UI gets the right user immediately.
-  const session = await auth();
+  // Seed client state only with a session that still maps to an existing DB user.
+  const existingSessionResult = await getExistingUserSessionOrNull();
+  const session = existingSessionResult?.session ?? null;
 
   return (
     <html lang="en">

@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider, useSession } from "next-auth/react";
+import { SessionProvider, signOut, useSession } from "next-auth/react";
 import type { Session } from "next-auth";
+
+type ApiErrorPayload = {
+  error?: string;
+};
+
+function isStaleSessionResponse(status: number, payload: ApiErrorPayload) {
+  if (status === 401) {
+    return true;
+  }
+
+  return status === 404 && payload.error === "User not found";
+}
 
 function PresenceHeartbeat() {
   const { data: session } = useSession();
@@ -14,7 +26,17 @@ function PresenceHeartbeat() {
 
     const sendHeartbeat = async () => {
       try {
-        await fetch("/api/auth/presence", { method: "POST" });
+        const response = await fetch("/api/auth/presence", { method: "POST" });
+
+        if (response.ok) {
+          return;
+        }
+
+        const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+
+        if (isStaleSessionResponse(response.status, payload)) {
+          await signOut({ callbackUrl: "/" });
+        }
       } catch {
         // Ignore heartbeat errors and retry on the next interval.
       }

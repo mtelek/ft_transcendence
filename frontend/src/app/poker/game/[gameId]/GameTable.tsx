@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Image from "next/image";
 import type { GameSnapshot, PokerCard } from "../../../../../server";
@@ -200,29 +201,27 @@ function ActionBar({
 function ResultOverlay({
   snapshot,
   myUsername,
-  onNextHand,
-  closeCountdown,
 }: {
   snapshot: GameSnapshot;
   myUsername: string;
-  onNextHand: () => void;
-  closeCountdown: number | null;
 }) {
   const { handResult, isGameOver, me, opponent } = snapshot;
+  const isMatchOver = isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
 
   const winner = handResult?.[0];
   const iWon = winner?.username === myUsername;
 
-  if (isGameOver) {
+  if (isMatchOver) {
     const iWonGame = me.totalChips > opponent.totalChips;
     return (
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
-        <div className="text-5xl">{iWonGame ? "🏆" : "💸"}</div>
-        <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You're busted!"}</h2>
+        <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You have lost the game!"}</h2>
         <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
-        <p className="text-slate-500 text-sm">
-          Window closes in {closeCountdown ?? 5}s…
-        </p>
+        <a
+          href="/dashboard"
+          className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
+          Exit to Dashboard
+        </a>
       </div>
     );
   }
@@ -338,7 +337,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     });
 
     socket.on("error", (err: { message: string }) => {
-      console.error("Socket error:", err.message);
+      if (err.message && err.message.toLowerCase().includes("not authorized")) {
+        router.replace("/dashboard");
+      } else {
+        console.error("Socket error:", err.message);
+      }
     });
 
     return () => {
@@ -434,8 +437,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <a href="/poker/lobby" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
-            Back to Lobby
+          <a href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
+            Back to Dashboard
           </a>
         </div>
       </div>
@@ -451,6 +454,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   }
 
   const { me, opponent, communityCards, pot, myTurn, legalActions, phase } = snapshot;
+  const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
 
   // fill community card slots up to 5
   const communitySlots = Array.from({ length: 5 }, (_, i) => communityCards[i] ?? null);
@@ -459,11 +463,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
-        <img
+        <Image
           src="/dark-poker-background-of-spades-and-clubs.jpg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
           style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
         />
       ) : (
@@ -502,20 +507,19 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         {/* Table container */}
         <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
           {/* Table image */}
-          <img
+          <Image
             src="/pokertable_no_bg.png"
             alt="Poker table"
-            className="absolute inset-0 w-full h-full object-contain"
+            fill
+            className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
           {/* Result overlay */}
-          {(snapshot.phase === "finished" || snapshot.isGameOver) && (
+          {(snapshot.phase === "finished" || isMatchOver) && (
             <ResultOverlay
               snapshot={snapshot}
               myUsername={username}
-              onNextHand={sendNextHand}
-              closeCountdown={closeCountdown}
             />
           )}
 

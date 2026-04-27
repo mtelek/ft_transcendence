@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
 import EditableFieldRow from "@/components/EditableFieldRow";
+import Image from "next/image";
 
 //Editable profile fields supported by this page
 type EditableField = "username" | "email" | "password";
@@ -249,12 +250,16 @@ export default function Home() {
 
         <div className="flex items-center gap-4">
           {/* Current avatar preview with safe fallback if image fails to load */}
-          <img
+          <Image
             src={currentImage}
+            alt="Current profile avatar"
+            width={80}
+            height={80}
             onError={(e) => {
               e.currentTarget.src = DEFAULT_AVATAR;
             }}
             className="w-20 h-20 rounded-full object-cover"
+            unoptimized
           />
 
           <button
@@ -365,13 +370,16 @@ export default function Home() {
                       disabled={isSaving}
                       className="group rounded-lg border border-zinc-700 p-1 hover:border-green-400 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <img
+                      <Image
                         src={avatar}
                         alt="Avatar option"
+                        width={80}
+                        height={80}
                         className="h-20 w-20 rounded-md object-cover"
                         onError={(e) => {
                           e.currentTarget.src = DEFAULT_AVATAR;
                         }}
+                        unoptimized
                       />
                     </button>
                   ))}

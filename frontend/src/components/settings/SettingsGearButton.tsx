@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export function SettingsGearButton({
   onClick,
   open,
@@ -27,10 +29,11 @@ export function SettingsGearButton({
       }}
       title="Settings"
     >
-      <img
+      <Image
         src="/settings_icon.png"
         alt=""
         aria-hidden="true"
+        fill
         style={{
           width: "100%",
           height: "100%",

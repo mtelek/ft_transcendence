@@ -338,11 +338,12 @@ export default function PokerTable({ username }: { username: string }) {
       style={{ ["--poker-anim-duration" as string]: `${animDurationMs}ms` }}
     >
       {visuals.backgroundVariant === "static" ? (
-        <img
+        <Image
           src="/dark-poker-background-of-spades-and-clubs.jpg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
           style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
         />
       ) : (
@@ -366,7 +367,8 @@ export default function PokerTable({ username }: { username: string }) {
           <img
             src="/pokertable_no_bg.png"
             alt="Poker table"
-            className="absolute inset-0 w-full h-full object-contain"
+            fill
+            className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
