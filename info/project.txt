@@ -251,17 +251,16 @@ Technology          Module                           Points
     ✅ The game must have clear rules and win/loss conditions.
     ✅ The game can be 2D or 3D.
 
+❌ Multiplayer game (more than two players).      2 pts (Major)
+      ❌ Support for three or more players simultaneously.
+      ❌ Fair gameplay mechanics for all participants.
+      ❌ Proper synchronization across all clients.
+
 ❌                  Remote players                2 pts (Major)
     Enable two players on separate computers to play the same game in real-time.
     ❌ Handle network latency and disconnections gracefully.
     ❌ Provide a smooth user experience for remote gameplay.
     ❌ Implement reconnection logic.
-
-❌                  Tournament system             1 pt  (Minor)
-    ❌ Clear matchup order and bracket system.
-    ❌ Track who plays against whom.
-    ❌ Matchmaking system for tournament participants.
-    ❌ Tournament registration and management.
 
 ❌ Game customization                             1 pt (Minor)
     ❌ Power-ups, attacks, or special abilities. Joker? Special Chip?
@@ -269,19 +268,13 @@ Technology          Module                           Points
     ✅ Customizable game settings.
     ✅ Default options must be available.
 
-❌ AI opponent                                    2 pts (Major)
-    ❌ The AI must be challenging and able to win occasionally.
-    ❌ The AI should simulate human-like behavior (not perfect play).
-    ❌ If you implement game customization options, the AI must be able to usethem.
-    ❌ You must be able to explain your AI implementation during evaluation.
-
 ❌ Game statistics and match history              1 pt (Minor)
     ❌ Track user game statistics (wins, losses, ranking, level, etc.).
     ❌ Display match history (1v1 games, dates, results, opponents).
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
 
-❌ Minor: Support for additional browsers.        1 pt (Minor)
+❌ Support for additional browsers.        1 pt (Minor)
     ❌ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).
     ❌ Test and fix all features in each browser.
     ❌ Document any browser-specific limitations.
@@ -301,8 +294,21 @@ WHAT WE HAVE NOT DECIDED YET (Possible module points)
 
 
 
-Add another game with user history and matchmaking. (Blackjack)
+❌ Add another game with user history and matchmaking. (Blackjack)
     ❌ Implement a second distinct game.
     ❌ Track user history and statistics for this game.
     ❌ Implement a matchmaking system.
     ❌ Maintain performance and responsiveness.
+
+❌                  Tournament system             1 pt  (Minor)
+    ❌ Clear matchup order and bracket system.
+    ❌ Track who plays against whom.
+    ❌ Matchmaking system for tournament participants.
+    ❌ Tournament registration and management.
+
+❌ AI opponent                                    2 pts (Major)
+    ❌ The AI must be challenging and able to win occasionally.
+    ❌ The AI should simulate human-like behavior (not perfect play).
+    ❌ If you implement game customization options, the AI must be able to usethem.
+    ❌ You must be able to explain your AI implementation during evaluation.
+    
