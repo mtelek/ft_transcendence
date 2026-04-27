@@ -281,6 +281,12 @@ Technology          Module                           Points
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
 
+❌ Minor: Support for additional browsers.        1 pt (Minor)
+    ❌ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).
+    ❌ Test and fix all features in each browser.
+    ❌ Document any browser-specific limitations.
+    ❌ Consistent UI/UX across all supported browsers.
+
                                         ------------------------
                                          TOTAL:  17 pts
 
