@@ -251,10 +251,10 @@ Technology          Module                           Points
     ✅ The game must have clear rules and win/loss conditions.
     ✅ The game can be 2D or 3D.
 
-❌ Multiplayer game (more than two players).      2 pts (Major)
-      ❌ Support for three or more players simultaneously.
-      ❌ Fair gameplay mechanics for all participants.
-      ❌ Proper synchronization across all clients.
+❌    Multiplayer game (more than two players)    2 pts (Major)
+    ❌ Support for three or more players simultaneously.
+    ❌ Fair gameplay mechanics for all participants.
+    ❌ Proper synchronization across all clients.
 
 ❌                  Remote players                2 pts (Major)
     Enable two players on separate computers to play the same game in real-time.
@@ -262,19 +262,19 @@ Technology          Module                           Points
     ❌ Provide a smooth user experience for remote gameplay.
     ❌ Implement reconnection logic.
 
-❌ Game customization                             1 pt (Minor)
+❌                Game customization              1 pt (Minor)
     ❌ Power-ups, attacks, or special abilities. Joker? Special Chip?
     ✅ Different maps or themes.
     ✅ Customizable game settings.
     ✅ Default options must be available.
 
-❌ Game statistics and match history              1 pt (Minor)
+❌       Game statistics and match history        1 pt (Minor)
     ❌ Track user game statistics (wins, losses, ranking, level, etc.).
     ❌ Display match history (1v1 games, dates, results, opponents).
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
 
-❌ Support for additional browsers.        1 pt (Minor)
+❌       Support for additional browsers.         1 pt (Minor)
     ❌ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).
     ❌ Test and fix all features in each browser.
     ❌ Document any browser-specific limitations.
