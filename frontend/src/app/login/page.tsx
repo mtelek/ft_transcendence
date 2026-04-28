@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import GoogleLogin from "@/components/GoogleLogin";
+import PokerBackground from "@/components/PokerBackground";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -35,9 +36,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6">
-      <div className="w-full max-w-md rounded-xl bg-black shadow-sm">
-        <div className="flex min-h-[26rem] items-start justify-center pt-12">
+    <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
+        <PokerBackground />
+      <div className="w-full max-w-md rounded-xl bg-black shadow-sm relative z-10">
+        <div className="flex min-h-[26rem] items-start justify-center pt-12 relative z-10">
           <form onSubmit={handleSubmit} className="flex w-80 max-w-full flex-col gap-4 px-4">
             <h1 className="text-2xl font-bold text-center">Login</h1>
             <input

@@ -1,7 +1,9 @@
 //General Privacy page that explains which user data is collected, how it is used, and how it is protected
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
+
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-black text-gray-300 px-6 py-12 flex justify-center">
+    <div className="min-h-screen text-gray-300 px-6 py-12 flex justify-center" style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
       <div className="max-w-3xl space-y-6">
 
         <h1 className="text-3xl font-bold text-white">Privacy Policy</h1>

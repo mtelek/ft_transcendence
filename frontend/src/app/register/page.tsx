@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PokerBackground from "@/components/PokerBackground";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -47,8 +48,9 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
+     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
+      <PokerBackground />
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md relative z-10">
         <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         {/* Use native form validation before the request is sent */}

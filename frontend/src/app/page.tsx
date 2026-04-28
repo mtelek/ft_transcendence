@@ -1,9 +1,10 @@
 import PokerBackground from "@/components/PokerBackground";
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-black text-white">
+    <div className="min-h-[calc(100vh-64px)] text-white">
       {/* Keep the animated hero separate so the footer can sit below it and scroll naturally. */}
       <section className="relative flex min-h-[calc(100vh-64px)] items-center justify-center overflow-hidden px-6">
         <PokerBackground />
@@ -13,7 +14,10 @@ export default function Home() {
       </section>
 
       {/* LEGAL / FOOTER SECTION */}
-      <section className="flex min-h-[33vh] flex-col items-center justify-center gap-6 border-t border-gray-800 bg-gradient-to-b from-black to-gray-900 px-6 py-10">
+      <section
+        className="flex min-h-[33vh] flex-col items-center justify-center gap-6 border-t border-gray-800 px-6 py-10"
+        style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}
+      >
         <div className="flex flex-wrap justify-center gap-6">
           <Link
             href="/privacy"

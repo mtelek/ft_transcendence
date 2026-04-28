@@ -1,7 +1,9 @@
 //General Terms page that defines the legal rules for using the app and gives users a clear agreement reference
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
+
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-black text-gray-300 px-6 py-12 flex justify-center">
+    <div className="min-h-screen text-gray-300 px-6 py-12 flex justify-center" style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
       <div className="max-w-3xl space-y-6">
 
         <h1 className="text-3xl font-bold text-white">Terms of Service</h1>

@@ -1,63 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-
-interface Particle {
-  x: number;
-  y: number;
-  size: number;
-  suit: string;
-  color: string;
-  speed: number;
-  baseOpacity: number;
-  opacity: number;
-  rotation: number;
-  rotSpeed: number;
-  drift: number;
-  vx: number;
-  vy: number;
-}
-
-type Variant = "classic" | "wood" | "garden";
-
-const VARIANT_SYMBOLS: Record<Variant, readonly string[]> = {
-  classic: ["♠", "♥", "♦", "♣"],
-  wood: ["♠", "♣", "♦"],
-  garden: ["♣", "♥", "❀", "✿"],
-};
-
-const VARIANT_COLORS: Record<Variant, Record<string, string>> = {
-  classic: {
-    "♠": "#c8d6e5",
-    "♥": "#e74c3c",
-    "♦": "#e74c3c",
-    "♣": "#c8d6e5",
-  },
-  wood: {
-    "♠": "#d4a373",
-    "♣": "#b08968",
-    "♦": "#d97706",
-  },
-  garden: {
-    "♣": "#a7f3d0",
-    "♥": "#fbcfe8",
-    "❀": "#fcd5ce",
-    "✿": "#ddd6fe",
-  },
-};
-
-const VARIANT_BG: Record<Variant, string> = {
-  classic: "#0a0a0a",
-  wood: "#1a0f06",
-  garden: "#0f1410",
-};
+import { Particle, Variant, VARIANT_COLORS, VARIANT_SYMBOLS, VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 const COUNT = 40;
 const MOUSE_RADIUS = 120;
 const REPULSION_FORCE = 2;
 
 export default function PokerBackground({
-  variant = "classic",
+  variant = DEFAULT_VARIANT,
 }: {
   variant?: Variant;
 }) {

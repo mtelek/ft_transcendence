@@ -68,11 +68,11 @@ export default function HeaderClient({ session }: { session: Session | null }) {
         ) : (
           <>
             {/* Guest navigation when no authenticated session exists */}
-            <Link href="/login" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
+            <Link href="/login" className="px-4 py-2 rounded-lg bg-black text-white rounded hover:bg-gray-800">
               Login
             </Link>
 
-            <Link href="/register" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
+            <Link href="/register" className="px-4 py-2 rounded-lg bg-black text-white rounded hover:bg-gray-800">
               Register
             </Link>
           </>
