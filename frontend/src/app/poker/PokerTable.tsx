@@ -14,6 +14,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ChipStacks } from "@/components/ChipStack";
 import type { TableSize } from "@/lib/poker-settings/types";
 import { DealingCard } from "@/components/poker/DealingCard";
+import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 
 const COMMUNITY_CARDS: Card[] = [
   DECK[6],
@@ -266,10 +267,12 @@ export default function PokerTable({ username }: { username: string }) {
 
   // Reset deal state when table size or players change
   useEffect(() => {
+  setTimeout(() => {
     setDealPhase("idle");
     setDealEntries([]);
     setSettledCount(0);
-  }, [settings.tableSize]);
+  }, 0);
+}, [settings.tableSize]);
 
   const startDealing = useCallback(() => {
     if (!tableRef.current || dealPhase !== "idle") return;
@@ -363,7 +366,7 @@ export default function PokerTable({ username }: { username: string }) {
 
       <div className="relative z-10 flex flex-col items-center w-full">
         <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]">
-          <img
+          <Image
             src="/pokertable_no_bg.png"
             alt="Poker table"
             fill

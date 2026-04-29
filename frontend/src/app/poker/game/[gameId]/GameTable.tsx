@@ -15,6 +15,7 @@ import PokerBackground from "@/components/PokerBackground";
 import { DealingCard } from "@/components/poker/DealingCard";
 import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 import { getCardImage, getCardBack } from "@/lib/cards";
+import Link from "next/link";
 
 function CardFaceUp({ card }: { card: PokerCard }) {
   return (
@@ -32,13 +33,13 @@ function CardFaceDown({ backImage = "back01" }: { backImage?: string }) {
   );
 }
 
-function CommunityCard({ card }: { card: PokerCard }) {
+/*function CommunityCard({ card }: { card: PokerCard }) {
   return (
     <div className="w-14 h-20 rounded-lg overflow-hidden shadow-xl select-none">
       <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
     </div>
   );
-}
+}*/
 
 function EmptyCommunitySlot() {
   return (
@@ -69,7 +70,10 @@ function ActionBar({
   const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
-    setRaiseAmount(chipRange?.min ?? 0);
+    const timeout = setTimeout(() => {
+     setRaiseAmount(chipRange?.min ?? 0);
+    });
+    return () => clearTimeout(timeout);
   }, [chipRange?.min]);
 
   const canFold = actions.includes("fold");
@@ -217,11 +221,11 @@ function ResultOverlay({
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
         <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You have lost the game!"}</h2>
         <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
-        <a
+        <Link
           href="/dashboard"
           className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
           Exit to Dashboard
-        </a>
+        </Link>
       </div>
     );
   }
@@ -288,7 +292,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
-  const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
+  //const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
   const router = useRouter();
 
   // Dealing animation state
@@ -304,6 +308,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const myCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
   const oppCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
 
+  /*
   // auto close the tab if game is over (not working correctly?!)
   useEffect(() => {
     if (!snapshot?.isGameOver) return;
@@ -320,6 +325,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }, 1000);
     return () => clearInterval(interval);
   }, [snapshot?.isGameOver]);
+  */
 
   useEffect(() => {
     const socket: Socket = io("http://localhost:3000");
@@ -348,7 +354,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     return () => {
       socket.disconnect();
     };
-  }, [gameId, username]);
+  }, [gameId, username, image, router]);
 
   // Reset to idle when a hand finishes so ghost slots are mounted before the next deal
   useEffect(() => {
@@ -418,7 +424,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     if (snapshot.phase !== "preflop" && dealPhase !== "dealing") {
       setDealPhase("done");
     }
-  }, [snapshot?.phase, dealPhase]);
+  }, [snapshot, dealPhase]);
 
   // Update community card count AFTER render so the stagger ref reflects the previous state
   useEffect(() => {
@@ -438,9 +444,9 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <a href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
+          <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
             Back to Dashboard
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -502,7 +508,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           )}
           {!myTurn && phase !== "finished" && phase !== "gameover" && (
             <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
-              Opponent's turn
+              Opponent&apros;s turn
             </span>
           )}
         </div>

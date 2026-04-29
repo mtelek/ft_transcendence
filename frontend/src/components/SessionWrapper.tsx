@@ -48,7 +48,7 @@ function PresenceHeartbeat() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [session?.user?.email, session?.user?.name]);
+  }, [session?.user]);
 
   return null;
 }
