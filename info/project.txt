@@ -274,11 +274,14 @@ Technology          Module                           Points
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
 
-❌       Support for additional browsers.         1 pt (Minor)
-    ❌ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).
-    ❌ Test and fix all features in each browser.
-    ❌ Document any browser-specific limitations.
-    ❌ Consistent UI/UX across all supported browsers.
+✅       Support for additional browsers.         1 pt (Minor)
+    ✅ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).
+    ✅ Test and fix all features in each browser.
+    ✅ Document any browser-specific limitations.⬆
+    ⬆️ Need to documentet in the README.md
+        - “All features have been tested and work in Chrome, Brave, and Edge.
+          Limitation: Edge puts a placeholder for lazy images first and then loads them"
+    ✅ Consistent UI/UX across all supported browsers.
 
                                         ------------------------
                                          TOTAL:  17 pts
@@ -291,8 +294,6 @@ Technology          Module                           Points
 ----------------------------------------------------------------
 WHAT WE HAVE NOT DECIDED YET (Possible module points)
 ----------------------------------------------------------------
-
-
 
 ❌ Add another game with user history and matchmaking. (Blackjack)
     ❌ Implement a second distinct game.
