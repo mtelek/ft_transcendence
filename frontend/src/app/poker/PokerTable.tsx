@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Card, DECK, getCardImage, getCardBack } from "@/lib/cards";
@@ -15,7 +14,6 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ChipStacks } from "@/components/ChipStack";
 import type { TableSize } from "@/lib/poker-settings/types";
 import { DealingCard } from "@/components/poker/DealingCard";
-import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 
 const COMMUNITY_CARDS: Card[] = [
   DECK[6],
@@ -100,7 +98,7 @@ function CardFaceDown({ backImage }: { backImage: string }) {
   );
 }
 
-function CommunityCard({ card }: { card: Card }) {
+/*function CommunityCard({ card }: { card: Card }) {
   return (
     <div className="w-14 h-20 rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-105"
          style={{ transitionDuration: "var(--poker-anim-duration)" }}>
@@ -108,6 +106,7 @@ function CommunityCard({ card }: { card: Card }) {
     </div>
   );
 }
+*/
 
 function TimerRing({ seconds }: { seconds: number }) {
   const [remaining, setRemaining] = useState(seconds);

@@ -40,8 +40,8 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   const rawLegal = myTurn ? table.legalActions() : { actions: [] as string[] };
   const legalActions = {
     actions: rawLegal.actions,
-    chipRange: (rawLegal as any).chipRange
-      ? { min: (rawLegal as any).chipRange.min, max: (rawLegal as any).chipRange.max }
+    chipRange: (rawLegal as { chipRange?: { min: number; max: number } }).chipRange
+      ? { min: (rawLegal as { chipRange: { min: number; max: number } }).chipRange.min, max: (rawLegal as { chipRange: { min: number; max: number } }).chipRange.max }
       : undefined,
   };
 

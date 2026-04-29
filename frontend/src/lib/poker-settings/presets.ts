@@ -7,7 +7,7 @@ import type {
   ThemeVisuals,
 } from "./types";
 
-const FELT_FILTERS: Record<FeltStyle, string> = {
+/*const FELT_FILTERS: Record<FeltStyle, string> = {
   green: "none",
   red: "hue-rotate(-100deg) saturate(1.4)",
   blue: "hue-rotate(120deg) saturate(1.2)",
@@ -15,6 +15,7 @@ const FELT_FILTERS: Record<FeltStyle, string> = {
   sage: "sepia(0.3) hue-rotate(20deg) saturate(0.7) brightness(1.1)",
   amber: "sepia(1) hue-rotate(-20deg) saturate(1.3) brightness(0.95)",
 };
+*/
 
 const BG_FILTERS_BY_FELT: Record<FeltStyle, string> = {
   green: "sepia(1) hue-rotate(90deg) saturate(2) brightness(0.6)",

@@ -130,7 +130,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const isFold = action === "fold";
 
       try {
-        table.actionTaken(action as any, betSize);
+          table.actionTaken(action as 'fold' | 'check' | 'call' | 'bet' | 'raise', betSize);
       } catch (err) {
         socket.emit("error", { message: (err as Error).message });
         return;
