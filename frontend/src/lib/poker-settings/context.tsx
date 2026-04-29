@@ -29,12 +29,13 @@ export function PokerSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PokerSettings>(DEFAULT_SETTINGS);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const saved = loadSettings();
-    // SSR-safe hydration: one-shot post-mount load from localStorage.
-    if (saved) setSettings(saved);
-    setHydrated(true);
-  }, []);
+useEffect(() => {
+  const saved = loadSettings();
+  if (saved) {
+    setTimeout(() => setSettings(saved), 0);
+  }
+  setTimeout(() => setHydrated(true), 0);
+}, []);
 
   useEffect(() => {
     if (hydrated) saveSettings(settings);
