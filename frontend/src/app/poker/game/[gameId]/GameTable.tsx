@@ -304,6 +304,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const lastDealHandRef = useRef<string | null>(null);
   // Tracks how many community cards were visible before the last update (for stagger delay)
   const communityCountRef = useRef(0);
+  // Store previous community card count for animation delay
+  const [prevCommunityCount, setPrevCommunityCount] = useState(0);
   // Ghost card slot refs for measuring exact final positions
   const myCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
   const oppCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
@@ -359,10 +361,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   // Reset to idle when a hand finishes so ghost slots are mounted before the next deal
   useEffect(() => {
     if (snapshot?.phase === "finished" || snapshot?.phase === "gameover") {
-      setDealPhase("idle");
-      setDealEntries([]);
-      setSettledCount(0);
-      lastDealHandRef.current = null;
+      setTimeout(() => {
+        setDealPhase("idle");
+        setDealEntries([]);
+        setSettledCount(0);
+        lastDealHandRef.current = null;
+      });
     }
   }, [snapshot?.phase]);
 
@@ -422,14 +426,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "preflop" && dealPhase !== "dealing") {
-      setDealPhase("done");
+      setTimeout(() => setDealPhase("done"));
     }
   }, [snapshot, dealPhase]);
 
   // Update community card count AFTER render so the stagger ref reflects the previous state
   useEffect(() => {
+    setPrevCommunityCount(communityCountRef.current);
     communityCountRef.current = snapshot?.communityCards.length ?? 0;
-  });
+  }, [snapshot?.communityCards.length]);
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
@@ -508,7 +513,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           )}
           {!myTurn && phase !== "finished" && phase !== "gameover" && (
             <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
-              Opponent&apros;s turn
+              Opponent&apos;s turn
             </span>
           )}
         </div>
@@ -547,7 +552,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                 <FlipCommunityCard
                   key={i}
                   card={card}
-                  delay={Math.max(0, i - communityCountRef.current) * 0.12}
+                  delay={Math.max(0, i - prevCommunityCount) * 0.12}
                   cardBackImage={settings.cardBackImage}
                 />
               ) : (
