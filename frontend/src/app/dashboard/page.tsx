@@ -93,7 +93,7 @@ export default function DashboardPage() {
   if (status === "waiting" || status === "matched") {
     return (
       <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-        <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill className="absolute inset-0 object-cover opacity-30" />
+      <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill sizes="100vw" loading="eager" className="absolute inset-0 object-cover opacity-30" />
         <div className="relative z-10 flex flex-col items-center gap-6 text-center px-4">
           <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>
           <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-12 py-10 flex flex-col items-center gap-4">
@@ -130,7 +130,7 @@ export default function DashboardPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
-      <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill className="absolute inset-0 object-cover opacity-30" />
+      <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill sizes="100vw" loading="eager" className="absolute inset-0 object-cover opacity-30" />
 
       <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-3xl">
         <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>

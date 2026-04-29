@@ -62,7 +62,7 @@ export function AppearanceTab() {
               }}
             >
               <div className="h-16 w-full relative">
-                <Image src={src} alt={label} fill style={{ objectFit: "fill" }} unoptimized />
+                <Image src={src} alt={label} fill sizes="100vw" style={{ objectFit: "fill" }} unoptimized />
               </div>
               <div className="px-3 py-2" style={{ background: "rgba(2, 6, 23, 0.75)" }}>
                 <span className="text-sm font-medium text-white">{label}</span>

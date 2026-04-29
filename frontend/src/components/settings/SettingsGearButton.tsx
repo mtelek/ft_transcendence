@@ -34,6 +34,7 @@ export function SettingsGearButton({
         alt=""
         aria-hidden="true"
         fill
+        sizes="48px"
         style={{
           width: "100%",
           height: "100%",

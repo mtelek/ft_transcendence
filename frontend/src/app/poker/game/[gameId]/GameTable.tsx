@@ -289,6 +289,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
   const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
+  const router = useRouter();
 
   // Dealing animation state
   const [dealPhase, setDealPhase] = useState<"idle" | "dealing" | "done">("idle");
@@ -468,6 +469,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           alt=""
           aria-hidden="true"
           fill
+          sizes="100vw"
+          loading="eager"
           className="object-cover"
           style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
         />
@@ -511,6 +514,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             src="/pokertable_no_bg.png"
             alt="Poker table"
             fill
+            sizes="(max-width: 1024px) 100vw, 64rem"
             className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
