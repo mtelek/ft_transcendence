@@ -6,6 +6,7 @@ import { DEFAULT_AVATAR } from "@/lib/avatar";
 import { apiRequest } from "@/lib/client-api";
 import EditableFieldRow from "@/components/EditableFieldRow";
 import Image from "next/image";
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 //Editable profile fields supported by this page
 type EditableField = "username" | "email" | "password";
@@ -242,7 +243,7 @@ export default function Home() {
 
   return (
     //Main account settings layout
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen text-white" style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
       <div className="ml-[33vw] p-6">
         <h1 className="text-3xl font-bold">Account</h1>
 
@@ -322,7 +323,7 @@ export default function Home() {
         {isPickerOpen && (
           //Avatar picker modal overlay
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4"
             // Close picker when clicking on the backdrop.
             onClick={() => setIsPickerOpen(false)}
           >
