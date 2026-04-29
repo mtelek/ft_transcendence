@@ -265,7 +265,7 @@ export default function Home() {
 
           <button
             onClick={openAvatarPicker}
-            className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition"
+            className="bg-teal-500 px-4 py-2 rounded hover:bg-teal-600 transition"
           >
             Change profile picture
           </button>
@@ -345,7 +345,7 @@ export default function Home() {
                   <button
                     onClick={openUploadDialog}
                     disabled={isSaving}
-                    className="rounded bg-blue-600 px-3 py-1 text-sm hover:bg-blue-700 disabled:opacity-60"
+                    className="rounded bg-teal-500 px-3 py-1 text-sm hover:bg-teal-600 disabled:opacity-60"
                   >
                     Upload profile picture
                   </button>
@@ -369,7 +369,7 @@ export default function Home() {
                       key={avatar}
                       onClick={() => handleAvatarSelect(avatar)}
                       disabled={isSaving}
-                      className="group rounded-lg border border-zinc-700 p-1 hover:border-green-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="group rounded-lg border border-zinc-700 p-1 hover:border-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Image
                         src={avatar}

@@ -2,6 +2,7 @@
 
 // This component uses client-side auth hooks and actions.
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 
 export default function LoginButton() {
   const handleGoogleSignIn = async () => {
@@ -14,19 +15,17 @@ export default function LoginButton() {
   return (
     <button
       type="button"
-      // Trigger Google sign-in when no active session exists
       onClick={handleGoogleSignIn}
-      className="w-full px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+      className="w-full p-3 bg-gray-800 rounded text-white flex items-center justify-center gap-2 hover:bg-gray-900"
     >
-      <span>Login with </span>
-      <span className="font-semibold" aria-label="Google">
-        <span className="text-[#4285F4]">G</span>
-        <span className="text-[#DB4437]">o</span>
-        <span className="text-[#F4B400]">o</span>
-        <span className="text-[#4285F4]">g</span>
-        <span className="text-[#0F9D58]">l</span>
-        <span className="text-[#DB4437]">e</span>
-      </span>
+      <Image
+      src="/logos/google-g-logo-only.svg"
+      alt="Google logo"
+      width={20}
+      height={20}
+      className="mr-2"
+      />
+      <span>Sign in with Google</span>
     </button>
   );
 }

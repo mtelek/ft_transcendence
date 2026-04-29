@@ -140,7 +140,7 @@ export default function DashboardPage() {
             <p className="text-slate-400 text-sm mb-2">Logged in as <span className="text-white font-semibold">{username}</span></p>
             <button
               onClick={() => openPanel("host")}
-              className={`w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-green-400 text-slate-900" : "bg-slate-700 hover:bg-slate-600 text-white"}`}
+              className={`w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-teal-500 text-slate-900" : "bg-slate-700 hover:bg-slate-600 text-white"}`}
             >
               Host Game
             </button>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
 
               <button
                 onClick={panel === "host" ? handleHost : handleJoin}
-                className={`mt-auto w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-green-400 hover:bg-green-500 text-slate-900" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+                className={`mt-auto w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-teal-500 hover:bg-teal-600 text-slate-900" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
               >
                 {panel === "host" ? "Create & Wait" : "Join Game"}
               </button>

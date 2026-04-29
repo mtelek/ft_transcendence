@@ -41,3 +41,15 @@ body {
 .poker-ui input[type="range"] {
   cursor: ew-resize;
 }
+
+.bg-pokerred {
+  background-color: #A32020;
+}
+
+.bg-pokerred:hover {
+  background-color: #7a1818;
+}
+
+.text-pokerred {
+  color: #A32020;
+}

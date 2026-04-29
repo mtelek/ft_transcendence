@@ -188,7 +188,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     <>
       {/* Backdrop closes the overlay when the user clicks outside the panel*/}
       <motion.div
-        className="fixed inset-0 bg-black/50 z-40"
+        className="fixed inset-0 bg-transparent z-40"
         onClick={onClose}
 		initial={{ opacity: 0}}
 		animate={{ opacity: 1}}
@@ -219,7 +219,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 			<Link 
         href="/settings"
         onClick={onClose} 
-        className="w-28 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-800 transition text-center">
+        className="w-28 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition text-center">
 			  Settings
 			</Link>
 

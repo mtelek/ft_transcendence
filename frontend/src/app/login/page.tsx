@@ -38,23 +38,22 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
         <PokerBackground />
-      <div className="w-full max-w-md rounded-xl bg-black shadow-sm relative z-10">
-        <div className="flex min-h-[26rem] items-start justify-center pt-12 relative z-10">
-          <form onSubmit={handleSubmit} className="flex w-80 max-w-full flex-col gap-4 px-4">
-            <h1 className="text-2xl font-bold text-center">Login</h1>
+      <div className="w-full max-w-md p-8 bg-black rounded-lg shadow-md relative z-10">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
+            <h1 className="text-2xl font-bold mb-6 text-center text-white">Login</h1>
             <input
               type="text"
               placeholder="Email or Username"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="px-4 py-2 text-base border rounded"
+              className="p-3 border rounded"
             />
             <input
               type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="px-4 py-2 text-base border rounded"
+              className="p-3 border rounded"
             />
             <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}
@@ -65,9 +64,9 @@ export default function LoginPage() {
             </p>
             <button
               type="submit"
-              className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+              className="p-3 bg-teal-500 text-white rounded hover:bg-teal-600"
             >
-              Login
+              Sign in
             </button>
             <div className="mt-2">
               <GoogleLogin />
@@ -75,6 +74,5 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-    </div>
   );
 }

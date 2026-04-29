@@ -6,7 +6,7 @@ export default function LogoutButton() {
   return (
     <button
       onClick={() => signOut({ callbackUrl: "/" })}
-      className="w-28 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-center"
+      className="w-28 px-4 py-2 bg-pokerred text-white rounded-lg transition text-center"
     >
       Logout
     </button>

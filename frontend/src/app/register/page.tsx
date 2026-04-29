@@ -12,22 +12,22 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setErrorMessage("");
 
     // Show persistent inline errors instead of short native validation bubbles.
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
-      setError("Invalid email format");
+      setErrorMessage("Invalid email format");
       return;
     }
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      setErrorMessage(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
 
@@ -40,7 +40,7 @@ export default function Register() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error);
+      setErrorMessage(data.error);
       return;
     }
 
@@ -51,10 +51,9 @@ export default function Register() {
      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
       <PokerBackground />
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md relative z-10">
-        <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         {/* Use native form validation before the request is sent */}
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
+          <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
           <input
             type="email"
             placeholder="Email"
@@ -76,17 +75,24 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 border rounded"
           />
+          <p
+              className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}
+              role={errorMessage ? "alert" : undefined}
+              aria-live="polite"
+            >
+              {errorMessage || "\u00A0"}
+          </p>
           <button
             type="submit"
             className="p-3 bg-black text-white rounded hover:bg-gray-800"
           >
-            Register
+            Sign up
           </button>
         </form>
         <p className="text-center mt-4 text-black">
           Already have an account?{" "}
           <Link href="/login" className="underline">
-            Login
+            Sign in
           </Link>
         </p>
       </div>

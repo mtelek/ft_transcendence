@@ -71,7 +71,7 @@ export default function EditableFieldRow({
       ) : (
         <button
           onClick={() => onStartEdit(field)}
-          className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700"
+          className="rounded bg-teal-500 px-3 py-2 text-sm hover:bg-teal-600"
         >
           Change
         </button>
