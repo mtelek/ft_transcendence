@@ -63,6 +63,7 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="email"
           />
           <input
             id="username"
@@ -71,6 +72,7 @@ export default function Register() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="username"
           />
           <input
             id="password"
@@ -79,6 +81,7 @@ export default function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="new-password"
           />
           <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}

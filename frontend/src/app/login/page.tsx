@@ -50,6 +50,7 @@ export default function LoginPage() {
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="p-3 border rounded"
+              autoComplete="username"
             />
             <input
               id="password"
@@ -58,6 +59,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="p-3 border rounded"
+              autoComplete="current-password"
             />
             <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}

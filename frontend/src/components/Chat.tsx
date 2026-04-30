@@ -111,6 +111,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 px-4 py-2 outline-none text-white bg-white/10 placeholder-slate-400 text-sm"
+            autoComplete="off"
           />
           <button
             type="submit"
