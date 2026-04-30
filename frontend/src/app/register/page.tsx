@@ -55,6 +55,7 @@ export default function Register() {
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
           <input
+            id="email"
             type="email"
             placeholder="Email"
             value={email}
@@ -62,6 +63,7 @@ export default function Register() {
             className="p-3 border rounded"
           />
           <input
+            id="username"
             type="text"
             placeholder="Username"
             value={username}
@@ -69,6 +71,7 @@ export default function Register() {
             className="p-3 border rounded"
           />
           <input
+            id="password"
             type="password"
             placeholder="Password"
             value={password}

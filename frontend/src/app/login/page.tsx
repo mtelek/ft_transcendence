@@ -42,6 +42,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
             <h1 className="text-2xl font-bold mb-6 text-center text-white">Login</h1>
             <input
+              id="identifier"
               type="text"
               placeholder="Email or Username"
               value={identifier}
@@ -49,6 +50,7 @@ export default function LoginPage() {
               className="p-3 border rounded"
             />
             <input
+              id="password"
               type="password"
               placeholder="Password"
               value={password}

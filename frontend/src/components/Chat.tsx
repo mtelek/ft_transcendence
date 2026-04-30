@@ -106,6 +106,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
       {size !== "minimized" && (
         <form onSubmit={sendMessage} className="flex border-t border-white/10">
           <input
+            id="chat"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
