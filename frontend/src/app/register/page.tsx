@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PokerBackground from "@/components/PokerBackground";
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -48,7 +49,8 @@ export default function Register() {
   };
 
   return (
-     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
+     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden"
+      style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
       <PokerBackground />
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md relative z-10">
         {/* Use native form validation before the request is sent */}
