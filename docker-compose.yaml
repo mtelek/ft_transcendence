@@ -15,9 +15,9 @@ services:
     env_file:
       - .env
     # DEV ONLY: remove these 2 lines before evaluation so code runs from the Docker image
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    # volumes:
+      # - ./frontend:/app
+      # - /app/node_modules
     restart: always
     networks:
       - transcendence

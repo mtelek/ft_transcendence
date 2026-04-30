@@ -256,8 +256,8 @@ Technology          Module                           Points
     ❌ Fair gameplay mechanics for all participants.
     ❌ Proper synchronization across all clients.
 
-❌                  Remote players                2 pts (Major)
-    ❌ Enable two players on separate computers to play the same game in real-time.
+✅                  Remote players                2 pts (Major)
+    ✅ Enable two players on separate computers to play the same game in real-time.
     ✅ Handle network latency and disconnections gracefully.
     ✅ Provide a smooth user experience for remote gameplay.
     ✅ Implement reconnection logic.

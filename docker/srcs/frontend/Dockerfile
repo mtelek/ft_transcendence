@@ -9,11 +9,20 @@ WORKDIR /app
 # if dependencies didnt change it wont run npm install which saves a lot of time
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm install
+# Install all dependencies and openssl for cert generation
+RUN apk add --no-cache openssl \
+	&& npm install
+
 
 # Copy the rest of your code into the container
 COPY . .
+
+# Create directory for certs and generate self-signed certificate
+RUN mkdir -p /app/certs \
+		&& openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+			-keyout /app/certs/key.pem \
+			-out /app/certs/cert.pem \
+			-subj "/CN=localhost"
 
 # Generate Prisma client for Linux
 RUN npx prisma generate
