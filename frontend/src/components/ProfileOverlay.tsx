@@ -154,10 +154,11 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     if (!session?.user) {
       return;
     }
-
+    if (friends.length === 0) {
+      void loadFriends(true);
+    }
     //Keep updating every few seconds and when you return to the tab so 
     // online status doesn’t get outdated
-    void loadFriends(true);
     const intervalId = window.setInterval(() => {
       void loadFriends();
     }, FRIENDS_REFRESH_MS);
