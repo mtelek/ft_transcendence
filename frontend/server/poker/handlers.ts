@@ -10,6 +10,9 @@ function hasBustedPlayer(session: GameSession) {
 }
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
+  // Track disconnect timers by username
+  const disconnectTimers = new Map<string, NodeJS.Timeout>();
+
   io.on("connection", (socket) => {
     console.log("[Socket.io] User connected:", socket.id);
 
@@ -105,8 +108,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+
       const entry = session.players.find((p) => p.username === username);
       if (entry) {
+        // Clear disconnect timer if reconnecting within 10s
+        if (disconnectTimers.has(username)) {
+          clearTimeout(disconnectTimers.get(username));
+          disconnectTimers.delete(username);
+        }
         state.socketToGame.delete(entry.socketId);
         entry.socketId = socket.id;
         if (image) entry.image = image;
@@ -216,10 +225,19 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (info) {
         const session = state.games.get(info.gameId);
         if (session && !session.isGameOver) {
-          const opp = session.players.find((p) => p.seatIndex !== info.seatIndex);
-          if (opp?.socketId) io.to(opp.socketId).emit("opponentDisconnected");
-          session.isGameOver = true;
-          endGame(state, info.gameId);
+          // Find the disconnecting player
+          const player = session.players.find((p) => p.seatIndex === info.seatIndex);
+          if (player) {
+            // Start a 10s timer for reconnection
+            disconnectTimers.set(player.username, setTimeout(() => {
+              // After 10s, if not reconnected, end game/mark as left
+              const opp = session.players.find((p) => p.seatIndex !== info.seatIndex);
+              if (opp?.socketId) io.to(opp.socketId).emit("opponentDisconnected");
+              session.isGameOver = true;
+              endGame(state, info.gameId);
+              disconnectTimers.delete(player.username);
+            }, 10000));
+          }
         }
         state.socketToGame.delete(socket.id);
       }
