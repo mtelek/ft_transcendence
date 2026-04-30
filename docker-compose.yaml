@@ -7,11 +7,14 @@ services:
     build:
       context: ./frontend
       dockerfile: ../docker/srcs/frontend/Dockerfile
+      args:
+        IP: ${IP}
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "80:80"
+      - "443:443"
     env_file:
       - .env
     # DEV ONLY: remove these 2 lines before evaluation so code runs from the Docker image

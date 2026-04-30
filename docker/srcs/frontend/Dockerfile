@@ -1,5 +1,10 @@
+
 # Base image - small Linux distro with Node preinstalled
 FROM node:20-alpine
+
+# Define IP and set is as environment variable inside the container
+ARG IP
+ENV IP=${IP}
 
 # Set working directory inside the container
 # All following commands run from here
@@ -13,16 +18,17 @@ COPY package*.json ./
 RUN apk add --no-cache openssl \
 	&& npm install
 
-
 # Copy the rest of your code into the container
 COPY . .
 
-# Create directory for certs and generate self-signed certificate
+# Create directory for certs and generate self-signed certificate with SAN for localhost and custom IP
 RUN mkdir -p /app/certs \
-		&& openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-			-keyout /app/certs/key.pem \
-			-out /app/certs/cert.pem \
-			-subj "/CN=localhost"
+  && printf "[req]\ndistinguished_name=req\nreq_extensions = v3_req\n[req_distinguished_name]\n[v3_req]\nsubjectAltName=DNS:localhost,IP:127.0.0.1,IP:${IP}\n" > /app/certs/openssl.cnf \
+  && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /app/certs/key.pem \
+    -out /app/certs/cert.pem \
+    -subj "/CN=localhost" \
+    -extensions v3_req -config /app/certs/openssl.cnf
 
 # Generate Prisma client for Linux
 RUN npx prisma generate

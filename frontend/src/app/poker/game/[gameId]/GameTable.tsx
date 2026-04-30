@@ -334,7 +334,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   */
 
   useEffect(() => {
-    const socket: Socket = io("http://localhost:3000");
+    const socket: Socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     socket.on("connect", () => {

@@ -1,4 +1,7 @@
-//Now allow images from Google profile servers
+const allowedDevOrigins = [
+  process.env.IP ? process.env.IP : 'localhost'
+];
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -8,6 +11,7 @@ const nextConfig = {
       },
     ],
   },
+  allowedDevOrigins,
 };
 
 module.exports = nextConfig;

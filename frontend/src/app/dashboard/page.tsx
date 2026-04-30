@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
   function getSocket(): Socket {
     if (socketRef.current) return socketRef.current;
-    const socket = io("http://localhost:3000");
+    const socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     socket.on("waitingForOpponent", () => setStatus("waiting"));

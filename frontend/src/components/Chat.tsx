@@ -30,7 +30,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const socket = io("http://localhost:3000");
+    const socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     const onMessage = (data: Message) => {
