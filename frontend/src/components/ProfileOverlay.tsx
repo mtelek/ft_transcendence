@@ -314,28 +314,38 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         <div className="mt-6 border-t border-gray-300 pt-4">
           <h3 className="text-md font-bold text-gray-800">Friends</h3>
 
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              id="friend"
-              value={friendIdentifier}
-              onChange={(event) => setFriendIdentifier(event.target.value)}
-              placeholder="Username or email"
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500"
-              autoComplete="off"
-            />
-            <button
-              onClick={handleAddFriend}
-              disabled={isAddingFriend}
-              className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
-            >
-              Add
-            </button>
+          <div className="mt-3 flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                id="friend"
+                value={friendIdentifier}
+                onChange={(event) => setFriendIdentifier(event.target.value)}
+                placeholder="Username or email"
+                className="w-full rounded-md border px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500 border-gray-300"
+                autoComplete="off"
+                aria-invalid={!!friendsError}
+                aria-describedby={friendsError ? 'friend-error' : undefined}
+              />
+              <button
+                onClick={handleAddFriend}
+                disabled={isAddingFriend}
+                className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
+              >
+                Add
+              </button>
+            </div>
+            {/* Error as helper text under input, always reserve space */}
+            <div className="min-h-[1.25rem]">
+              <div
+                id="friend-error"
+                className={`text-xs text-pokerred ${friendsError ? "visible" : "invisible"}`}
+                role={friendsError ? "alert" : undefined}
+                aria-live="polite"
+              >
+                {friendsError || "\u00A0"}
+              </div>
+            </div>
           </div>
-
-          {/* Surface friend-related API errors near the form and list. */}
-          {friendsError && (
-            <p className="mt-2 text-xs text-red-600">{friendsError}</p>
-          )}
 
           <div className="mt-3 space-y-2">
             {friendsLoading ? (
@@ -366,7 +376,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={() => handleRemoveFriend(friend.id)}
                     disabled={removingFriendId === friend.id}
-                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-60"
+                    className="rounded bg-pokerred px-2 py-1 text-xs text-white disabled:opacity-60"
                   >
                     Remove
                   </button>
