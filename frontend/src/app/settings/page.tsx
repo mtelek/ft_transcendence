@@ -336,11 +336,13 @@ export default function Home() {
                 <h2 className="text-xl font-semibold">Choose an avatar</h2>
                 <div className="flex items-center gap-2">
                   <input
+                    id="file"
                     ref={uploadInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     className="hidden"
                     onChange={handleAvatarUpload}
+                    autoComplete="off"
                   />
                   <button
                     onClick={openUploadDialog}

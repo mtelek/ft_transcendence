@@ -116,6 +116,7 @@ function ActionBar({
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
           </div>
           <input
+            id="raiseamount"
             type="range"
             min={minBet}
             max={maxBet}
@@ -124,6 +125,7 @@ function ActionBar({
             disabled={!canBetOrRaise}
             onChange={(e) => setRaiseAmount(Number(e.target.value))}
             className="w-36 accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            autoComplete="off"
           />
         </div>
       )}
@@ -169,10 +171,12 @@ function ActionBar({
             <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
             {isEditing ? (
               <input
+                id="editvalue"
                 type="number"
                 className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
                 value={editValue}
                 autoFocus
+                autoComplete="off"
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => {

@@ -38,13 +38,23 @@ export default function EditableFieldRow({
       <div className="flex-1">
         <p className="text-sm text-gray-400">{label}</p>
         {isEditing ? (
-          //In edit mode, show the controlled input for the current field value
+          // In edit mode, show the controlled input for the current field value
           <input
+            id={field}
             type={inputType}
             value={value}
             onChange={(e) => onChangeValue(e.target.value)}
             placeholder={placeholder}
             className="mt-1 w-full rounded bg-zinc-800 px-3 py-2 text-white outline-none ring-1 ring-zinc-600 focus:ring-green-500"
+            autoComplete={
+              field === "username"
+                ? "username"
+                : field === "email"
+                ? "email"
+                : field === "password"
+                ? "current-password"
+                : undefined
+            }
           />
         ) : (
           <p className="mt-1 text-white">{displayValue}</p>

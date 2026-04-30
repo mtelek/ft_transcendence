@@ -469,6 +469,7 @@ export default function PokerTable({ username }: { username: string }) {
               <button onClick={() => setBetAmount(settings.startingStack)} className="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 transition-colors">Max</button>
             </div>
             <input
+              id="range"
               type="range"
               min={0}
               max={settings.startingStack}
@@ -476,6 +477,7 @@ export default function PokerTable({ username }: { username: string }) {
               value={betAmount}
               onChange={(e) => setBetAmount(Number(e.target.value))}
               className="w-36 accent-lime-400 cursor-pointer"
+              autoComplete="off"
             />
           </div>
 
@@ -491,10 +493,12 @@ export default function PokerTable({ username }: { username: string }) {
               <span className="leading-none">BET</span>
               {isEditingBet ? (
                 <input
+                  id="number"
                   type="number"
                   className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
                   value={editBetValue}
                   autoFocus
+                  autoComplete="off"
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => setEditBetValue(e.target.value)}
                   onBlur={() => {

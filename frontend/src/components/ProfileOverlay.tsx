@@ -239,10 +239,12 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
           <div className="mt-3 flex items-center gap-2">
             <input
+              id="friend"
               value={friendIdentifier}
               onChange={(event) => setFriendIdentifier(event.target.value)}
               placeholder="Username or email"
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500"
+              autoComplete="off"
             />
             <button
               onClick={handleAddFriend}
