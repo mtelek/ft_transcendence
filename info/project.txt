@@ -257,10 +257,10 @@ Technology          Module                           Points
     ❌ Proper synchronization across all clients.
 
 ❌                  Remote players                2 pts (Major)
-    Enable two players on separate computers to play the same game in real-time.
-    ❌ Handle network latency and disconnections gracefully.
-    ❌ Provide a smooth user experience for remote gameplay.
-    ❌ Implement reconnection logic.
+    ❌ Enable two players on separate computers to play the same game in real-time.
+    ✅ Handle network latency and disconnections gracefully.
+    ✅ Provide a smooth user experience for remote gameplay.
+    ✅ Implement reconnection logic.
 
 ❌                Game customization              1 pt (Minor)
     ❌ Power-ups, attacks, or special abilities. Joker? Special Chip?
@@ -313,3 +313,10 @@ WHAT WE HAVE NOT DECIDED YET (Possible module points)
     ❌ If you implement game customization options, the AI must be able to usethem.
     ❌ You must be able to explain your AI implementation during evaluation.
     
+❌ File upload and management system.             1 pt  (Minor)
+    ❌ Support multiple file types (images, documents, etc.).
+    ❌ Client-side and server-side validation (type, size, format).
+    ❌ Secure file storage with proper access control.
+    ❌ File preview functionality where applicable.
+    ❌ Progress indicators for uploads.
+    ❌ Ability to delete uploaded files.
