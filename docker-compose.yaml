@@ -18,11 +18,11 @@ services:
     env_file:
       - .env
     # DEV ONLY: remove these 3 lines before evaluation so code runs from the Docker image
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - WATCHPACK_POLLING=true
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
+    # environment:
+    #   - WATCHPACK_POLLING=true
     restart: always
     networks:
       - transcendence
