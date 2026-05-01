@@ -30,7 +30,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const socket = io("http://localhost:3000");
+    const socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     const onMessage = (data: Message) => {
@@ -106,10 +106,12 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
       {size !== "minimized" && (
         <form onSubmit={sendMessage} className="flex border-t border-white/10">
           <input
+            id="chat"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 px-4 py-2 outline-none text-white bg-white/10 placeholder-slate-400 text-sm"
+            autoComplete="off"
           />
           <button
             type="submit"

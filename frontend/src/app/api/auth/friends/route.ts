@@ -51,14 +51,15 @@ async function getCurrentUserOrError(): Promise<CurrentUserResult> {
 
 export async function GET() {
   try {
-    //Return accepted friends for the authenticated user, including online presence
+    //Return accepted friends and pending requests for the authenticated user
     const authResult = await getCurrentUserOrError();
     if ("error" in authResult) {
       return authResult.error;
     }
     const { currentUser } = authResult;
 
-    const rows = await prisma.$queryRaw<FriendRow[]>`
+    // Accepted friends
+    const friendsRows = await prisma.$queryRaw<FriendRow[]>`
       SELECT
         u.id,
         u.username AS name,
@@ -71,9 +72,55 @@ export async function GET() {
       ORDER BY COALESCE(u.username, u.email, '') ASC
     `;
 
-    return jsonOk({ friends: mapFriendRows(rows) });
+    // Pending incoming requests (other users sent requests to me)
+    const pendingRows = await prisma.$queryRaw<FriendRow[]>`
+      SELECT
+        u.id,
+        u.username AS name,
+        u.email,
+        u.image,
+        (u."lastSeenAt" IS NOT NULL AND u."lastSeenAt" >= NOW() - INTERVAL '10 seconds') AS "isOnline"
+      FROM "Friendship" f
+      JOIN "User" u ON u.id = f."userId"
+      WHERE f."friendId" = ${currentUser.id} AND f."accepted" = false
+      ORDER BY COALESCE(u.username, u.email, '') ASC
+    `;
+
+    return jsonOk({ friends: mapFriendRows(friendsRows), pending: mapFriendRows(pendingRows) });
   } catch {
     return jsonError("Failed to load friends", 500);
+  }
+}
+// Accept a pending friend request
+export async function PATCH(request: Request) {
+  try {
+    const authResult = await getCurrentUserOrError();
+    if ("error" in authResult) {
+      return authResult.error;
+    }
+    const { currentUser } = authResult;
+    const { friendId } = (await request.json()) as { friendId?: string };
+    if (!friendId) {
+      return jsonError("Friend id is required", 400);
+    }
+
+    // Accept the pending request and create reciprocal
+    await prisma.$transaction([
+      prisma.$executeRaw`
+        UPDATE "Friendship"
+        SET "accepted" = true
+        WHERE "userId" = ${friendId} AND "friendId" = ${currentUser.id}
+      `,
+      prisma.$executeRaw`
+        INSERT INTO "Friendship" ("userId", "friendId", "accepted", "createdAt")
+        VALUES (${currentUser.id}, ${friendId}, true, NOW())
+        ON CONFLICT ("userId", "friendId") DO UPDATE SET "accepted" = true
+      `,
+    ]);
+
+    return jsonOk({ message: "Friend request accepted" });
+  } catch {
+    return jsonError("Failed to accept friend request", 500);
   }
 }
 

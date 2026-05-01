@@ -6,7 +6,8 @@ export default function Home() {
   return (
     <div className="min-h-[calc(100vh-64px)] text-white">
       {/* Keep the animated hero separate so the footer can sit below it and scroll naturally. */}
-      <section className="relative flex min-h-[calc(100vh-64px)] items-center justify-center overflow-hidden px-6">
+      <section className="relative flex min-h-[calc(100vh-64px)] items-center justify-center overflow-hidden px-6"
+        style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
         <PokerBackground />
         <h1 className="relative z-10 text-center text-4xl font-bold tracking-widest text-pokerred drop-shadow-[0_0_10px_rgba(231,0,0,0.7)]">
           WELCOME TO FT_TRANSCENDENCE

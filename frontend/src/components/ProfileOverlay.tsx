@@ -41,6 +41,8 @@ function areFriendsEqual(a: Friend[], b: Friend[]) {
 }
 
 export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
+  // Pending friend requests
+  const [pending, setPending] = useState<Friend[]>([]);
   //Session data provides the logged in users profile informaation
   const { data: session } = useSession();
   //Friends currently shown in the overlay
@@ -64,7 +66,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     }
 
     try {
-      const data = await apiRequest<{ friends?: Friend[] }>(
+      const data = await apiRequest<{ friends?: Friend[]; pending?: Friend[] }>(
         "/api/auth/friends",
         { method: "GET" },
         "Failed to load friends"
@@ -72,12 +74,14 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
       //Handle malformed responses by falling back to an empty list
       const incomingFriends = Array.isArray(data.friends) ? data.friends : [];
+      const incomingPending = Array.isArray(data.pending) ? data.pending : [];
 
-      //Avoid replacing state when the list has not actually changed.
       setFriends((previousFriends) =>
         areFriendsEqual(previousFriends, incomingFriends) ? previousFriends : incomingFriends
       );
-      //Clear any previous error after a succesful refresh
+      setPending((previousPending) =>
+        areFriendsEqual(previousPending, incomingPending) ? previousPending : incomingPending
+      );
       setFriendsError(null);
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to load friends");
@@ -87,6 +91,39 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       }
     }
   }, []);
+  async function handleAcceptFriend(friendId: string) {
+    try {
+      await apiRequest(
+        "/api/auth/friends",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendId }),
+        },
+        "Failed to accept friend request"
+      );
+      await loadFriends();
+    } catch (error) {
+      setFriendsError(error instanceof Error ? error.message : "Failed to accept friend request");
+    }
+  }
+
+  async function handleDeclineFriend(friendId: string) {
+    try {
+      await apiRequest(
+        "/api/auth/friends",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendId }),
+        },
+        "Failed to decline friend request"
+      );
+      await loadFriends();
+    } catch (error) {
+      setFriendsError(error instanceof Error ? error.message : "Failed to decline friend request");
+    }
+  }
 
   async function handleAddFriend() {
     const identifier = friendIdentifier.trim();
@@ -154,10 +191,11 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     if (!session?.user) {
       return;
     }
-
+    if (friends.length === 0) {
+      void loadFriends(true);
+    }
     //Keep updating every few seconds and when you return to the tab so 
     // online status doesn’t get outdated
-    void loadFriends(true);
     const intervalId = window.setInterval(() => {
       void loadFriends();
     }, FRIENDS_REFRESH_MS);
@@ -233,30 +271,81 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 			<LogoutButton/>
 		</div>
 
+        {/* Pending friend requests */}
+        <div className="mt-6 border-t border-gray-300 pt-4">
+          <h3 className="text-md font-bold text-gray-800">Pending Friend Requests</h3>
+          <div className="mt-3 space-y-2">
+            {pending.length === 0 ? (
+              <p className="text-sm text-gray-500">No pending requests</p>
+            ) : (
+              pending.map((friend) => (
+                <div key={friend.id} className="flex items-center gap-2 rounded-md bg-yellow-100 px-2 py-2">
+                  <Image
+                    src={friend.image || DEFAULT_AVATAR}
+                    alt={`${friend.name} avatar`}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.src = DEFAULT_AVATAR;
+                    }}
+                    unoptimized
+                  />
+                  <span className="text-sm text-gray-900">{friend.name}</span>
+                  <button
+                    onClick={() => handleAcceptFriend(friend.id)}
+                    className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleDeclineFriend(friend.id)}
+                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                  >
+                    Decline
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Friends area allows searching, adding, viewing presence, and removing friends. */}
         <div className="mt-6 border-t border-gray-300 pt-4">
           <h3 className="text-md font-bold text-gray-800">Friends</h3>
 
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              value={friendIdentifier}
-              onChange={(event) => setFriendIdentifier(event.target.value)}
-              placeholder="Username or email"
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500"
-            />
-            <button
-              onClick={handleAddFriend}
-              disabled={isAddingFriend}
-              className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
-            >
-              Add
-            </button>
+          <div className="mt-3 flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                id="friend"
+                value={friendIdentifier}
+                onChange={(event) => setFriendIdentifier(event.target.value)}
+                placeholder="Username or email"
+                className="w-full rounded-md border px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500 border-gray-300"
+                autoComplete="off"
+                aria-invalid={!!friendsError}
+                aria-describedby={friendsError ? 'friend-error' : undefined}
+              />
+              <button
+                onClick={handleAddFriend}
+                disabled={isAddingFriend}
+                className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
+              >
+                Add
+              </button>
+            </div>
+            {/* Error as helper text under input, always reserve space */}
+            <div className="min-h-[1.25rem]">
+              <div
+                id="friend-error"
+                className={`text-xs text-pokerred ${friendsError ? "visible" : "invisible"}`}
+                role={friendsError ? "alert" : undefined}
+                aria-live="polite"
+              >
+                {friendsError || "\u00A0"}
+              </div>
+            </div>
           </div>
-
-          {/* Surface friend-related API errors near the form and list. */}
-          {friendsError && (
-            <p className="mt-2 text-xs text-red-600">{friendsError}</p>
-          )}
 
           <div className="mt-3 space-y-2">
             {friendsLoading ? (
@@ -287,7 +376,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={() => handleRemoveFriend(friend.id)}
                     disabled={removingFriendId === friend.id}
-                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-60"
+                    className="rounded bg-pokerred px-2 py-1 text-xs text-white disabled:opacity-60"
                   >
                     Remove
                   </button>

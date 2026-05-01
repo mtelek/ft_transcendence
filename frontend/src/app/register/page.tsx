@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PokerBackground from "@/components/PokerBackground";
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -48,32 +49,39 @@ export default function Register() {
   };
 
   return (
-     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
+     <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden"
+      style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
       <PokerBackground />
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md relative z-10">
         {/* Use native form validation before the request is sent */}
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
           <input
+            id="email"
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="email"
           />
           <input
+            id="username"
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="username"
           />
           <input
+            id="password"
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 border rounded"
+            autoComplete="new-password"
           />
           <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}

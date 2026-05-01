@@ -20,7 +20,7 @@ export function ThemeCard({
       className="relative overflow-hidden rounded-lg text-left transition-transform hover:scale-[1.03]"
       style={{
         background: visuals.actionBarGradient,
-        outline: active ? `2px solid ${visuals.accent}` : "none",
+        outline: active ? "2px solid white" : "none",
         outlineOffset: "2px",
       }}
     >

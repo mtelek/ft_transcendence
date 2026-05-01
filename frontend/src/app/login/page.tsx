@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import GoogleLogin from "@/components/GoogleLogin";
 import PokerBackground from "@/components/PokerBackground";
+import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -36,24 +37,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden">
+    <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-6 relative overflow-hidden"
+        style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
         <PokerBackground />
       <div className="w-full max-w-md p-8 bg-black rounded-lg shadow-md relative z-10">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
             <h1 className="text-2xl font-bold mb-6 text-center text-white">Login</h1>
             <input
+              id="identifier"
               type="text"
               placeholder="Email or Username"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="p-3 border rounded"
+              autoComplete="username"
             />
             <input
+              id="password"
               type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="p-3 border rounded"
+              autoComplete="current-password"
             />
             <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}

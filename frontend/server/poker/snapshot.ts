@@ -13,11 +13,14 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   const mySeat = seats[mySeatIndex];
 
   const handInProgress = table.isHandInProgress();
-  const bettingInProgress = handInProgress && table.isBettingRoundInProgress();
-  const communityCards: PokerCard[] = handInProgress ? table.communityCards() : lastCommunityCards;
+  // handResult being set means the hand is logically over even if the library
+  // hasn't fully transitioned state yet (e.g. fold before endBettingRound)
+  const handActuallyInProgress = handInProgress && handResult === null;
+  const bettingInProgress = handActuallyInProgress && table.isBettingRoundInProgress();
+  const communityCards: PokerCard[] = handActuallyInProgress ? table.communityCards() : lastCommunityCards;
 
   let myHoleCards: (PokerCard | null)[] = [null, null];
-  if (handInProgress) {
+  if (handActuallyInProgress) {
     const all = table.holeCards();
     myHoleCards = (all[mySeatIndex] ?? []) as PokerCard[];
   } else {
@@ -29,7 +32,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   const opponents: OpponentSnapshot[] = oppEntries.map((oppEntry) => {
     const oppSeat = seats[oppEntry.seatIndex];
     let oppHoleCards: (PokerCard | null)[] = [null, null];
-    if (handInProgress) {
+    if (handActuallyInProgress) {
       const all = table.holeCards();
       oppHoleCards = (all[oppEntry.seatIndex] ?? [null, null]).map(() => null);
     } else {
@@ -49,10 +52,10 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
 
   let phase: GameSnapshot["phase"] = "preflop";
   if (isGameOver) phase = "gameover";
-  else if (!handInProgress) phase = "finished";
+  else if (!handActuallyInProgress) phase = "finished";
   else phase = table.roundOfBetting();
 
-  const pot = handInProgress ? table.pots().reduce((sum, p) => sum + p.size, 0) : 0;
+  const pot = handActuallyInProgress ? table.pots().reduce((sum, p) => sum + p.size, 0) : 0;
 
   const myTurn = bettingInProgress && table.playerToAct() === mySeatIndex;
   const rawLegal = myTurn ? table.legalActions() : { actions: [] as string[] };

@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   function getSocket(): Socket {
     if (socketRef.current) return socketRef.current;
-    const socket = io("http://localhost:3000");
+    const socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     socket.on("waitingForPlayers", (info: { current: number; needed: number }) => {
@@ -173,22 +173,26 @@ export default function DashboardPage() {
               <label className="flex flex-col gap-1">
                 <span className="text-slate-400 text-sm">Game Name</span>
                 <input
+                  id="gamename"
                   type="text"
                   value={gameName}
                   onChange={(e) => setGameName(e.target.value)}
                   placeholder="e.g. my-poker-room"
                   className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
+                  autoComplete="off"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
                 <span className="text-slate-400 text-sm">Password <span className="text-slate-600">(optional)</span></span>
                 <input
+                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Leave blank for no password"
                   className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
+                  autoComplete="off"
                 />
               </label>
 

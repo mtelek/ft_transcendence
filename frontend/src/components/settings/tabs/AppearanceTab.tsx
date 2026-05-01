@@ -3,13 +3,10 @@
 import Image from "next/image";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import {
-  ACCENT_LABELS,
-  ACCENT_SWATCHES,
   FELT_LABELS,
   FELT_SWATCHES,
 } from "@/lib/poker-settings/presets";
 import type {
-  AccentStyle,
   BgVariant,
   FeltStyle,
 } from "@/lib/poker-settings/types";
@@ -28,10 +25,6 @@ const FELT_OPTIONS: { value: FeltStyle; label: string }[] = (
 ).map((v) => ({ value: v, label: FELT_LABELS[v] }));
 
 const CARD_BACK_IDS = ["back01", "back02", "back03", "back04", "back05", "back06", "back07", "back08"];
-
-const ACCENT_OPTIONS: { value: AccentStyle; label: string }[] = (
-  ["green", "red", "blue", "amber", "purple"] as const
-).map((v) => ({ value: v, label: ACCENT_LABELS[v] }));
 
 const BG_OPTIONS: { value: BgVariant; label: string }[] = [
   { value: "static", label: "Static" },
@@ -73,15 +66,6 @@ export function AppearanceTab() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <div>
-          <label className="text-slate-200 block mb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Felt color</label>
-          <SwatchRow
-            value={settings.custom.feltStyle}
-            options={FELT_OPTIONS}
-            swatches={FELT_SWATCHES}
-            onChange={(v) => updateCustom({ feltStyle: v })}
-          />
-        </div>
 
         <div>
           <label className="text-slate-200 block mb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Card back</label>
@@ -99,14 +83,14 @@ export function AppearanceTab() {
             ))}
           </div>
         </div>
-
+        
         <div>
-          <label className="text-slate-200 block mb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Accent color</label>
+          <label className="text-slate-200 block mb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Background color</label>
           <SwatchRow
-            value={settings.custom.accentStyle}
-            options={ACCENT_OPTIONS}
-            swatches={ACCENT_SWATCHES}
-            onChange={(v) => updateCustom({ accentStyle: v })}
+            value={settings.custom.feltStyle}
+            options={FELT_OPTIONS}
+            swatches={FELT_SWATCHES}
+            onChange={(v) => updateCustom({ feltStyle: v })}
           />
         </div>
 

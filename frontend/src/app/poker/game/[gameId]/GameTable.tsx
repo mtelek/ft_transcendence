@@ -95,7 +95,6 @@ function ActionBar({
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -114,6 +113,7 @@ function ActionBar({
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
           </div>
           <input
+            id="raiseamount"
             type="range"
             min={minBet}
             max={maxBet}
@@ -122,6 +122,7 @@ function ActionBar({
             disabled={!canBetOrRaise}
             onChange={(e) => setRaiseAmount(Number(e.target.value))}
             className="w-36 accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            autoComplete="off"
           />
         </div>
       )}
@@ -167,10 +168,12 @@ function ActionBar({
             <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
             {isEditing ? (
               <input
+                id="editvalue"
                 type="number"
                 className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
                 value={editValue}
                 autoFocus
+                autoComplete="off"
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => {
@@ -240,7 +243,7 @@ function ResultOverlay({
 
   return (
     <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
-      <div className="text-4xl">{iWon ? "🎉" : "😔"}</div>
+      <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
       <h2 className="text-2xl font-bold text-white">
         {iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
       </h2>
@@ -248,7 +251,10 @@ function ResultOverlay({
         <p className="text-slate-300 text-lg">{winner.handName}</p>
       )}
       {winner?.handName === "Fold" && (
-        <p className="text-slate-300">Opponent folded</p>
+        <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
+      )}
+      {iWon && winner?.potWon != null && winner.potWon > 0 && (
+        <p className="text-orange-400 font-semibold text-lg">+€{winner.potWon.toLocaleString()}</p>
       )}
 
       {/* Show winner's cards */}
@@ -315,7 +321,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   ]);
 
   useEffect(() => {
-    const socket: Socket = io("http://localhost:3000");
+    const socket: Socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -501,6 +507,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
+      <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
         <Image
@@ -563,27 +570,27 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             <ResultOverlay snapshot={snapshot} myUsername={username} />
           )}
 
-          {/* Pot */}
-          <div className="absolute top-[28%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium">
+          {/* Pot + Community cards */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
             {pot > 0 && (
-              <>Pot <span className="font-bold" style={{ color: visuals.accent }}>€{pot.toLocaleString()}</span></>
+              <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                Pot <span className="font-bold text-orange-400">€{pot.toLocaleString()}</span>
+              </div>
             )}
-          </div>
-
-          {/* Community cards */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2">
-            {communitySlots.map((card, i) =>
-              card ? (
-                <FlipCommunityCard
-                  key={i}
-                  card={card}
-                  delay={Math.max(0, i - prevCommunityCount) * 0.12}
-                  cardBackImage={settings.cardBackImage}
-                />
-              ) : (
-                <EmptyCommunitySlot key={i} />
-              )
-            )}
+            <div className="flex gap-2">
+              {communitySlots.map((card, i) =>
+                card ? (
+                  <FlipCommunityCard
+                    key={i}
+                    card={card}
+                    delay={Math.max(0, i - prevCommunityCount) * 0.12}
+                    cardBackImage={settings.cardBackImage}
+                  />
+                ) : (
+                  <EmptyCommunitySlot key={i} />
+                )
+              )}
+            </div>
           </div>
 
           {/* Opponent seats */}
@@ -729,9 +736,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             </div>
           )}
 
-          <p className="text-slate-500 text-xs mt-4">
-            ft_transcendence | {gameId}
-          </p>
         </div>
       </div>
 

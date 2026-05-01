@@ -35,6 +35,9 @@ function startGame(io: Server, state: PokerServerState, gameId: string, players:
 }
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
+  // Track disconnect timers by username
+  const disconnectTimers = new Map<string, NodeJS.Timeout>();
+
   io.on("connection", (socket) => {
     console.log("[Socket.io] User connected:", socket.id);
 
@@ -125,8 +128,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+
       const entry = session.players.find((p) => p.username === username);
       if (entry) {
+        // clear disconnect timer if reconnecting within 10s
+        if (disconnectTimers.has(username)) {
+          clearTimeout(disconnectTimers.get(username));
+          disconnectTimers.delete(username);
+        }
         state.socketToGame.delete(entry.socketId);
         entry.socketId = socket.id;
         if (image) entry.image = image;
@@ -148,6 +157,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isBettingRoundInProgress() || table.playerToAct() !== info.seatIndex) return;
 
       const isFold = action === "fold";
+      const foldWinner = isFold
+        ? session.players.find((p) => p.seatIndex !== info.seatIndex)!
+        : null;
+      // capture pot before the action so it's available after the hand ends
+      const potBeforeAction = table.pots().reduce((sum, p) => sum + p.size, 0);
 
       // snapshot chip counts before action to detect who won on fold
       const chipsBefore = table.seats().map((s) => s?.totalChips ?? 0);
@@ -159,6 +173,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+      // After fold the pot may already be cleared by the library; use pre-action value
+      const foldPot = isFold
+        ? potBeforeAction + (betSize ?? 0)
+        : 0;
+
       const allHoles = table.holeCards();
       session.lastHoleCards = allHoles.map((h) => {
         if (h) return [...h];
@@ -167,14 +186,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       if (!table.isHandInProgress()) {
         if (isFold) {
-          // find who gained chips (the winner by fold)
+          // find who gained chips (chip-diff works for any number of players)
           const chipsAfter = table.seats().map((s) => s?.totalChips ?? 0);
           const winnerSeatIdx = chipsAfter.findIndex((chips, i) => chips > chipsBefore[i]);
           const winner = winnerSeatIdx >= 0
             ? session.players.find((p) => p.seatIndex === winnerSeatIdx)
             : session.players.find((p) => p.seatIndex !== info.seatIndex);
           if (winner) {
-            session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [] }];
+            session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [], potWon: foldPot }];
           }
         }
 
