@@ -1,3 +1,5 @@
+import { Table } from "poker-ts";
+import type { Server } from "socket.io";
 import type { GameSession, PokerCard } from "./types";
 import { HAND_RANKING_NAMES } from "./types";
 import type { PokerServerState } from "./state";
@@ -42,4 +44,64 @@ export function advanceRounds(session: GameSession) {
       session.lastCommunityCards = [...table.communityCards()];
     }
   }
+}
+
+// returns true if the game is now over (1 or 0 players with chips).
+// eliminates busted players: notifies them, removes them from session, reseats remaining on a fresh table (with 2 seats)
+export function handleElimination(io: Server, state: PokerServerState, gameId: string): boolean {
+  const session = state.games.get(gameId);
+  if (!session) return true;
+
+  const seats = session.table.seats();
+
+  const activePlayers = session.players.filter((p) => {
+    const seat = seats[p.seatIndex];
+    return seat && seat.totalChips > 0;
+  });
+
+  const bustedPlayers = session.players.filter((p) => {
+    const seat = seats[p.seatIndex];
+    return !seat || seat.totalChips === 0;
+  });
+
+  for (const p of bustedPlayers) {
+    io.to(p.socketId).emit("eliminated");
+    state.socketToGame.delete(p.socketId);
+    state.pendingGames.delete(p.username);
+  }
+
+  if (activePlayers.length <= 1) {
+    // re-index the single winner to seat 0 for snapshot consistency
+    activePlayers.forEach((p, newSeat) => {
+      const entry = state.socketToGame.get(p.socketId);
+      if (entry) entry.seatIndex = newSeat;
+      p.seatIndex = newSeat;
+    });
+    session.players = activePlayers;
+    session.isGameOver = true;
+    return true;
+  }
+
+  // create a fresh table with the surviving players
+  const newTable = new Table({ smallBlind: 10, bigBlind: 20 }, activePlayers.length);
+  activePlayers.forEach((p, newSeat) => {
+    const oldSeat = seats[p.seatIndex];
+    newTable.sitDown(newSeat, oldSeat!.totalChips);
+  });
+
+  activePlayers.forEach((p, newSeat) => {
+    const entry = state.socketToGame.get(p.socketId);
+    if (entry) entry.seatIndex = newSeat;
+    p.seatIndex = newSeat;
+  });
+
+  session.table = newTable;
+  session.players = activePlayers;
+  session.nextHandReady = new Array(activePlayers.length).fill(false);
+  session.lastHoleCards = new Array(activePlayers.length).fill(null);
+  session.lastCommunityCards = [];
+  session.nextDealerSeat = 0;
+  // keep handResult so players see who won the last hand before clicking "next hand"
+
+  return false;
 }

@@ -21,10 +21,22 @@ export interface GameSession {
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
   handResult: WinnerInfo[] | null;
-  nextHandReady: [boolean, boolean];
+  nextHandReady: boolean[];
   nextDealerSeat: number;
   isGameOver: boolean;
+  totalPlayers: number;
 }
+
+export type OpponentSnapshot = {
+  username: string;
+  image?: string;
+  stack: number;
+  betSize: number;
+  totalChips: number;
+  holeCards: (PokerCard | null)[];
+  isDealer: boolean;
+  seatIndex: number;
+};
 
 export type GameSnapshot = {
   gameId: string;
@@ -37,16 +49,9 @@ export type GameSnapshot = {
     totalChips: number;
     holeCards: (PokerCard | null)[];
     isDealer: boolean;
+    seatIndex: number;
   };
-  opponent: {
-    username: string;
-    image?: string;
-    stack: number;
-    betSize: number;
-    totalChips: number;
-    holeCards: (PokerCard | null)[];
-    isDealer: boolean;
-  };
+  opponents: OpponentSnapshot[];
   communityCards: PokerCard[];
   pot: number;
   myTurn: boolean;
@@ -54,6 +59,7 @@ export type GameSnapshot = {
   handResult: WinnerInfo[] | null;
   iReadyForNextHand: boolean;
   isGameOver: boolean;
+  totalPlayers: number;
 };
 
 export const HAND_RANKING_NAMES = [

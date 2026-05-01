@@ -1,33 +1,51 @@
 import type { Server } from "socket.io";
 import type { PokerServerState } from "./state";
-import type { GameSnapshot, PokerCard } from "./types";
+import type { GameSnapshot, OpponentSnapshot, PokerCard } from "./types";
 
 export function buildSnapshot(state: PokerServerState, gameId: string, mySeatIndex: number): GameSnapshot {
   const session = state.games.get(gameId)!;
-  const { table, players, lastCommunityCards, lastHoleCards, handResult, nextHandReady, isGameOver } = session;
+  const { table, players, lastCommunityCards, lastHoleCards, handResult, nextHandReady, isGameOver, totalPlayers } = session;
 
   const myEntry = players.find((p) => p.seatIndex === mySeatIndex)!;
-  const oppEntry = players.find((p) => p.seatIndex !== mySeatIndex)!;
-  const oppSeatIndex = oppEntry.seatIndex;
+  const oppEntries = players.filter((p) => p.seatIndex !== mySeatIndex);
 
   const seats = table.seats();
   const mySeat = seats[mySeatIndex];
-  const oppSeat = seats[oppSeatIndex];
 
   const handInProgress = table.isHandInProgress();
   const bettingInProgress = handInProgress && table.isBettingRoundInProgress();
   const communityCards: PokerCard[] = handInProgress ? table.communityCards() : lastCommunityCards;
 
   let myHoleCards: (PokerCard | null)[] = [null, null];
-  let oppHoleCards: (PokerCard | null)[] = [null, null];
   if (handInProgress) {
     const all = table.holeCards();
     myHoleCards = (all[mySeatIndex] ?? []) as PokerCard[];
-    oppHoleCards = (all[oppSeatIndex] ?? [null, null]).map(() => null);
   } else {
     myHoleCards = lastHoleCards[mySeatIndex] ?? [null, null];
-    oppHoleCards = lastHoleCards[oppSeatIndex] ?? [null, null];
   }
+
+  const dealerSeat = handInProgress ? table.button() : -1;
+
+  const opponents: OpponentSnapshot[] = oppEntries.map((oppEntry) => {
+    const oppSeat = seats[oppEntry.seatIndex];
+    let oppHoleCards: (PokerCard | null)[] = [null, null];
+    if (handInProgress) {
+      const all = table.holeCards();
+      oppHoleCards = (all[oppEntry.seatIndex] ?? [null, null]).map(() => null);
+    } else {
+      oppHoleCards = lastHoleCards[oppEntry.seatIndex] ?? [null, null];
+    }
+    return {
+      username: oppEntry.username,
+      image: oppEntry.image,
+      stack: oppSeat?.stack ?? 0,
+      betSize: oppSeat?.betSize ?? 0,
+      totalChips: oppSeat?.totalChips ?? 0,
+      holeCards: oppHoleCards,
+      isDealer: dealerSeat === oppEntry.seatIndex,
+      seatIndex: oppEntry.seatIndex,
+    };
+  });
 
   let phase: GameSnapshot["phase"] = "preflop";
   if (isGameOver) phase = "gameover";
@@ -45,8 +63,6 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       : undefined,
   };
 
-  const dealerSeat = handInProgress ? table.button() : -1;
-
   return {
     gameId,
     phase,
@@ -58,23 +74,17 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       totalChips: mySeat?.totalChips ?? 0,
       holeCards: myHoleCards,
       isDealer: dealerSeat === mySeatIndex,
+      seatIndex: mySeatIndex,
     },
-    opponent: {
-      username: oppEntry.username,
-      image: oppEntry.image,
-      stack: oppSeat?.stack ?? 0,
-      betSize: oppSeat?.betSize ?? 0,
-      totalChips: oppSeat?.totalChips ?? 0,
-      holeCards: oppHoleCards,
-      isDealer: dealerSeat === oppSeatIndex,
-    },
+    opponents,
     communityCards,
     pot,
     myTurn,
     legalActions,
     handResult,
-    iReadyForNextHand: nextHandReady[mySeatIndex as 0 | 1],
+    iReadyForNextHand: nextHandReady[mySeatIndex] ?? false,
     isGameOver,
+    totalPlayers,
   };
 }
 

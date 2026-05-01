@@ -17,6 +17,12 @@ import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 import { getCardImage, getCardBack } from "@/lib/cards";
 import Link from "next/link";
 
+// opponent seat positions as [top%, left%] , depending if 2 or 3 players
+const OPPONENT_POSITIONS: Record<number, [number, number][]> = {
+  1: [[12, 50]],
+  2: [[12, 25], [12, 75]],
+};
+
 function CardFaceUp({ card }: { card: PokerCard }) {
   return (
     <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg select-none">
@@ -32,14 +38,6 @@ function CardFaceDown({ backImage = "back01" }: { backImage?: string }) {
     </div>
   );
 }
-
-/*function CommunityCard({ card }: { card: PokerCard }) {
-  return (
-    <div className="w-14 h-20 rounded-lg overflow-hidden shadow-xl select-none">
-      <Image src={getCardImage(card)} alt="" width={56} height={80} className="w-full h-full object-cover" />
-    </div>
-  );
-}*/
 
 function EmptyCommunitySlot() {
   return (
@@ -201,7 +199,6 @@ function ActionBar({
 
 // RESULT OVERLAY
 
-//display the outcome of a poker hand or the entire game, overlaying the table
 function ResultOverlay({
   snapshot,
   myUsername,
@@ -209,18 +206,27 @@ function ResultOverlay({
   snapshot: GameSnapshot;
   myUsername: string;
 }) {
-  const { handResult, isGameOver, me, opponent } = snapshot;
-  const isMatchOver = isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
+  const { handResult, isGameOver, me, opponents } = snapshot;
+  const totalChips = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
+  const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
   const winner = handResult?.[0];
   const iWon = winner?.username === myUsername;
 
   if (isMatchOver) {
-    const iWonGame = me.totalChips > opponent.totalChips;
+    const iWonGame = opponents.every((o) => o.totalChips === 0) || (me.totalChips > 0 && opponents.every((o) => o.totalChips < me.totalChips / opponents.length));
+    const actualWinner = me.totalChips > 0
+      ? me.username
+      : opponents.reduce((best, o) => (o.totalChips > (opponents.find(x => x.username === best)?.totalChips ?? 0) ? o.username : best), opponents[0]?.username ?? "");
     return (
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
-        <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You have lost the game!"}</h2>
-        <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
+        <h2 className="text-3xl font-bold text-white">
+          {iWonGame ? "You win the game!" : isGameOver && me.totalChips > 0 ? "You win the game!" : "You have lost!"}
+        </h2>
+        <p className="text-slate-300">
+          Winner: <span className="font-bold text-yellow-400">{isGameOver && me.totalChips > 0 ? me.username : actualWinner}</span>
+          {" "}— €{totalChips.toLocaleString()} chips
+        </p>
         <Link
           href="/dashboard"
           className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
@@ -253,12 +259,11 @@ function ResultOverlay({
           ))}
         </div>
       )}
-
     </div>
   );
 }
 
-// PHASE BADGE; show in which phase of the hand/game we are
+// PHASE BADGE
 
 const PHASE_LABELS: Record<string, string> = {
   preflop: "Pre-flop",
@@ -282,8 +287,7 @@ type DealEntry = {
   faceUp: boolean;
 };
 
-const DEAL_CARD_INTERVAL = 0.2; // seconds between each card
-// Placeholder card for opponent face-down cards (value never shown)
+const DEAL_CARD_INTERVAL = 0.2;
 const PLACEHOLDER_CARD: PokerCard = { rank: "A", suit: "spades" };
 
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
@@ -292,7 +296,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [disconnected, setDisconnected] = useState(false);
-  //const [closeCountdown, setCloseCountdown] = useState<number | null>(null);
+  const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
 
   // Dealing animation state
@@ -300,34 +304,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
   const [settledCount, setSettledCount] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
-  // Tracks which hand (by card fingerprint) has already been animated
   const lastDealHandRef = useRef<string | null>(null);
-  // Tracks how many community cards were visible before the last update (for stagger delay)
   const communityCountRef = useRef(0);
-  // Store previous community card count for animation delay
   const [prevCommunityCount, setPrevCommunityCount] = useState(0);
-  // Ghost card slot refs for measuring exact final positions
+  // Ghost card slot refs: myCardSlotRefs[0..1], oppCardSlotRefs[oppIndex][0..1]
   const myCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
-  const oppCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
-
-  /*
-  // auto close the tab if game is over (not working correctly?!)
-  useEffect(() => {
-    if (!snapshot?.isGameOver) return;
-    setCloseCountdown(5);
-    const interval = setInterval(() => {
-      setCloseCountdown((n) => {
-        if (n === null || n <= 1) {
-          clearInterval(interval);
-          window.close();
-          return null;
-        }
-        return n - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [snapshot?.isGameOver]);
-  */
+  const oppCardSlotRefs = useRef<(HTMLDivElement | null)[][]>([
+    [null, null],
+    [null, null],
+  ]);
 
   useEffect(() => {
     const socket: Socket = io("http://localhost:3000");
@@ -345,6 +330,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       setDisconnected(true);
     });
 
+    socket.on("eliminated", () => {
+      setEliminated(true);
+    });
+
     socket.on("error", (err: { message: string }) => {
       if (err.message && err.message.toLowerCase().includes("not authorized")) {
         router.replace("/dashboard");
@@ -358,7 +347,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     };
   }, [gameId, username, image, router]);
 
-  // Reset to idle when a hand finishes so ghost slots are mounted before the next deal
+  // reset to inactive when a hand finishes
   useEffect(() => {
     if (snapshot?.phase === "finished" || snapshot?.phase === "gameover") {
       setTimeout(() => {
@@ -370,7 +359,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [snapshot?.phase]);
 
-  // Trigger deal animation when a new preflop hand arrives AND ghost slots are in the DOM
+  // trigger deal animation when new preflop hand arrives
   useEffect(() => {
     if (!snapshot || snapshot.phase !== "preflop" || dealPhase !== "idle") return;
     if (!tableRef.current) return;
@@ -388,33 +377,45 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     const deckX = w * 0.5;
     const deckY = h * 0.5;
 
-    function slotCenter(refs: (HTMLDivElement | null)[], idx: number, fx: number, fy: number) {
-      const el = refs[idx];
+    function slotCenter(el: HTMLDivElement | null, fallbackX: number, fallbackY: number) {
       if (el) {
         const r = el.getBoundingClientRect();
         return { x: r.left + r.width / 2 - tableRect.left, y: r.top + r.height / 2 - tableRect.top };
       }
-      return { x: fx, y: fy };
+      return { x: fallbackX, y: fallbackY };
     }
 
-    const me0  = slotCenter(myCardSlotRefs.current,  0, w * 0.5, h * 0.88);
-    const me1  = slotCenter(myCardSlotRefs.current,  1, w * 0.5, h * 0.88);
-    const opp0 = slotCenter(oppCardSlotRefs.current, 0, w * 0.5, h * 0.12);
-    const opp1 = slotCenter(oppCardSlotRefs.current, 1, w * 0.5, h * 0.12);
+    const oppPositions = OPPONENT_POSITIONS[snapshot.opponents.length] ?? OPPONENT_POSITIONS[1];
 
-    const entries: DealEntry[] = [
-      { id: "me-0",  card: cards[0],         fromX: deckX, fromY: deckY, toX: me0.x,  toY: me0.y,  delay: 0 * DEAL_CARD_INTERVAL, faceUp: true  },
-      { id: "opp-0", card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp0.x, toY: opp0.y, delay: 1 * DEAL_CARD_INTERVAL, faceUp: false },
-      { id: "me-1",  card: cards[1],         fromX: deckX, fromY: deckY, toX: me1.x,  toY: me1.y,  delay: 2 * DEAL_CARD_INTERVAL, faceUp: true  },
-      { id: "opp-1", card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp1.x, toY: opp1.y, delay: 3 * DEAL_CARD_INTERVAL, faceUp: false },
-    ];
+    const entries: DealEntry[] = [];
+    let cardIdx = 0;
+
+    // Deal round 1: me card 0, then each opponent card 0
+    const me0 = slotCenter(myCardSlotRefs.current[0], w * 0.5, h * 0.88);
+    entries.push({ id: "me-0", card: cards[0], fromX: deckX, fromY: deckY, toX: me0.x, toY: me0.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: true });
+
+    snapshot.opponents.forEach((_, oi) => {
+      const [topPct, leftPct] = oppPositions[oi] ?? [12, 50];
+      const opp0 = slotCenter(oppCardSlotRefs.current[oi]?.[0] ?? null, w * (leftPct / 100), h * (topPct / 100));
+      entries.push({ id: `opp-${oi}-0`, card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp0.x, toY: opp0.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: false });
+    });
+
+    // Deal round 2: me card 1, then each opponent card 1
+    const me1 = slotCenter(myCardSlotRefs.current[1], w * 0.5, h * 0.88);
+    entries.push({ id: "me-1", card: cards[1], fromX: deckX, fromY: deckY, toX: me1.x, toY: me1.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: true });
+
+    snapshot.opponents.forEach((_, oi) => {
+      const [topPct, leftPct] = oppPositions[oi] ?? [12, 50];
+      const opp1 = slotCenter(oppCardSlotRefs.current[oi]?.[1] ?? null, w * (leftPct / 100), h * (topPct / 100));
+      entries.push({ id: `opp-${oi}-1`, card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp1.x, toY: opp1.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: false });
+    });
 
     setDealEntries(entries);
     setSettledCount(0);
     setDealPhase("dealing");
   }, [snapshot, dealPhase]);
 
-  // When all cards have settled, switch to "done" so static cards appear
+  // When all cards have settled, switch to "done"
   useEffect(() => {
     if (dealPhase === "dealing" && dealEntries.length > 0 && settledCount >= dealEntries.length) {
       const t = setTimeout(() => setDealPhase("done"), 300);
@@ -422,7 +423,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [settledCount, dealEntries.length, dealPhase]);
 
-  // In non-preflop phases (flop onwards), cards must always be visible
+  // In non-preflop phases, cards must always be visible
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "preflop" && dealPhase !== "dealing") {
@@ -430,7 +431,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [snapshot, dealPhase]);
 
-  // Update community card count AFTER render so the stagger ref reflects the previous state
   useEffect(() => {
     setPrevCommunityCount(communityCountRef.current);
     communityCountRef.current = snapshot?.communityCards.length ?? 0;
@@ -442,6 +442,21 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   function sendNextHand() {
     socketRef.current?.emit("nextHand");
+  }
+
+  if (eliminated) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center flex flex-col items-center gap-4">
+          <div className="text-5xl">💀</div>
+          <p className="text-white text-2xl font-bold">You&apos;ve been eliminated!</p>
+          <p className="text-slate-400">You ran out of chips.</p>
+          <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full hover:bg-slate-200 transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (disconnected) {
@@ -465,11 +480,24 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     );
   }
 
-  const { me, opponent, communityCards, pot, myTurn, legalActions, phase } = snapshot;
-  const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
+  const { me, opponents, communityCards, pot, myTurn, legalActions, phase } = snapshot;
+  const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
+  const totalChipsAll = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
+  const maxBalance = Math.round(totalChipsAll / (opponents.length + 1));
 
-  // fill community card slots up to 5
+  // callAmount: how much to call = max opponent bet - my current bet
+  const maxOppBet = opponents.reduce((m, o) => Math.max(m, o.betSize), 0);
+  const callAmount = Math.min(me.stack, Math.max(0, maxOppBet - me.betSize));
+
   const communitySlots = Array.from({ length: 5 }, (_, i) => communityCards[i] ?? null);
+  const oppPositions = OPPONENT_POSITIONS[opponents.length] ?? OPPONENT_POSITIONS[1];
+
+  // Who is currently acting (not me)?
+  const actingOpponent = opponents.find((o) => {
+    // During betting, the player to act is whoever has myTurn=false and phase is active
+    return !myTurn && phase !== "finished" && phase !== "gameover";
+  });
+  const waitingForName = actingOpponent?.username ?? opponents[0]?.username ?? "Opponent";
 
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
@@ -501,7 +529,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-        {/* Phase + game ID */}
+        {/* Phase badge */}
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
             {PHASE_LABELS[phase] ?? phase}
@@ -513,7 +541,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           )}
           {!myTurn && phase !== "finished" && phase !== "gameover" && (
             <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
-              Opponent&apos;s turn
+              {waitingForName}&apos;s turn
             </span>
           )}
         </div>
@@ -532,10 +560,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
           {/* Result overlay */}
           {(snapshot.phase === "finished" || isMatchOver) && (
-            <ResultOverlay
-              snapshot={snapshot}
-              myUsername={username}
-            />
+            <ResultOverlay snapshot={snapshot} myUsername={username} />
           )}
 
           {/* Pot */}
@@ -561,45 +586,59 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             )}
           </div>
 
-          {/* Opponent seat (top) — ordered from screen edge → table center */}
-          <div
-            className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
-            style={{ top: "12%", left: "50%" }}
-          >
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
-                €{opponent.stack.toLocaleString()}
-              </div>
-              {opponent.betSize > 0 && (
-                <div className="bg-yellow-700/80 px-2 py-0.5 rounded-full text-xs text-yellow-200">
-                  bet €{opponent.betSize.toLocaleString()}
+          {/* Opponent seats */}
+          {opponents.map((opp, oi) => {
+            const [topPct, leftPct] = oppPositions[oi] ?? [12, 50];
+            const isOppTurn = !myTurn && phase !== "finished" && phase !== "gameover";
+            return (
+              <div
+                key={opp.seatIndex}
+                className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
+                style={{ top: `${topPct}%`, left: `${leftPct}%` }}
+              >
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="bg-slate-900/80 px-3 py-0.5 rounded-full text-xs text-white font-medium">
+                    €{opp.stack.toLocaleString()}
+                  </div>
+                  {opp.betSize > 0 && (
+                    <div className="bg-yellow-700/80 px-2 py-0.5 rounded-full text-xs text-yellow-200">
+                      bet €{opp.betSize.toLocaleString()}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <span className="text-white text-xs font-medium">{opponent.username}</span>
-            <div className="flex items-center gap-1.5">
-              {opponent.isDealer && (
-                <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
-              )}
-              <PlayerAvatar
-                src={opponent.image}
-                fallback={opponent.username}
-                className={`w-10 h-10 rounded-full border-2 ${!myTurn && phase !== "finished" ? "border-green-400" : "border-slate-400"}`}
-              />
-            </div>
-            <div className="flex items-end gap-2 mt-1">
-              <ChipStacks balance={opponent.totalChips} maxBalance={Math.round((me.totalChips + opponent.totalChips) / 2)} />
-              <div className="flex gap-1">
-                {dealPhase === "done"
-                  ? opponent.holeCards.map((card, i) =>
-                      card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} backImage={settings.cardBackImage} />
-                    )
-                  : [0, 1].map((i) => (
-                      <div key={i} ref={(el) => { oppCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
-                    ))}
+                <span className="text-white text-xs font-medium">{opp.username}</span>
+                <div className="flex items-center gap-1.5">
+                  {opp.isDealer && (
+                    <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
+                  )}
+                  <PlayerAvatar
+                    src={opp.image}
+                    fallback={opp.username}
+                    className={`w-10 h-10 rounded-full border-2 ${isOppTurn ? "border-green-400" : "border-slate-400"}`}
+                  />
+                </div>
+                <div className="flex items-end gap-2 mt-1">
+                  <ChipStacks balance={opp.totalChips} maxBalance={maxBalance} />
+                  <div className="flex gap-1">
+                    {dealPhase === "done"
+                      ? opp.holeCards.map((card, i) =>
+                          card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} backImage={settings.cardBackImage} />
+                        )
+                      : [0, 1].map((i) => (
+                          <div
+                            key={i}
+                            ref={(el) => {
+                              if (!oppCardSlotRefs.current[oi]) oppCardSlotRefs.current[oi] = [null, null];
+                              oppCardSlotRefs.current[oi][i] = el;
+                            }}
+                            className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30"
+                          />
+                        ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
 
           {/* Animated dealing cards overlay */}
           {dealPhase === "dealing" && dealEntries.map((entry) => (
@@ -632,7 +671,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                       <div key={i} ref={(el) => { myCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
                     ))}
               </div>
-              <ChipStacks balance={me.totalChips} maxBalance={Math.round((me.totalChips + opponent.totalChips) / 2)} />
+              <ChipStacks balance={me.totalChips} maxBalance={maxBalance} />
             </div>
             <div className="flex items-center gap-1.5">
               {me.isDealer && (
@@ -658,14 +697,14 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           </div>
         </div>
 
-        {/* Action bar + controls — above chat */}
+        {/* Action bar + controls */}
         <div style={{ position: "relative", zIndex: 60 }}>
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
               legalActions={legalActions}
               myStack={me.stack}
               pot={pot}
-              callAmount={Math.min(me.stack, Math.max(0, opponent.betSize - me.betSize))}
+              callAmount={callAmount}
               onAction={sendAction}
               bannerImage={settings.bannerImage}
             />
@@ -673,11 +712,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
           {!myTurn && phase !== "finished" && phase !== "gameover" && (
             <div className="mt-6 px-8 py-4 text-slate-400 text-sm">
-              Waiting for {opponent.username}...
+              Waiting for {waitingForName}...
             </div>
           )}
 
-          {/* Next Hand button — shown below table when hand is over */}
+          {/* Next Hand button */}
           {phase === "finished" && !snapshot.isGameOver && (
             <div className="mt-6 flex flex-col items-center gap-2">
               <button
@@ -685,7 +724,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                 disabled={snapshot.iReadyForNextHand}
                 className="bg-white text-slate-900 font-bold px-10 py-3 rounded-full text-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
               >
-                {snapshot.iReadyForNextHand ? "Waiting for opponent…" : "Next Hand →"}
+                {snapshot.iReadyForNextHand ? "Waiting for others…" : "Next Hand →"}
               </button>
             </div>
           )}

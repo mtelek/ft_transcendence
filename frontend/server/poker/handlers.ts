@@ -3,10 +3,35 @@ import type { Server } from "socket.io";
 import type { PokerServerState } from "./state";
 import type { GameSession } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
-import { advanceRounds, endGame } from "./game-flow";
+import { advanceRounds, endGame, handleElimination } from "./game-flow";
 
 function hasBustedPlayer(session: GameSession) {
   return session.table.seats().some((seat) => seat && seat.totalChips === 0);
+}
+
+function startGame(io: Server, state: PokerServerState, gameId: string, players: Array<{ socketId: string; username: string; image?: string }>) {
+  const n = players.length;
+  const table = new Table({ smallBlind: 10, bigBlind: 20 }, n);
+  for (let i = 0; i < n; i++) table.sitDown(i, 1000);
+  table.startHand(0);
+
+  const session: GameSession = {
+    table,
+    players: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
+    lastCommunityCards: [],
+    lastHoleCards: new Array(n).fill(null),
+    handResult: null,
+    nextHandReady: new Array(n).fill(false),
+    nextDealerSeat: 1,
+    isGameOver: false,
+    totalPlayers: n,
+  };
+
+  state.games.set(gameId, session);
+  for (let i = 0; i < n; i++) {
+    state.pendingGames.set(players[i].username, { gameId, seatIndex: i });
+    io.to(players[i].socketId).emit("gameStarted", { gameId });
+  }
 }
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
@@ -26,7 +51,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.join(gameId);
     });
 
-    socket.on("hostGame", ({ username, image, gameName, password }: { username: string; image?: string; gameName: string; password: string }) => {
+    socket.on("hostGame", ({ username, image, gameName, password, gameSize }: { username: string; image?: string; gameName: string; password: string; gameSize?: number }) => {
       const normalizedGameName = gameName.trim();
       if (!normalizedGameName) {
         socket.emit("lobbyError", { message: "Game name is required" });
@@ -39,57 +64,52 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       for (const [name, entry] of state.namedLobbies) {
-        if (entry.socketId === socket.id) {
+        if (entry.players.some((p) => p.socketId === socket.id)) {
           state.namedLobbies.delete(name);
           state.reservedGameNames.delete(name);
           break;
         }
       }
 
-      state.namedLobbies.set(normalizedGameName, { socketId: socket.id, username, image, password });
+      const maxPlayers = gameSize === 3 ? 3 : 2;
+      state.namedLobbies.set(normalizedGameName, {
+        password,
+        maxPlayers,
+        players: [{ socketId: socket.id, username, image }],
+      });
       state.reservedGameNames.add(normalizedGameName);
-      socket.emit("waitingForOpponent");
+      socket.emit("waitingForPlayers", { current: 1, needed: maxPlayers });
     });
 
     socket.on("joinNamedGame", ({ username, image, gameName, password }: { username: string; image?: string; gameName: string; password: string }) => {
       const normalizedGameName = gameName.trim();
-      const host = state.namedLobbies.get(normalizedGameName);
-      if (!host) {
+      const lobby = state.namedLobbies.get(normalizedGameName);
+      if (!lobby) {
         socket.emit("lobbyError", { message: "Game not found" });
         return;
       }
-      if (host.password !== password) {
+      if (lobby.password !== password) {
         socket.emit("lobbyError", { message: "Wrong password" });
         return;
       }
-      state.namedLobbies.delete(normalizedGameName);
+      if (lobby.players.some((p) => p.username === username)) {
+        socket.emit("lobbyError", { message: "You are already in this lobby" });
+        return;
+      }
 
-      const gameId = normalizedGameName;
-      const table = new Table({ smallBlind: 10, bigBlind: 20 }, 2);
-      table.sitDown(0, 1000);
-      table.sitDown(1, 1000);
-      table.startHand(0);
+      lobby.players.push({ socketId: socket.id, username, image });
 
-      const session: GameSession = {
-        table,
-        players: [
-          { socketId: host.socketId, username: host.username, image: host.image, seatIndex: 0 },
-          { socketId: socket.id, username, image, seatIndex: 1 },
-        ],
-        lastCommunityCards: [],
-        lastHoleCards: [null, null],
-        handResult: null,
-        nextHandReady: [false, false],
-        nextDealerSeat: 1,
-        isGameOver: false,
-      };
-
-      state.games.set(gameId, session);
-      state.pendingGames.set(host.username, { gameId, seatIndex: 0 });
-      state.pendingGames.set(username, { gameId, seatIndex: 1 });
-
-      io.to(host.socketId).emit("gameStarted", { gameId });
-      socket.emit("gameStarted", { gameId });
+      if (lobby.players.length >= lobby.maxPlayers) {
+        state.namedLobbies.delete(normalizedGameName);
+        startGame(io, state, normalizedGameName, lobby.players);
+      } else {
+        // not full yet — notify everyone in the lobby
+        const current = lobby.players.length;
+        const needed = lobby.maxPlayers;
+        for (const p of lobby.players) {
+          io.to(p.socketId).emit("waitingForPlayers", { current, needed });
+        }
+      }
     });
 
     socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
@@ -129,8 +149,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       const isFold = action === "fold";
 
+      // snapshot chip counts before action to detect who won on fold
+      const chipsBefore = table.seats().map((s) => s?.totalChips ?? 0);
+
       try {
-          table.actionTaken(action as 'fold' | 'check' | 'call' | 'bet' | 'raise', betSize);
+        table.actionTaken(action as "fold" | "check" | "call" | "bet" | "raise", betSize);
       } catch (err) {
         socket.emit("error", { message: (err as Error).message });
         return;
@@ -144,22 +167,29 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       if (!table.isHandInProgress()) {
         if (isFold) {
-          const winner = session.players.find((p) => p.seatIndex !== info.seatIndex)!;
-          session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [] }];
+          // find who gained chips (the winner by fold)
+          const chipsAfter = table.seats().map((s) => s?.totalChips ?? 0);
+          const winnerSeatIdx = chipsAfter.findIndex((chips, i) => chips > chipsBefore[i]);
+          const winner = winnerSeatIdx >= 0
+            ? session.players.find((p) => p.seatIndex === winnerSeatIdx)
+            : session.players.find((p) => p.seatIndex !== info.seatIndex);
+          if (winner) {
+            session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [] }];
+          }
         }
 
         if (hasBustedPlayer(session)) {
-          session.isGameOver = true;
+          const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          if (gameOver) endGame(state, info.gameId);
           return;
         }
       } else {
         advanceRounds(session);
         if (!table.isHandInProgress() && hasBustedPlayer(session)) {
-          session.isGameOver = true;
+          const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          if (gameOver) endGame(state, info.gameId);
           return;
         }
         if (table.isHandInProgress()) {
@@ -177,25 +207,25 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const session = state.games.get(info.gameId);
       if (!session || session.table.isHandInProgress() || session.isGameOver) return;
 
-      session.nextHandReady[info.seatIndex as 0 | 1] = true;
+      session.nextHandReady[info.seatIndex] = true;
       broadcastState(io, state, info.gameId);
 
-      if (session.nextHandReady[0] && session.nextHandReady[1]) {
-        session.nextHandReady = [false, false];
+      if (session.nextHandReady.every(Boolean)) {
+        session.nextHandReady = new Array(session.players.length).fill(false);
         session.handResult = null;
         session.lastCommunityCards = [];
-        session.lastHoleCards = [null, null];
+        session.lastHoleCards = new Array(session.players.length).fill(null);
 
         if (hasBustedPlayer(session)) {
-          session.isGameOver = true;
+          const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          if (gameOver) endGame(state, info.gameId);
           return;
         }
 
         try {
           session.table.startHand(session.nextDealerSeat);
-          session.nextDealerSeat = session.nextDealerSeat === 0 ? 1 : 0;
+          session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
           broadcastState(io, state, info.gameId);
         } catch (err) {
           console.error("startHand error:", err);
@@ -205,9 +235,18 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     socket.on("disconnect", () => {
       for (const [name, entry] of state.namedLobbies) {
-        if (entry.socketId === socket.id) {
-          state.namedLobbies.delete(name);
-          state.reservedGameNames.delete(name);
+        const idx = entry.players.findIndex((p) => p.socketId === socket.id);
+        if (idx !== -1) {
+          entry.players.splice(idx, 1);
+          if (entry.players.length === 0) {
+            state.namedLobbies.delete(name);
+            state.reservedGameNames.delete(name);
+          } else {
+            // notify remaining lobby members
+            for (const p of entry.players) {
+              io.to(p.socketId).emit("waitingForPlayers", { current: entry.players.length, needed: entry.maxPlayers });
+            }
+          }
           break;
         }
       }
@@ -216,10 +255,21 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (info) {
         const session = state.games.get(info.gameId);
         if (session && !session.isGameOver) {
-          const opp = session.players.find((p) => p.seatIndex !== info.seatIndex);
-          if (opp?.socketId) io.to(opp.socketId).emit("opponentDisconnected");
-          session.isGameOver = true;
-          endGame(state, info.gameId);
+          // check if this player still has chips or if theyre already busted (if they discconnect it should not end the other players game)
+         
+          const seat = session.table.seats()[info.seatIndex];
+          const alreadyEliminated = !seat || seat.totalChips === 0;
+
+          if (alreadyEliminated) {
+            //  remove them; the game continues as if they closed the tab
+            session.players = session.players.filter((p) => p.socketId !== socket.id);
+          } else {
+            for (const p of session.players) {
+              if (p.socketId !== socket.id) io.to(p.socketId).emit("opponentDisconnected");
+            }
+            session.isGameOver = true;
+            endGame(state, info.gameId);
+          }
         }
         state.socketToGame.delete(socket.id);
       }
