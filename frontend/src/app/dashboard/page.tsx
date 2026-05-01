@@ -135,7 +135,7 @@ export default function DashboardPage() {
       <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-3xl">
         <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>
 
-        <div className="flex items-stretch gap-6 w-full">
+        <div className="flex items-stretch justify-center gap-6 w-full">
           <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-10 flex flex-col items-center justify-center gap-4 min-w-[200px]">
             <p className="text-slate-400 text-sm mb-2">Logged in as <span className="text-white font-semibold">{username}</span></p>
             <button

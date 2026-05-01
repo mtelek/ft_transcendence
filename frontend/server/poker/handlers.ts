@@ -137,6 +137,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isBettingRoundInProgress() || table.playerToAct() !== info.seatIndex) return;
 
       const isFold = action === "fold";
+      const foldWinner = isFold
+        ? session.players.find((p) => p.seatIndex !== info.seatIndex)!
+        : null;
+      // Capture pot before the action so it's available after the hand ends
+      const potBeforeAction = table.pots().reduce((sum, p) => sum + p.size, 0);
 
       try {
           table.actionTaken(action as 'fold' | 'check' | 'call' | 'bet' | 'raise', betSize);
@@ -145,6 +150,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+      // After fold the pot may already be cleared by the library; use pre-action value
+      const foldPot = isFold
+        ? potBeforeAction + (betSize ?? 0)
+        : 0;
+
       const allHoles = table.holeCards();
       session.lastHoleCards = allHoles.map((h) => {
         if (h) return [...h];
@@ -152,9 +162,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       });
 
       if (!table.isHandInProgress()) {
-        if (isFold) {
-          const winner = session.players.find((p) => p.seatIndex !== info.seatIndex)!;
-          session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [] }];
+        if (foldWinner) {
+          session.handResult = [{ username: foldWinner.username, handName: "Fold", holeCards: [], potWon: foldPot }];
         }
 
         if (hasBustedPlayer(session)) {
@@ -165,6 +174,10 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         }
       } else {
         advanceRounds(session);
+        // If it was a fold, override handResult regardless of what advanceRounds set
+        if (foldWinner) {
+          session.handResult = [{ username: foldWinner.username, handName: "Fold", holeCards: [], potWon: foldPot }];
+        }
         if (!table.isHandInProgress() && hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);

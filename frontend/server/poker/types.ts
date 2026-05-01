@@ -13,6 +13,7 @@ export interface WinnerInfo {
   username: string;
   handName: string;
   holeCards: PokerCard[];
+  potWon: number;
 }
 
 export interface GameSession {

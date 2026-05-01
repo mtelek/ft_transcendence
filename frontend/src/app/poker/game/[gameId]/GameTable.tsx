@@ -97,7 +97,6 @@ function ActionBar({
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -238,7 +237,7 @@ function ResultOverlay({
 
   return (
     <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
-      <div className="text-4xl">{iWon ? "🎉" : "😔"}</div>
+      <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
       <h2 className="text-2xl font-bold text-white">
         {iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
       </h2>
@@ -246,7 +245,10 @@ function ResultOverlay({
         <p className="text-slate-300 text-lg">{winner.handName}</p>
       )}
       {winner?.handName === "Fold" && (
-        <p className="text-slate-300">Opponent folded</p>
+        <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
+      )}
+      {iWon && winner?.potWon != null && winner.potWon > 0 && (
+        <p className="text-orange-400 font-semibold text-lg">+€{winner.potWon.toLocaleString()}</p>
       )}
 
       {/* Show winner's cards */}
@@ -477,6 +479,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
+      <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
         <Image
@@ -505,8 +508,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-        {/* Phase + game ID */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* Phase + turn — sits above table in normal flow, z-index beats table's stacking context */}
+        <div className="relative flex items-center gap-3 mb-8" style={{ zIndex: 20 }}>
           <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
             {PHASE_LABELS[phase] ?? phase}
           </span>
@@ -542,27 +545,27 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             />
           )}
 
-          {/* Pot */}
-          <div className="absolute top-[28%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium">
+          {/* Pot + Community cards */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
             {pot > 0 && (
-              <>Pot <span className="font-bold" style={{ color: visuals.accent }}>€{pot.toLocaleString()}</span></>
+              <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                Pot <span className="font-bold text-orange-400">€{pot.toLocaleString()}</span>
+              </div>
             )}
-          </div>
-
-          {/* Community cards */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2">
-            {communitySlots.map((card, i) =>
-              card ? (
-                <FlipCommunityCard
-                  key={i}
-                  card={card}
-                  delay={Math.max(0, i - prevCommunityCount) * 0.12}
-                  cardBackImage={settings.cardBackImage}
-                />
-              ) : (
-                <EmptyCommunitySlot key={i} />
-              )
-            )}
+            <div className="flex gap-2">
+              {communitySlots.map((card, i) =>
+                card ? (
+                  <FlipCommunityCard
+                    key={i}
+                    card={card}
+                    delay={Math.max(0, i - prevCommunityCount) * 0.12}
+                    cardBackImage={settings.cardBackImage}
+                  />
+                ) : (
+                  <EmptyCommunitySlot key={i} />
+                )
+              )}
+            </div>
           </div>
 
           {/* Opponent seat (top) — ordered from screen edge → table center */}
@@ -694,9 +697,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             </div>
           )}
 
-          <p className="text-slate-500 text-xs mt-4">
-            ft_transcendence | {gameId}
-          </p>
         </div>
       </div>
 
