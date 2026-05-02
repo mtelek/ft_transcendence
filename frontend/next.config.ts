@@ -1,5 +1,6 @@
 const allowedDevOrigins = [
-  process.env.IP ? process.env.IP : 'localhost'
+  process.env.IP ? process.env.IP : 'localhost',
+  '0.0.0.0',
 ];
 
 const nextConfig = {
