@@ -27,6 +27,15 @@ model User {
   sessions Session[]
   friends  Friendship[] @relation("Friendships")
   friendOf Friendship[] @relation("FriendOf")
+
+  // Relations for Match model
+  matchesWon   Match[] @relation("Winner")
+  matchesAsP1  Match[] @relation("Player1")
+  matchesAsP2  Match[] @relation("Player2")
+  matchesAsP3  Match[] @relation("Player3")
+  matchesAsP4  Match[] @relation("Player4")
+  matchesAsP5  Match[] @relation("Player5")
+  matchesAsP6  Match[] @relation("Player6")
 }
 
 model Friendship {
@@ -76,4 +85,28 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Match {
+  id         String   @id @default(dbgenerated("lower(replace(gen_random_uuid()::text, '-'::text, ''::text))"))
+  playedAt   DateTime @default(now())
+  mode       String   // e.g. "1v1", "6max"
+  winnerId   String?
+  winner     User?    @relation("Winner", fields: [winnerId], references: [id])
+  scores     Int[]    // Array of player scores, index matches player slot
+
+  // Up to 6 players, nullable for less than 6
+  player1Id  String?
+  player2Id  String?
+  player3Id  String?
+  player4Id  String?
+  player5Id  String?
+  player6Id  String?
+
+  player1    User?    @relation("Player1", fields: [player1Id], references: [id])
+  player2    User?    @relation("Player2", fields: [player2Id], references: [id])
+  player3    User?    @relation("Player3", fields: [player3Id], references: [id])
+  player4    User?    @relation("Player4", fields: [player4Id], references: [id])
+  player5    User?    @relation("Player5", fields: [player5Id], references: [id])
+  player6    User?    @relation("Player6", fields: [player6Id], references: [id])
 }

@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { io, Socket } from "socket.io-client";
+import Statistics from "@/components/poker/stats/statistics";
+import MatchHistory from "@/components/poker/stats/matchHistory";
 
-type Panel = "none" | "host" | "join";
+type Panel = "host" | "join";
 type Status = "idle" | "waiting" | "matched";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const socketRef = useRef<Socket | null>(null);
-  const [panel, setPanel] = useState<Panel>("none");
+  const [panel, setPanel] = useState<Panel>("host");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
   const [password, setPassword] = useState("");
@@ -117,7 +119,7 @@ export default function DashboardPage() {
               socketRef.current?.disconnect();
               socketRef.current = null;
               setStatus("idle");
-              setPanel("none");
+              setPanel("host");
             }}
             className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
           >
@@ -132,7 +134,7 @@ export default function DashboardPage() {
     <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
       <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill sizes="100vw" loading="eager" className="absolute inset-0 object-cover opacity-30" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-3xl">
+      <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-6xl">
         <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>
 
         <div className="flex items-stretch gap-6 w-full">
@@ -152,50 +154,53 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {panel !== "none" && (
-            <div className="flex-1 bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-10 flex flex-col gap-5 text-left">
-              <h2 className="text-white text-xl font-bold">
-                {panel === "host" ? "Create a Game" : "Join a Game"}
-              </h2>
+          <div className="flex-1 bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-10 flex flex-col gap-5 text-left min-h-[430px]">
+            <h2 className="text-white text-xl font-bold">
+              {panel === "host" ? "Create a Game" : "Join a Game"}
+            </h2>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-slate-400 text-sm">Game Name</span>
-                <input
-                  id="gamename"
-                  type="text"
-                  value={gameName}
-                  onChange={(e) => setGameName(e.target.value)}
-                  placeholder="e.g. my-poker-room"
-                  className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
-                  autoComplete="off"
-                />
-              </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-slate-400 text-sm">Game Name</span>
+              <input
+                id="gamename"
+                type="text"
+                value={gameName}
+                onChange={(e) => setGameName(e.target.value)}
+                placeholder="e.g. my-poker-room"
+                className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
+                autoComplete="off"
+              />
+            </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-slate-400 text-sm">Password <span className="text-slate-600">(optional)</span></span>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Leave blank for no password"
-                  className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
-                  autoComplete="off"
-                />
-              </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-slate-400 text-sm">Password <span className="text-slate-600">(optional)</span></span>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Leave blank for no password"
+                className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 outline-none focus:border-white/50 placeholder-slate-500"
+                autoComplete="off"
+              />
+            </label>
 
-              <p className="text-red-400 text-sm min-h-[20px]">
-                {error || "\u00A0"}
-              </p>
+            <p className="text-red-400 text-sm min-h-[20px]">
+              {error || "\u00A0"}
+            </p>
 
-              <button
-                onClick={panel === "host" ? handleHost : handleJoin}
-                className={`mt-auto w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-teal-500 hover:bg-teal-600 text-slate-900" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
-              >
-                {panel === "host" ? "Create & Wait" : "Join Game"}
-              </button>
-            </div>
-          )}
+            <button
+              onClick={panel === "host" ? handleHost : handleJoin}
+              className={`mt-auto w-full py-3 rounded-full font-bold text-lg transition-colors ${panel === "host" ? "bg-teal-500 hover:bg-teal-600 text-slate-900" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+            >
+              {panel === "host" ? "Create & Wait" : "Join Game"}
+            </button>
+          </div>
+
+          <aside className="w-[340px] bg-black/45 backdrop-blur-sm border border-white/10 rounded-2xl p-5 text-left flex flex-col min-h-[430px]">
+            <Statistics />
+            <MatchHistory />
+          </aside>
         </div>
       </div>
     </div>

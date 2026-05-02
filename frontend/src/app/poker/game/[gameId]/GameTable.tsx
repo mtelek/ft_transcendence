@@ -213,6 +213,7 @@ function ResultOverlay({
   snapshot: GameSnapshot;
   myUsername: string;
 }) {
+  const router = useRouter();
   const { handResult, isGameOver, me, opponent } = snapshot;
   const isMatchOver = isGameOver || me.totalChips === 0 || opponent.totalChips === 0;
 
@@ -225,11 +226,11 @@ function ResultOverlay({
       <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
         <h2 className="text-3xl font-bold text-white">{iWonGame ? "You win the game!" : "You have lost the game!"}</h2>
         <p className="text-slate-300">Final chips — {me.username}: €{me.totalChips} | {opponent.username}: €{opponent.totalChips}</p>
-        <Link
-          href="/dashboard"
+        <button
+          onClick={() => { router.refresh(); router.push("/dashboard"); }}
           className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
           Exit to Dashboard
-        </Link>
+        </button>
       </div>
     );
   }

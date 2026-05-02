@@ -24,6 +24,7 @@ export interface GameSession {
   nextHandReady: [boolean, boolean];
   nextDealerSeat: number;
   isGameOver: boolean;
+  matchSaved: boolean;
 }
 
 export type GameSnapshot = {

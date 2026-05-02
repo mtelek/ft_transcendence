@@ -29,6 +29,16 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.join(gameId);
     });
 
+    socket.on("subscribeMatchHistory", ({ username }: { username?: string }) => {
+      if (!username) return;
+      socket.join(`history:${username}`);
+    });
+
+    socket.on("unsubscribeMatchHistory", ({ username }: { username?: string }) => {
+      if (!username) return;
+      socket.leave(`history:${username}`);
+    });
+
     socket.on("hostGame", ({ username, image, gameName, password }: { username: string; image?: string; gameName: string; password: string }) => {
       const normalizedGameName = gameName.trim();
       if (!normalizedGameName) {
@@ -85,6 +95,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         nextHandReady: [false, false],
         nextDealerSeat: 1,
         isGameOver: false,
+        matchSaved: false,
       };
 
       state.games.set(gameId, session);
@@ -160,7 +171,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         if (hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          endGame(io, state, info.gameId);
           return;
         }
       } else {
@@ -168,7 +179,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         if (!table.isHandInProgress() && hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          endGame(io, state, info.gameId);
           return;
         }
         if (table.isHandInProgress()) {
@@ -198,7 +209,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         if (hasBustedPlayer(session)) {
           session.isGameOver = true;
           broadcastState(io, state, info.gameId);
-          endGame(state, info.gameId);
+          endGame(io, state, info.gameId);
           return;
         }
 
@@ -234,7 +245,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
               const opp = session.players.find((p) => p.seatIndex !== info.seatIndex);
               if (opp?.socketId) io.to(opp.socketId).emit("opponentDisconnected");
               session.isGameOver = true;
-              endGame(state, info.gameId);
+              endGame(io, state, info.gameId);
               disconnectTimers.delete(player.username);
             }, 10000));
           }

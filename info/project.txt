@@ -269,8 +269,8 @@ Technology          Module                           Points
     ✅ Default options must be available.
 
 ❌       Game statistics and match history        1 pt (Minor)
-    ❌ Track user game statistics (wins, losses, ranking, level, etc.).
-    ❌ Display match history (1v1 games, dates, results, opponents).
+    ✅ Track user game statistics (wins, losses, ranking, level, etc.).
+    ✅ Display match history (1v1 games, dates, results, opponents).
     ❌ Show achievements and progression.
     ❌ Leaderboard integration.
 
