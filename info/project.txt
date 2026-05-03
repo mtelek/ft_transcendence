@@ -272,7 +272,7 @@ Technology          Module                           Points
     ✅ Track user game statistics (wins, losses, ranking, level, etc.).
     ✅ Display match history (1v1 games, dates, results, opponents).
     ❌ Show achievements and progression.
-    ❌ Leaderboard integration.
+    ✅ Leaderboard integration.
 
 ✅       Support for additional browsers.         1 pt (Minor)
     ✅ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).

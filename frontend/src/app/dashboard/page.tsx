@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -200,6 +201,12 @@ export default function DashboardPage() {
           <aside className="w-[340px] bg-black/45 backdrop-blur-sm border border-white/10 rounded-2xl p-5 text-left flex flex-col min-h-[430px]">
             <Statistics />
             <MatchHistory />
+            <Link
+              href="/leaderboard"
+              className="mt-4 w-full py-3 rounded-full font-bold text-center text-slate-900 bg-amber-400 hover:bg-amber-300 transition-colors"
+            >
+              Leaderboard
+            </Link>
           </aside>
         </div>
       </div>

@@ -77,7 +77,10 @@ export default function MatchHistory() {
         <p className="text-sm text-slate-300 font-medium">Match History</p>
       </div>
 
-      <div className="flex-1 overflow-auto border border-white/10 rounded-xl">
+      <div
+        className="overflow-y-auto border border-white/10 rounded-xl [scrollbar-width:thin] [scrollbar-color:rgb(71_85_105)_rgba(255,255,255,0.06)] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-track]:rounded-r-xl [&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-transparent [&::-webkit-scrollbar-thumb]:bg-clip-padding [&::-webkit-scrollbar-thumb:hover]:bg-slate-500"
+        style={{ maxHeight: "calc(5 * 41px + 37px)" }}
+      >
         {historyLoading ? (
           <div className="h-full flex items-center justify-center text-slate-400 text-sm">Loading...</div>
         ) : historyError ? (
