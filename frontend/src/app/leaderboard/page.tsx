@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import Leaderboard from "@/components/poker/stats/Leaderboard";
+import { requireExistingUserSession } from "@/lib/require-existing-user-session";
 
-export default function LeaderboardPage() {
+export default async function LeaderboardPage() {
+  await requireExistingUserSession();
   return (
     <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-y-auto px-4 py-10">
       <Image

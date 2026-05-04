@@ -28,7 +28,7 @@ export async function requireExistingUserSession() {
   const user = await findUserFromSession(session);
 
   if (!user) {
-    redirect("/");
+    redirect("/login");
   }
 
   return { session, user };
