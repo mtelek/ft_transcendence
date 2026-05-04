@@ -1,6 +1,6 @@
-const allowedDevOrigins = [
-  process.env.IP ? process.env.IP : 'localhost'
-];
+const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+
+const allowedDevOrigins = [env?.IP ?? "localhost"];
 
 const nextConfig = {
   images: {
@@ -14,4 +14,4 @@ const nextConfig = {
   allowedDevOrigins,
 };
 
-module.exports = nextConfig;
+export default nextConfig;
