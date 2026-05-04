@@ -4,7 +4,7 @@ import Leaderboard from "@/components/poker/stats/Leaderboard";
 
 export default function LeaderboardPage() {
   return (
-    <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden px-4 py-10">
+    <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-y-auto px-4 py-10">
       <Image
         src="/dark-poker-background-of-spades-and-clubs.jpg"
         alt=""

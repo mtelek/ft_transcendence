@@ -18,8 +18,13 @@ type Friend = {
   isOnline: boolean;
 };
 
+type FriendMutationResponse = {
+  message?: string;
+};
+
 //Interval for refreshing the friend list and online status
 const FRIENDS_REFRESH_MS = 1500;
+const FRIENDS_CHANGED_EVENT = "friends:changed";
 
 function areFriendsEqual(a: Friend[], b: Friend[]) {
   //Keep previous friend array reference when polling returns unchanged data,
@@ -57,6 +62,11 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   //Tracks which friend is currently being removed so only that button is disabled.
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
+
+  function notifyFriendsChanged() {
+    //Notify other client components (like leaderboard) to re-fetch friend-derived data.
+    window.dispatchEvent(new Event(FRIENDS_CHANGED_EVENT));
+  }
 
   const loadFriends = useCallback(async (showLoading = false) => {
     //Only show the visible loading state when explicitly requested
@@ -103,6 +113,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
         "Failed to accept friend request"
       );
       await loadFriends();
+      notifyFriendsChanged();
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to accept friend request");
     }
@@ -136,7 +147,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     setFriendsError(null);
 
     try {
-      await apiRequest(
+      const response = await apiRequest<FriendMutationResponse>(
         "/api/auth/friends",
         {
           method: "POST",
@@ -150,6 +161,11 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       setFriendIdentifier("");
       //Refresh the list  so the UI shows the latest friendship state
       await loadFriends();
+
+      //Only refresh friend-derived widgets if friendship became accepted.
+      if (response.message === "Friend request accepted" || response.message === "Already friends") {
+        notifyFriendsChanged();
+      }
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to add friend");
     } finally {
@@ -179,6 +195,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       
        //Refresh the list  so the UI shows the latest friendship state
       await loadFriends();
+      notifyFriendsChanged();
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to remove friend");
     } finally {

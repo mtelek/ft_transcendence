@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+const FRIENDS_CHANGED_EVENT = "friends:changed";
+const LEADERBOARD_REFRESH_MS = 5000;
+
 type LeaderboardEntry = {
   id: string;
   name: string;
@@ -13,6 +16,14 @@ type LeaderboardResponse = {
   friends: LeaderboardEntry[];
   global: LeaderboardEntry[];
 };
+
+type FriendsResponse = {
+  friends?: Array<{ id: string }>;
+};
+
+function buildFriendSignature(friendIds: string[]) {
+  return [...friendIds].sort().join("|");
+}
 
 function sortByWinsThenName(a: LeaderboardEntry, b: LeaderboardEntry) {
   if (b.wins !== a.wins) return b.wins - a.wins;
@@ -29,7 +40,7 @@ function LeaderboardTable({
   emptyText: string;
 }) {
   return (
-    <div className="flex flex-col min-h-[240px]">
+    <div className="flex flex-col min-h-[240px] md:min-h-0 md:h-full">
       <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">{title}</p>
       <div className="flex-1 overflow-auto border border-white/10 rounded-xl">
         {rows.length === 0 ? (
@@ -72,6 +83,7 @@ export default function Leaderboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let lastFriendSignature = "";
 
     async function loadLeaderboard() {
       setLoading(true);
@@ -91,21 +103,74 @@ export default function Leaderboard() {
       }
     }
 
-    void loadLeaderboard();
+    async function loadFriendSignature() {
+      const res = await fetch("/api/auth/friends", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load friends");
+
+      const data = (await res.json()) as FriendsResponse;
+      const friendIds = Array.isArray(data.friends) ? data.friends.map((friend) => friend.id) : [];
+      return buildFriendSignature(friendIds);
+    }
+
+    async function refreshIfFriendListChanged() {
+      try {
+        const nextSignature = await loadFriendSignature();
+        if (cancelled) return;
+
+        if (!lastFriendSignature) {
+          lastFriendSignature = nextSignature;
+          return;
+        }
+
+        if (nextSignature !== lastFriendSignature) {
+          lastFriendSignature = nextSignature;
+          await loadLeaderboard();
+        }
+      } catch {
+        // Ignore friend-signature polling errors; leaderboard has its own error handling.
+      }
+    }
+
+    async function loadLeaderboardAndSyncSignature() {
+      await loadLeaderboard();
+      try {
+        const signature = await loadFriendSignature();
+        if (!cancelled) {
+          lastFriendSignature = signature;
+        }
+      } catch {
+        // Ignore signature sync errors.
+      }
+    }
+
+    void loadLeaderboardAndSyncSignature();
 
     function handleVisibilityChange() {
-      if (document.visibilityState === "visible") void loadLeaderboard();
+      if (document.visibilityState === "visible") void loadLeaderboardAndSyncSignature();
     }
+    function handleFriendsChanged() {
+      void loadLeaderboardAndSyncSignature();
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshIfFriendListChanged();
+      }
+    }, LEADERBOARD_REFRESH_MS);
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener(FRIENDS_CHANGED_EVENT, handleFriendsChanged);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener(FRIENDS_CHANGED_EVENT, handleFriendsChanged);
     };
   }, []);
 
   return (
-    <section className="bg-black/45 backdrop-blur-sm border border-white/10 rounded-2xl p-5 text-left flex flex-col gap-4">
+    <section className="bg-black/45 backdrop-blur-sm border border-white/10 rounded-2xl p-5 text-left flex flex-col gap-4 max-h-[calc(100vh-220px)]">
       <h3 className="text-sm text-slate-300 font-medium">Leaderboard</h3>
 
       {loading ? (
@@ -113,7 +178,7 @@ export default function Leaderboard() {
       ) : error ? (
         <div className="h-[260px] flex items-center justify-center text-red-300 text-sm px-4 text-center">{error}</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
           <LeaderboardTable
             title="Friends Ranking"
             rows={friendsRanked}
