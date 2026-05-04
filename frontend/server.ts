@@ -28,7 +28,19 @@ app.prepare().then(() => {
     cert: fs.readFileSync("/app/certs/cert.pem"),
   };
   const httpsServer = createHttpsServer(options, (req, res) => handle(req, res));
-  const io = new Server(httpsServer, { cors: { origin: "*" } });
+  const io = new Server(httpsServer, {
+    cors: { origin: "*" },
+    destroyUpgrade: false,
+  });
+
+  // Let Next.js handle non-socket.io WebSocket upgrades (e.g. HMR)
+  const nextUpgradeHandler = app.getUpgradeHandler();
+  httpsServer.on("upgrade", (req, socket, head) => {
+    if (!req.url?.startsWith("/socket.io")) {
+      nextUpgradeHandler(req, socket, head);
+    }
+  });
+
   const state = createPokerServerState();
   registerPokerHandlers(io, state);
 
