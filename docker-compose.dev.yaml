@@ -1,0 +1,54 @@
+
+services:
+
+  frontend:
+    image: frontend-dev
+    container_name: frontend-dev
+    build:
+      context: ./frontend
+      dockerfile: ../docker/srcs/frontend/Dockerfile
+      args:
+        IP: ${IP}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      DEV_HTTP: "true"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - transcendence-dev
+
+  postgres:
+    image: postgres-dev
+    container_name: postgres-dev
+    build:
+      context: ./docker/srcs/postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data_dev:/var/lib/postgresql/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - transcendence-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  transcendence-dev:
+    driver: bridge
+
+volumes:
+  db_data_dev:
+    driver: local

@@ -10,6 +10,7 @@ setup:
 		echo " .env file exists"; \
 	fi
 
+# Production — HTTPS, no volume mounts
 up: setup
 	cd $(SRCS_DIR) && docker compose up --build
 
@@ -20,9 +21,22 @@ clean:
 	cd $(SRCS_DIR) && docker compose down -v --rmi all --remove-orphans
 	docker system prune -f
 
+reset: clean up
+
+# Development — HTTP on :3000, live code reload via volume mounts
+dev: setup
+	docker compose -f docker-compose.dev.yaml up --build --remove-orphans
+
+dev-down:
+	docker compose -f docker-compose.dev.yaml down
+
+dev-clean:
+	docker compose -f docker-compose.dev.yaml down -v --rmi all --remove-orphans
+	docker system prune -f
+
+dev-reset: dev-clean dev
+
 fclean: clean
 	rm -f $(ENV_FILE)
 
-reset: clean up
-
-.PHONY: up down clean setup
+.PHONY: up down clean reset setup dev dev-down dev-clean dev-reset fclean
