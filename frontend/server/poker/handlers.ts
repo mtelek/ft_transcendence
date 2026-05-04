@@ -12,6 +12,19 @@ function hasBustedPlayer(session: GameSession) {
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
   // Track disconnect timers by username
   const disconnectTimers = new Map<string, NodeJS.Timeout>();
+  const specialRevealTimers = new Map<string, NodeJS.Timeout>();
+
+  function specialRevealTimerKey(gameId: string, seatIndex: number) {
+    return `${gameId}:${seatIndex}`;
+  }
+
+  function clearSpecialRevealTimer(gameId: string, seatIndex: number) {
+    const key = specialRevealTimerKey(gameId, seatIndex);
+    const timer = specialRevealTimers.get(key);
+    if (!timer) return;
+    clearTimeout(timer);
+    specialRevealTimers.delete(key);
+  }
 
   io.on("connection", (socket) => {
     console.log("[Socket.io] User connected:", socket.id);
@@ -91,6 +104,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         ],
         lastCommunityCards: [],
         lastHoleCards: [null, null],
+        specialChipUsedBy: [false, false],
+        specialRevealActiveBySeat: [false, false],
         handResult: null,
         nextHandReady: [false, false],
         nextDealerSeat: 1,
@@ -190,6 +205,37 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       broadcastState(io, state, info.gameId);
     });
 
+    socket.on("useSpecialChip", () => {
+      const info = state.socketToGame.get(socket.id);
+      if (!info) return;
+
+      const session = state.games.get(info.gameId);
+      if (!session || session.isGameOver) return;
+
+      if (!session.table.isHandInProgress()) return;
+      if (!session.table.isBettingRoundInProgress()) return;
+      if (session.table.playerToAct() !== info.seatIndex) return;
+
+      const seat = info.seatIndex as 0 | 1;
+      if (session.specialChipUsedBy[seat]) return;
+
+      session.specialChipUsedBy[seat] = true;
+      session.specialRevealActiveBySeat[seat] = true;
+      broadcastState(io, state, info.gameId);
+
+      clearSpecialRevealTimer(info.gameId, seat);
+      specialRevealTimers.set(
+        specialRevealTimerKey(info.gameId, seat),
+        setTimeout(() => {
+          const activeSession = state.games.get(info.gameId);
+          if (!activeSession || activeSession.isGameOver) return;
+          activeSession.specialRevealActiveBySeat[seat] = false;
+          specialRevealTimers.delete(specialRevealTimerKey(info.gameId, seat));
+          broadcastState(io, state, info.gameId);
+        }, 5000)
+      );
+    });
+
     socket.on("nextHand", () => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
@@ -205,6 +251,9 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         session.handResult = null;
         session.lastCommunityCards = [];
         session.lastHoleCards = [null, null];
+        session.specialRevealActiveBySeat = [false, false];
+        clearSpecialRevealTimer(info.gameId, 0);
+        clearSpecialRevealTimer(info.gameId, 1);
 
         if (hasBustedPlayer(session)) {
           session.isGameOver = true;
@@ -234,6 +283,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       const info = state.socketToGame.get(socket.id);
       if (info) {
+        clearSpecialRevealTimer(info.gameId, info.seatIndex);
         const session = state.games.get(info.gameId);
         if (session && !session.isGameOver) {
           // Find the disconnecting player

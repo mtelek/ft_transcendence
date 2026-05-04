@@ -14,6 +14,7 @@ import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import PokerBackground from "@/components/PokerBackground";
 import { DealingCard } from "@/components/poker/DealingCard";
 import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
+import { SpecialChip } from "@/components/poker/SpecialChip";
 import { getCardImage, getCardBack } from "@/lib/cards";
 import Link from "next/link";
 
@@ -54,14 +55,20 @@ function ActionBar({
   myStack,
   pot,
   callAmount,
+  opponent,
   onAction,
+  onUseSpecialChip,
+  specialChipUsed,
   bannerImage,
 }: {
   legalActions: GameSnapshot["legalActions"];
   myStack: number;
   pot: number;
   callAmount: number;
+  opponent: Pick<GameSnapshot["opponent"], "username" | "image">;
   onAction: (action: string, betSize?: number) => void;
+  onUseSpecialChip: (targetId: string) => void;
+  specialChipUsed: boolean;
   bannerImage: string;
 }) {
   const { actions, chipRange } = legalActions;
@@ -163,40 +170,48 @@ function ActionBar({
           </button>
         )}
         {canBetOrRaise && (
-          <button
-            disabled={!canBetOrRaise}
-            onClick={() => onAction(betAction, raiseAmount)}
-            className="flex-1 flex flex-col items-center justify-center bg-lime-500 hover:bg-lime-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors"
-          >
-            <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
-            {isEditing ? (
-              <input
-                id="editvalue"
-                type="number"
-                className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
-                value={editValue}
-                autoFocus
-                autoComplete="off"
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={() => {
-                  const parsed = parseInt(editValue, 10);
-                  if (!isNaN(parsed)) setRaiseAmount(Math.max(minBet, Math.min(maxBet, parsed)));
-                  setIsEditing(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur();
-                }}
-              />
-            ) : (
-              <span
-                className="mt-1 text-sm font-semibold leading-none cursor-pointer hover:underline inline-block w-[4.5rem] text-center tabular-nums"
-                onClick={(e) => { e.stopPropagation(); setEditValue(String(raiseAmount)); setIsEditing(true); }}
-              >
-                €{raiseAmount.toLocaleString()}
-              </span>
-            )}
-          </button>
+          <div className="flex flex-1 items-center justify-center gap-3">
+            <button
+              disabled={!canBetOrRaise}
+              onClick={() => onAction(betAction, raiseAmount)}
+              className="flex-1 flex flex-col items-center justify-center bg-lime-500 hover:bg-lime-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors"
+            >
+              <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
+              {isEditing ? (
+                <input
+                  id="editvalue"
+                  type="number"
+                  className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
+                  value={editValue}
+                  autoFocus
+                  autoComplete="off"
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => {
+                    const parsed = parseInt(editValue, 10);
+                    if (!isNaN(parsed)) setRaiseAmount(Math.max(minBet, Math.min(maxBet, parsed)));
+                    setIsEditing(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur();
+                  }}
+                />
+              ) : (
+                <span
+                  className="mt-1 text-sm font-semibold leading-none cursor-pointer hover:underline inline-block w-[4.5rem] text-center tabular-nums"
+                  onClick={(e) => { e.stopPropagation(); setEditValue(String(raiseAmount)); setIsEditing(true); }}
+                >
+                  €{raiseAmount.toLocaleString()}
+                </span>
+              )}
+            </button>
+            <SpecialChip
+              disabled={false}
+              isUsed={specialChipUsed}
+              targets={[{ id: "opponent", username: opponent.username, image: opponent.image }]}
+              onUse={onUseSpecialChip}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -449,6 +464,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     socketRef.current?.emit("nextHand");
   }
 
+  function sendUseSpecialChip(_targetId: string) {
+    socketRef.current?.emit("useSpecialChip");
+  }
+
   if (disconnected) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -671,7 +690,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               myStack={me.stack}
               pot={pot}
               callAmount={Math.min(me.stack, Math.max(0, opponent.betSize - me.betSize))}
+              opponent={{ username: opponent.username, image: opponent.image }}
               onAction={sendAction}
+              onUseSpecialChip={sendUseSpecialChip}
+              specialChipUsed={snapshot.specialChip.isUsed}
               bannerImage={settings.bannerImage}
             />
           )}

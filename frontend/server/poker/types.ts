@@ -20,6 +20,8 @@ export interface GameSession {
   players: PlayerEntry[];
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
+  specialChipUsedBy: [boolean, boolean];
+  specialRevealActiveBySeat: [boolean, boolean];
   handResult: WinnerInfo[] | null;
   nextHandReady: [boolean, boolean];
   nextDealerSeat: number;
@@ -52,6 +54,10 @@ export type GameSnapshot = {
   pot: number;
   myTurn: boolean;
   legalActions: { actions: string[]; chipRange?: { min: number; max: number } };
+  specialChip: {
+    isUsed: boolean;
+    revealedOpponentCards: boolean;
+  };
   handResult: WinnerInfo[] | null;
   iReadyForNextHand: boolean;
   isGameOver: boolean;
