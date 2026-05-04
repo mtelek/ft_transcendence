@@ -148,11 +148,11 @@ export async function POST(request: Request) {
     });
 
     if (!targetUser) {
-      return jsonError("User not found", 404);
+      return jsonOk({ error: "User not found" });
     }
 
     if (targetUser.id === currentUser.id) {
-      return jsonError("You cannot add yourself", 400);
+      return jsonOk({ error: "You cannot add yourself" });
     }
 
     //Existing outgoing relation means request already exists from current -> target
@@ -166,9 +166,9 @@ export async function POST(request: Request) {
     const outgoing = existingOutgoing[0];
     if (outgoing) {
       if (outgoing.accepted) {
-        return jsonError("Already friends", 409);
+        return jsonOk({ error: "Already friends" });
       }
-      return jsonError("Friend request already sent", 409);
+      return jsonOk({ error: "Friend request already sent" });
     }
 
     //Existing incoming relation means target already has a request toward current user

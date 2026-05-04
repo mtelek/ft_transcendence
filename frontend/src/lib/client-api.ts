@@ -10,7 +10,7 @@ export async function apiRequest<T>(
   const response = await fetch(input, init);
   const data = (await response.json().catch(() => ({}))) as T & ApiErrorPayload;
 
-  if (!response.ok) {
+  if (!response.ok || data.error) {
     throw new Error(data.error || fallbackError);
   }
 
