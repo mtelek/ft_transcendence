@@ -251,7 +251,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
       />
 
       {/* Sliding side panel containing  profile details and friend management UI*/}
-      <motion.div className="fixed top-16 bottom-0 right-0 w-80 bg-white shadow-lg z-50 p-4 overflow-y-auto"
+        <motion.div className="fixed top-16 bottom-0 right-0 w-80 bg-white shadow-lg z-50 p-4 overflow-hidden flex flex-col"
 	  	initial={{ x: 300, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 300, opacity: 0 }}
@@ -288,118 +288,120 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 			<LogoutButton/>
 		</div>
 
-        {/* Pending friend requests */}
-        <div className="mt-6 border-t border-gray-300 pt-4">
-          <h3 className="text-md font-bold text-gray-800">Pending Friend Requests</h3>
-          <div className="mt-3 space-y-2">
-            {pending.length === 0 ? (
-              <p className="text-sm text-gray-500">No pending requests</p>
-            ) : (
-              pending.map((friend) => (
-                <div key={friend.id} className="flex items-center gap-2 rounded-md bg-yellow-100 px-2 py-2">
-                  <Image
-                    src={friend.image || DEFAULT_AVATAR}
-                    alt={`${friend.name} avatar`}
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.src = DEFAULT_AVATAR;
-                    }}
-                    unoptimized
-                  />
-                  <span className="text-sm text-gray-900">{friend.name}</span>
-                  <button
-                    onClick={() => handleAcceptFriend(friend.id)}
-                    className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineFriend(friend.id)}
-                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-                  >
-                    Decline
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Friends area allows searching, adding, viewing presence, and removing friends. */}
-        <div className="mt-6 border-t border-gray-300 pt-4">
-          <h3 className="text-md font-bold text-gray-800">Friends</h3>
-
-          <div className="mt-3 flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <input
-                id="friend"
-                value={friendIdentifier}
-                onChange={(event) => setFriendIdentifier(event.target.value)}
-                placeholder="Username or email"
-                className="w-full rounded-md border px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500 border-gray-300"
-                autoComplete="off"
-                aria-invalid={!!friendsError}
-                aria-describedby={friendsError ? 'friend-error' : undefined}
-              />
-              <button
-                onClick={handleAddFriend}
-                disabled={isAddingFriend}
-                className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
-              >
-                Add
-              </button>
+        <div className="mt-6 flex flex-col gap-6 min-h-0 flex-1 overflow-y-auto pr-1">
+          {/* Pending friend requests */}
+          <div className="border-t border-gray-300 pt-4">
+            <h3 className="text-md font-bold text-gray-800">Pending Friend Requests</h3>
+            <div className="mt-3 space-y-2">
+              {pending.length === 0 ? (
+                <p className="text-sm text-gray-500">No pending requests</p>
+              ) : (
+                pending.map((friend) => (
+                  <div key={friend.id} className="flex items-center gap-2 rounded-md bg-yellow-100 px-2 py-2">
+                    <Image
+                      src={friend.image || DEFAULT_AVATAR}
+                      alt={`${friend.name} avatar`}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.src = DEFAULT_AVATAR;
+                      }}
+                      unoptimized
+                    />
+                    <span className="text-sm text-gray-900">{friend.name}</span>
+                    <button
+                      onClick={() => handleAcceptFriend(friend.id)}
+                      className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleDeclineFriend(friend.id)}
+                      className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-            {/* Error as helper text under input, always reserve space */}
-            <div className="min-h-[1.25rem]">
-              <div
-                id="friend-error"
-                className={`text-xs text-pokerred ${friendsError ? "visible" : "invisible"}`}
-                role={friendsError ? "alert" : undefined}
-                aria-live="polite"
-              >
-                {friendsError || "\u00A0"}
+          </div>
+
+          {/* Friends area allows searching, adding, viewing presence, and removing friends. */}
+          <div className="border-t border-gray-300 pt-4">
+            <h3 className="text-md font-bold text-gray-800">Friends</h3>
+
+            <div className="mt-3 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <input
+                  id="friend"
+                  value={friendIdentifier}
+                  onChange={(event) => setFriendIdentifier(event.target.value)}
+                  placeholder="Username or email"
+                  className="w-full rounded-md border px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-500 border-gray-300"
+                  autoComplete="off"
+                  aria-invalid={!!friendsError}
+                  aria-describedby={friendsError ? 'friend-error' : undefined}
+                />
+                <button
+                  onClick={handleAddFriend}
+                  disabled={isAddingFriend}
+                  className="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800 disabled:opacity-60"
+                >
+                  Add
+                </button>
+              </div>
+              {/* Error as helper text under input, always reserve space */}
+              <div className="min-h-[1.25rem]">
+                <div
+                  id="friend-error"
+                  className={`text-xs text-pokerred ${friendsError ? "visible" : "invisible"}`}
+                  role={friendsError ? "alert" : undefined}
+                  aria-live="polite"
+                >
+                  {friendsError || "\u00A0"}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-3 space-y-2">
-            {friendsLoading ? (
-              <p className="text-sm text-gray-500">Loading friends...</p>
-            ) : friends.length === 0 ? (
-              <p className="text-sm text-gray-500">No friends yet</p>
-            ) : (
-              friends.map((friend) => (
-                <div key={friend.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-2 py-2">
-                  <Image
-                    src={friend.image || DEFAULT_AVATAR}
-                    alt={`${friend.name} avatar`}
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                    onError={(event) => {
-                      //User avatars may be missing or broken, always fall back to a safe default avatar
-                      event.currentTarget.src = DEFAULT_AVATAR;
-                    }}
-                    unoptimized
-                  />
-                  <span className="text-sm text-gray-900">{friend.name}</span>
-                  {/* Avalaible dot reflects the server-computed online status. */}
-                  <span
-                    className={`ml-auto h-2.5 w-2.5 rounded-full ${friend.isOnline ? "bg-green-500" : "bg-gray-400"}`}
-                    title={friend.isOnline ? "Online" : "Offline"}
-                  />
-                  <button
-                    onClick={() => handleRemoveFriend(friend.id)}
-                    disabled={removingFriendId === friend.id}
-                    className="rounded bg-pokerred px-2 py-1 text-xs text-white disabled:opacity-60"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            )}
+            <div className="mt-3 space-y-2">
+              {friendsLoading ? (
+                <p className="text-sm text-gray-500">Loading friends...</p>
+              ) : friends.length === 0 ? (
+                <p className="text-sm text-gray-500">No friends yet</p>
+              ) : (
+                friends.map((friend) => (
+                  <div key={friend.id} className="flex items-center gap-2 rounded-md bg-gray-100 px-2 py-2">
+                    <Image
+                      src={friend.image || DEFAULT_AVATAR}
+                      alt={`${friend.name} avatar`}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full object-cover"
+                      onError={(event) => {
+                        //User avatars may be missing or broken, always fall back to a safe default avatar
+                        event.currentTarget.src = DEFAULT_AVATAR;
+                      }}
+                      unoptimized
+                    />
+                    <span className="text-sm text-gray-900">{friend.name}</span>
+                    {/* Avalaible dot reflects the server-computed online status. */}
+                    <span
+                      className={`ml-auto h-2.5 w-2.5 rounded-full ${friend.isOnline ? "bg-green-500" : "bg-gray-400"}`}
+                      title={friend.isOnline ? "Online" : "Offline"}
+                    />
+                    <button
+                      onClick={() => handleRemoveFriend(friend.id)}
+                      disabled={removingFriendId === friend.id}
+                      className="rounded bg-pokerred px-2 py-1 text-xs text-white disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </motion.div>

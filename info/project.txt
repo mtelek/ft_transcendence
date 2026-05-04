@@ -251,10 +251,10 @@ Technology          Module                           Points
     ✅ The game must have clear rules and win/loss conditions.
     ✅ The game can be 2D or 3D.
 
-❌    Multiplayer game (more than two players)    2 pts (Major)
-    ❌ Support for three or more players simultaneously.
-    ❌ Fair gameplay mechanics for all participants.
-    ❌ Proper synchronization across all clients.
+✅    Multiplayer game (more than two players)    2 pts (Major)
+    ✅ Support for three or more players simultaneously.
+    ✅ Fair gameplay mechanics for all participants.
+    ✅ Proper synchronization across all clients.
 
 ✅                  Remote players                2 pts (Major)
     ✅ Enable two players on separate computers to play the same game in real-time.
