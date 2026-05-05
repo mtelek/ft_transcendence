@@ -78,10 +78,10 @@ function ActionBar({
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-     setRaiseAmount(chipRange?.min ?? 0);
+      setRaiseAmount(chipRange?.min ?? 0);
     });
     return () => clearTimeout(timeout);
-  }, [chipRange?.min]);
+  }, [chipRange?.min, chipRange?.max]);
 
   const canFold = actions.includes("fold");
   const canCheck = actions.includes("check");
@@ -93,7 +93,7 @@ function ActionBar({
 
   const minBet = chipRange?.min ?? 0;
   const maxBet = chipRange?.max ?? myStack;
-  const step = Math.max(1, Math.floor(minBet / 2));
+  const step = 1;
 
   const quickBtn = "bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
@@ -118,8 +118,8 @@ function ActionBar({
         <div className="flex items-center justify-between gap-4">
           <div className="flex gap-2">
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(minBet)} className={quickBtn}>Min</button>
-            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round(maxBet / 2))))} className={quickBtn}>½ Pot</button>
-            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, pot)))} className={quickBtn}>Pot</button>
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round((pot + 2 * callAmount) / 2))))} className={quickBtn}>½ Pot</button>
+            <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, pot + 2 * callAmount)))} className={quickBtn}>Pot</button>
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
           </div>
           <input
@@ -173,7 +173,14 @@ function ActionBar({
           <div className="flex flex-1 items-center justify-center gap-3">
             <button
               disabled={!canBetOrRaise}
-              onClick={() => onAction(betAction, raiseAmount)}
+              onClick={() => {
+                let amount = raiseAmount;
+                if (isEditing) {
+                  const parsed = parseInt(editValue, 10);
+                  if (!isNaN(parsed)) amount = Math.max(minBet, Math.min(maxBet, parsed));
+                }
+                onAction(betAction, amount);
+              }}
               className="flex-1 flex flex-col items-center justify-center bg-lime-500 hover:bg-lime-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold px-8 py-3 rounded-full text-lg transition-colors"
             >
               <span className="leading-none">{canBet ? "BET" : "RAISE"}</span>
@@ -181,6 +188,8 @@ function ActionBar({
                 <input
                   id="editvalue"
                   type="number"
+                  min={minBet}
+                  max={maxBet}
                   className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
                   value={editValue}
                   autoFocus
