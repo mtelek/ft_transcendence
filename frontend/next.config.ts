@@ -1,6 +1,9 @@
-const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-
-const allowedDevOrigins = [env?.IP ?? "localhost"];
+const allowedDevOrigins = [
+  process.env.IP ? process.env.IP : 'localhost',
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+];
 
 const nextConfig = {
   images: {

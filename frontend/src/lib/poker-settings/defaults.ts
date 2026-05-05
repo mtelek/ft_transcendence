@@ -5,7 +5,6 @@ export const DEFAULT_SETTINGS: PokerSettings = {
   custom: {
     feltStyle: "green",
     cardBackStyle: "red",
-    accentStyle: "green",
     bgVariant: "static",
   },
   tableSize: 6,

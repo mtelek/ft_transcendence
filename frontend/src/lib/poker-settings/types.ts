@@ -9,7 +9,6 @@ export type ThemeVisuals = {
   bgFilter: string;
   tableFilter: string;
   cardBackFilter: string;
-  accent: string;
   chipPalette: readonly [string, string, string, string];
   actionBarGradient: string;
   backgroundVariant: BgVariant;
@@ -18,12 +17,10 @@ export type ThemeVisuals = {
 
 export type FeltStyle = "green" | "red" | "blue" | "brown" | "sage" | "amber";
 export type CardBackStyle = "red" | "wood" | "floral";
-export type AccentStyle = "green" | "red" | "blue" | "amber" | "purple";
 
 export type CustomChoice = {
   feltStyle: FeltStyle;
   cardBackStyle: CardBackStyle;
-  accentStyle: AccentStyle;
   bgVariant: BgVariant;
 };
 

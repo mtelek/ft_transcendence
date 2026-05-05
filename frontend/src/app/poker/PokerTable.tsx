@@ -378,7 +378,7 @@ export default function PokerTable({ username }: { username: string }) {
             className="absolute top-[30%] left-1/2 -translate-x-1/2 text-sm text-slate-300 font-medium"
           >
             Pot{" "}
-            <span className="font-bold" style={{ color: visuals.accent }}>
+            <span className="font-bold text-blue-500">
               €{pot.toLocaleString()}
             </span>
           </div>

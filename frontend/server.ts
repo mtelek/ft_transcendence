@@ -25,14 +25,28 @@ app.prepare().then(() => {
       console.log("> HTTP server listening on port 80 and redirecting to HTTPS");
     });
 
-    const options = {
-      key: fs.readFileSync("/app/certs/key.pem"),
-      cert: fs.readFileSync("/app/certs/cert.pem"),
-    };
-    const httpsServer = createHttpsServer(options, (req, res) => handle(req, res));
-    const io = new Server(httpsServer, { cors: { origin: "*" } });
-    const state = createPokerServerState();
-    registerPokerHandlers(io, state);
+// APP
+app.prepare().then(() => {
+  const options = {
+    key: fs.readFileSync("/app/certs/key.pem"),
+    cert: fs.readFileSync("/app/certs/cert.pem"),
+  };
+  const httpsServer = createHttpsServer(options, (req, res) => handle(req, res));
+  const io = new Server(httpsServer, {
+    cors: { origin: "*" },
+    destroyUpgrade: false,
+  });
+
+  // Let Next.js handle non-socket.io WebSocket upgrades (e.g. HMR)
+  const nextUpgradeHandler = app.getUpgradeHandler();
+  httpsServer.on("upgrade", (req, socket, head) => {
+    if (!req.url?.startsWith("/socket.io")) {
+      nextUpgradeHandler(req, socket, head);
+    }
+  });
+
+  const state = createPokerServerState();
+  registerPokerHandlers(io, state);
 
     httpsServer.listen(443, () => {
       console.log("> Ready on https://0.0.0.0:443");
