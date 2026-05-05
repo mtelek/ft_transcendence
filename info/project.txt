@@ -260,7 +260,7 @@ Technology          Module                           Points
     ✅ Enable two players on separate computers to play the same game in real-time.
     ✅ Handle network latency and disconnections gracefully.
     ✅ Provide a smooth user experience for remote gameplay.
-    ✅ Implement reconnection logic.
+    ❌ Implement reconnection logic.
 
 ✅                Game customization              1 pt (Minor)
     ✅ Power-ups, attacks, or special abilities. Joker? Special Chip?
