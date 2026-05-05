@@ -15,6 +15,7 @@ const handle = app.getRequestHandler();
 
 // APP
 app.prepare().then(() => {
+  const nextUpgradeHandler = app.getUpgradeHandler();
   if (useHttps) {
     // HTTP server for redirecting to HTTPS (port 80 -> 443)
     createHttpServer((req, res) => {
@@ -25,28 +26,19 @@ app.prepare().then(() => {
       console.log("> HTTP server listening on port 80 and redirecting to HTTPS");
     });
 
-// APP
-app.prepare().then(() => {
-  const options = {
-    key: fs.readFileSync("/app/certs/key.pem"),
-    cert: fs.readFileSync("/app/certs/cert.pem"),
-  };
-  const httpsServer = createHttpsServer(options, (req, res) => handle(req, res));
-  const io = new Server(httpsServer, {
-    cors: { origin: "*" },
-    destroyUpgrade: false,
-  });
-
-  // Let Next.js handle non-socket.io WebSocket upgrades (e.g. HMR)
-  const nextUpgradeHandler = app.getUpgradeHandler();
-  httpsServer.on("upgrade", (req, socket, head) => {
-    if (!req.url?.startsWith("/socket.io")) {
-      nextUpgradeHandler(req, socket, head);
-    }
-  });
-
-  const state = createPokerServerState();
-  registerPokerHandlers(io, state);
+    const options = {
+      key: fs.readFileSync("/app/certs/key.pem"),
+      cert: fs.readFileSync("/app/certs/cert.pem"),
+    };
+    const httpsServer = createHttpsServer(options, (req, res) => handle(req, res));
+    httpsServer.on("upgrade", (req, socket, head) => {
+      if (!req.url?.startsWith("/socket.io")) {
+        nextUpgradeHandler(req, socket, head);
+      }
+    });
+    const io = new Server(httpsServer, { cors: { origin: "*" } });
+    const state = createPokerServerState();
+    registerPokerHandlers(io, state);
 
     httpsServer.listen(443, () => {
       console.log("> Ready on https://0.0.0.0:443");
@@ -54,6 +46,11 @@ app.prepare().then(() => {
   } else {
     // Plain HTTP dev server — HMR WebSocket works without SSL
     const httpServer = createHttpServer((req, res) => handle(req, res));
+    httpServer.on("upgrade", (req, socket, head) => {
+      if (!req.url?.startsWith("/socket.io")) {
+        nextUpgradeHandler(req, socket, head);
+      }
+    });
     const io = new Server(httpServer, { cors: { origin: "*" } });
     const state = createPokerServerState();
     registerPokerHandlers(io, state);

@@ -3,7 +3,6 @@ import type { Server } from "socket.io";
 import type { GameSession, PokerCard } from "./types";
 import { HAND_RANKING_NAMES } from "./types";
 import type { PokerServerState } from "./state";
-import type { Server } from "socket.io";
 import { Pool } from "pg";
 import { randomUUID } from "crypto";
 

@@ -21,13 +21,14 @@ export interface GameSession {
   players: PlayerEntry[];
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
-  specialChipUsedBy: [boolean, boolean];
-  specialRevealActiveBySeat: [boolean, boolean];
+  specialChipUsedBy: boolean[];
+  specialRevealActiveBySeat: boolean[];
   handResult: WinnerInfo[] | null;
   nextHandReady: boolean[];
   nextDealerSeat: number;
   isGameOver: boolean;
   totalPlayers: number;
+  matchSaved: boolean;
 }
 
 export type OpponentSnapshot = {

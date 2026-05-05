@@ -63,7 +63,7 @@ function ActionBar({
   myStack: number;
   pot: number;
   callAmount: number;
-  opponent: Pick<GameSnapshot["opponent"], "username" | "image">;
+  opponent: { username: string; image?: string };
   onAction: (action: string, betSize?: number) => void;
   onUseSpecialChip: (targetId: string) => void;
   specialChipUsed: boolean;
@@ -102,6 +102,7 @@ function ActionBar({
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -465,6 +466,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     socketRef.current?.emit("nextHand");
   }
 
+  function sendUseSpecialChip(_targetId: string) {
+    socketRef.current?.emit("useSpecialChip");
+  }
+
   if (eliminated) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -727,6 +732,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               myStack={me.stack}
               pot={pot}
               callAmount={callAmount}
+              opponent={{ username: opponents[0]?.username ?? "", image: opponents[0]?.image }}
               onAction={sendAction}
               onUseSpecialChip={sendUseSpecialChip}
               specialChipUsed={snapshot.specialChip.isUsed}

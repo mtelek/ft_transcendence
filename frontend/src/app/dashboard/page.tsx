@@ -153,7 +153,7 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>
 
         <div className="flex items-stretch gap-6 w-full">
-          <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-10 flex flex-col items-center justify-center gap-4 min-w-50">
+          <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-10 flex flex-col items-center justify-center gap-4 min-w-[200px]">
             <p className="text-slate-400 text-sm mb-2">Logged in as <span className="text-white font-semibold">{username}</span></p>
             <button
               onClick={() => openPanel("host")}
@@ -200,31 +200,9 @@ export default function DashboardPage() {
               />
             </label>
 
-              {panel === "host" && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-slate-400 text-sm">Players</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setGameSize(2)}
-                      className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${gameSize === 2 ? "bg-teal-500 text-slate-900" : "bg-slate-700 hover:bg-slate-600 text-white"}`}
-                    >
-                      1 vs 1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGameSize(3)}
-                      className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${gameSize === 3 ? "bg-teal-500 text-slate-900" : "bg-slate-700 hover:bg-slate-600 text-white"}`}
-                    >
-                      3 Players
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <p className="text-red-400 text-sm min-h-5">
-                {error || " "}
-              </p>
+            <p className="text-red-400 text-sm min-h-[20px]">
+              {error || "\u00A0"}
+            </p>
 
             <button
               onClick={panel === "host" ? handleHost : handleJoin}

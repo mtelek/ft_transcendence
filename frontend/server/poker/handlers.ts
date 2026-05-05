@@ -20,11 +20,14 @@ function startGame(io: Server, state: PokerServerState, gameId: string, players:
     players: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
+    specialChipUsedBy: new Array(n).fill(false),
+    specialRevealActiveBySeat: new Array(n).fill(false),
     handResult: null,
     nextHandReady: new Array(n).fill(false),
     nextDealerSeat: 1,
     isGameOver: false,
     totalPlayers: n,
+    matchSaved: false,
   };
 
   state.games.set(gameId, session);
@@ -65,6 +68,16 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     socket.on("joinGameRoom", ({ gameId }: { gameId: string }) => {
       socket.join(gameId);
+    });
+
+    socket.on("subscribeMatchHistory", ({ username }: { username?: string }) => {
+      if (!username) return;
+      socket.join(`history:${username}`);
+    });
+
+    socket.on("unsubscribeMatchHistory", ({ username }: { username?: string }) => {
+      if (!username) return;
+      socket.leave(`history:${username}`);
     });
 
     socket.on("hostGame", ({ username, image, gameName, password, gameSize }: { username: string; image?: string; gameName: string; password: string; gameSize?: number }) => {
@@ -126,6 +139,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           io.to(p.socketId).emit("waitingForPlayers", { current, needed });
         }
       }
+
+
     });
 
     socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
@@ -213,7 +228,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         if (hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          if (gameOver) endGame(state, info.gameId);
+          if (gameOver) endGame(io, state, info.gameId);
           return;
         }
       } else {
@@ -221,7 +236,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         if (!table.isHandInProgress() && hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          if (gameOver) endGame(state, info.gameId);
+          if (gameOver) endGame(io, state, info.gameId);
           return;
         }
         if (table.isHandInProgress()) {
@@ -243,7 +258,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!session.table.isBettingRoundInProgress()) return;
       if (session.table.playerToAct() !== info.seatIndex) return;
 
-      const seat = info.seatIndex as 0 | 1;
+      const seat = info.seatIndex;
       if (session.specialChipUsedBy[seat]) return;
 
       session.specialChipUsedBy[seat] = true;
@@ -278,11 +293,13 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         session.handResult = null;
         session.lastCommunityCards = [];
         session.lastHoleCards = new Array(session.players.length).fill(null);
+        session.specialRevealActiveBySeat = new Array(session.players.length).fill(false);
+        for (let i = 0; i < session.players.length; i++) clearSpecialRevealTimer(info.gameId, i);
 
         if (hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
-          if (gameOver) endGame(state, info.gameId);
+          if (gameOver) endGame(io, state, info.gameId);
           return;
         }
 
@@ -332,7 +349,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
               if (p.socketId !== socket.id) io.to(p.socketId).emit("opponentDisconnected");
             }
             session.isGameOver = true;
-            endGame(state, info.gameId);
+            endGame(io, state, info.gameId);
           }
         }
         state.socketToGame.delete(socket.id);

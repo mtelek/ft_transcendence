@@ -4,7 +4,18 @@ import type { GameSnapshot, OpponentSnapshot, PokerCard } from "./types";
 
 export function buildSnapshot(state: PokerServerState, gameId: string, mySeatIndex: number): GameSnapshot {
   const session = state.games.get(gameId)!;
-  const { table, players, lastCommunityCards, lastHoleCards, handResult, nextHandReady, isGameOver, totalPlayers } = session;
+  const {
+    table,
+    players,
+    lastCommunityCards,
+    lastHoleCards,
+    handResult,
+    nextHandReady,
+    isGameOver,
+    totalPlayers,
+    specialChipUsedBy,
+    specialRevealActiveBySeat,
+  } = session;
 
   const myEntry = players.find((p) => p.seatIndex === mySeatIndex)!;
   const oppEntries = players.filter((p) => p.seatIndex !== mySeatIndex);
@@ -35,6 +46,11 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     if (handActuallyInProgress) {
       const all = table.holeCards();
       oppHoleCards = (all[oppEntry.seatIndex] ?? [null, null]).map(() => null);
+      const isRevealActive = specialRevealActiveBySeat[mySeatIndex] ?? false;
+      if (isRevealActive) {
+        const oppActualHoleCards = (all[oppEntry.seatIndex] ?? []) as PokerCard[];
+        oppHoleCards = [oppActualHoleCards[0] ?? null, oppActualHoleCards[1] ?? null];
+      }
     } else {
       oppHoleCards = lastHoleCards[oppEntry.seatIndex] ?? [null, null];
     }
@@ -85,8 +101,8 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     myTurn,
     legalActions,
     specialChip: {
-      isUsed: specialChipUsedBy[mySeatIndex as 0 | 1],
-      revealedOpponentCards: specialRevealActiveBySeat[mySeatIndex as 0 | 1],
+      isUsed: specialChipUsedBy[mySeatIndex] ?? false,
+      revealedOpponentCards: specialRevealActiveBySeat[mySeatIndex] ?? false,
     },
     handResult,
     iReadyForNextHand: nextHandReady[mySeatIndex] ?? false,
