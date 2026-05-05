@@ -36,6 +36,27 @@ model User {
   matchesAsP4  Match[] @relation("Player4")
   matchesAsP5  Match[] @relation("Player5")
   matchesAsP6  Match[] @relation("Player6")
+
+  //Array that stores all the users achivements
+  achievements Achievement[]
+
+  //Game stats
+  wins        Int @default(0)
+  losses      Int @default(0)
+  handsPlayed Int @default(0)
+}
+
+model Achievement {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  unlockedAt DateTime @default(now())
+
+  // links userId with id from User table and deletes achivements when user is deleted
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // makes sure a user can get an achivement only once
+  @@unique([userId, type])
 }
 
 model Friendship {

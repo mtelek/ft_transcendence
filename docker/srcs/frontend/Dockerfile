@@ -23,7 +23,7 @@ COPY . .
 
 # Create directory for certs and generate self-signed certificate with SAN for localhost and custom IP
 RUN mkdir -p /app/certs \
-  && printf "[req]\ndistinguished_name=req\nreq_extensions = v3_req\n[req_distinguished_name]\n[v3_req]\nsubjectAltName=DNS:localhost,DNS:${IP},IP:127.0.0.1\n" > /app/certs/openssl.cnf \
+  && printf "[req]\ndistinguished_name=req\nreq_extensions = v3_req\n[req_distinguished_name]\n[v3_req]\nsubjectAltName=DNS:localhost,IP:127.0.0.1,IP:${IP}\n" > /app/certs/openssl.cnf \
   && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /app/certs/key.pem \
     -out /app/certs/cert.pem \
