@@ -241,10 +241,17 @@ function DashboardInner() {
           </aside>
         </div>
 
-        <section className="w-full bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 text-left">
-          <h2 className="text-white text-lg font-bold mb-3">Gameplay Settings</h2>
-          <GameplayTab />
-        </section>
+        {panel === "host" ? (
+          <section className="w-full bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 text-left h-[140px] overflow-hidden">
+            <h2 className="text-white text-lg font-bold mb-3">Gameplay Settings</h2>
+            <GameplayTab />
+          </section>
+        ) : (
+          <section
+            className="w-full bg-transparent border border-transparent rounded-2xl px-8 py-3 text-left h-[140px]"
+            aria-hidden="true"
+          />
+        )}
       </div>
     </div>
   );
