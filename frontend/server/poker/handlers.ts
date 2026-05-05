@@ -9,9 +9,15 @@ function hasBustedPlayer(session: GameSession) {
   return session.table.seats().some((seat) => seat && seat.totalChips === 0);
 }
 
-function startGame(io: Server, state: PokerServerState, gameId: string, players: Array<{ socketId: string; username: string; image?: string }>) {
+function startGame(
+  io: Server,
+  state: PokerServerState,
+  gameId: string,
+  players: Array<{ socketId: string; username: string; image?: string }>,
+  blinds: { small: number; big: number }
+) {
   const n = players.length;
-  const table = new Table({ smallBlind: 10, bigBlind: 20 }, n);
+  const table = new Table({ smallBlind: blinds.small, bigBlind: blinds.big }, n);
   for (let i = 0; i < n; i++) table.sitDown(i, 1000);
   table.startHand(0);
 
@@ -80,7 +86,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.leave(`history:${username}`);
     });
 
-    socket.on("hostGame", ({ username, image, gameName, password, gameSize }: { username: string; image?: string; gameName: string; password: string; gameSize?: number }) => {
+    socket.on("hostGame", ({ username, image, gameName, password, gameSize, blinds }: { username: string; image?: string; gameName: string; password: string; gameSize?: number; blinds?: { small: number; big: number } }) => {
       const normalizedGameName = gameName.trim();
       if (!normalizedGameName) {
         socket.emit("lobbyError", { message: "Game name is required" });
@@ -101,9 +107,21 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       const maxPlayers = gameSize === 3 ? 3 : 2;
+      const smallBlind = blinds?.small ?? 10;
+      const bigBlind = blinds?.big ?? 20;
+      const normalizedBlinds = {
+        small: Number.isFinite(smallBlind) && smallBlind > 0 ? Math.floor(smallBlind) : 10,
+        big: Number.isFinite(bigBlind) && bigBlind > 0 ? Math.floor(bigBlind) : 20,
+      };
+
+      if (normalizedBlinds.big < normalizedBlinds.small) {
+        normalizedBlinds.big = normalizedBlinds.small * 2;
+      }
+
       state.namedLobbies.set(normalizedGameName, {
         password,
         maxPlayers,
+        blinds: normalizedBlinds,
         players: [{ socketId: socket.id, username, image }],
       });
       state.reservedGameNames.add(normalizedGameName);
@@ -130,7 +148,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       if (lobby.players.length >= lobby.maxPlayers) {
         state.namedLobbies.delete(normalizedGameName);
-        startGame(io, state, normalizedGameName, lobby.players);
+        startGame(io, state, normalizedGameName, lobby.players, lobby.blinds);
       } else {
         // not full yet — notify everyone in the lobby
         const current = lobby.players.length;

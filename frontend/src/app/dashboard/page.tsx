@@ -87,7 +87,14 @@ function DashboardInner() {
     }
     setError("");
     const socket = getSocket();
-    socket.emit("hostGame", { username, image, gameName: gameName.trim(), password, gameSize: settings.tableSize });
+    socket.emit("hostGame", {
+      username,
+      image,
+      gameName: gameName.trim(),
+      password,
+      gameSize: settings.tableSize,
+      blinds: settings.blinds,
+    });
   }
 
   function handleJoin() {

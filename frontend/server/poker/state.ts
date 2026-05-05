@@ -9,6 +9,10 @@ export type LobbyPlayer = {
 export type NamedLobbyEntry = {
   password: string;
   maxPlayers: number;
+  blinds: {
+    small: number;
+    big: number;
+  };
   players: LobbyPlayer[];
 };
 
