@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 interface Message {
   username: string;
   text: string;
+  type?: "chat" | "game";
 }
 
 type ChatSize = "full" | "small" | "minimized";
@@ -94,8 +95,14 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
         >
           {visibleMessages.map((msg, i) => (
             <div key={i}>
-              <span className="font-bold text-slate-200">{msg.username}: </span>
-              <span className="text-slate-300">{msg.text}</span>
+              {msg.type === "game" ? (
+                <span className="text-amber-400 italic text-xs">{msg.text}</span>
+              ) : (
+                <>
+                  <span className="font-bold text-slate-200">{msg.username}: </span>
+                  <span className="text-slate-300">{msg.text}</span>
+                </>
+              )}
             </div>
           ))}
           {size === "full" && <div ref={bottomRef} />}
