@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import PokerBackground from "@/components/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
@@ -45,7 +46,19 @@ export default function Register() {
       return;
     }
 
-    router.push("/login");
+    const signInResult = await signIn("credentials", {
+      identifier: trimmedEmail,
+      password,
+      redirect: false,
+    });
+
+    if (signInResult?.error) {
+      setErrorMessage("Account created, but automatic sign in failed. Please log in manually.");
+      router.push("/login");
+      return;
+    }
+
+    router.push("/dashboard");
   };
 
   return (
