@@ -46,8 +46,8 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     if (handActuallyInProgress) {
       const all = table.holeCards();
       oppHoleCards = (all[oppEntry.seatIndex] ?? [null, null]).map(() => null);
-      const isRevealActive = specialRevealActiveBySeat[mySeatIndex] ?? false;
-      if (isRevealActive) {
+      const revealTarget = specialRevealActiveBySeat[mySeatIndex] ?? -1;
+      if (revealTarget === oppEntry.seatIndex) {
         const oppActualHoleCards = (all[oppEntry.seatIndex] ?? []) as PokerCard[];
         oppHoleCards = [oppActualHoleCards[0] ?? null, oppActualHoleCards[1] ?? null];
       }
@@ -102,7 +102,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     legalActions,
     specialChip: {
       isUsed: specialChipUsedBy[mySeatIndex] ?? false,
-      revealedOpponentCards: specialRevealActiveBySeat[mySeatIndex] ?? false,
+      revealedOpponentCards: (specialRevealActiveBySeat[mySeatIndex] ?? -1) !== -1,
     },
     handResult,
     iReadyForNextHand: nextHandReady[mySeatIndex] ?? false,

@@ -8,21 +8,29 @@ import Image from "next/image";
 import { io, Socket } from "socket.io-client";
 import Statistics from "@/components/poker/stats/statistics";
 import MatchHistory from "@/components/poker/stats/matchHistory";
-import { PokerSettingsProvider } from "@/lib/poker-settings/context";
+import { PokerSettingsProvider, usePokerSettings } from "@/lib/poker-settings/context";
 import { GameplayTab } from "@/components/settings/tabs/GameplayTab";
 
 type Panel = "host" | "join";
 type Status = "idle" | "waiting" | "matched";
 
 export default function DashboardPage() {
+  return (
+    <PokerSettingsProvider>
+      <DashboardInner />
+    </PokerSettingsProvider>
+  );
+}
+
+function DashboardInner() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const socketRef = useRef<Socket | null>(null);
   const [panel, setPanel] = useState<Panel>("host");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
+  const { settings } = usePokerSettings();
   const [password, setPassword] = useState("");
-  const [gameSize, setGameSize] = useState<2 | 3>(2);
   const [waitingInfo, setWaitingInfo] = useState<{ current: number; needed: number } | null>(null);
   const [error, setError] = useState("");
 
@@ -79,7 +87,7 @@ export default function DashboardPage() {
     }
     setError("");
     const socket = getSocket();
-    socket.emit("hostGame", { username, image, gameName: gameName.trim(), password, gameSize });
+    socket.emit("hostGame", { username, image, gameName: gameName.trim(), password, gameSize: settings.tableSize });
   }
 
   function handleJoin() {
@@ -224,12 +232,10 @@ export default function DashboardPage() {
           </aside>
         </div>
 
-        <PokerSettingsProvider>
-          <section className="w-full bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 text-left">
-            <h2 className="text-white text-lg font-bold mb-3">Gameplay Settings</h2>
-            <GameplayTab />
-          </section>
-        </PokerSettingsProvider>
+        <section className="w-full bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 text-left">
+          <h2 className="text-white text-lg font-bold mb-3">Gameplay Settings</h2>
+          <GameplayTab />
+        </section>
       </div>
     </div>
   );

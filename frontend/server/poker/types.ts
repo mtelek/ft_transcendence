@@ -22,7 +22,7 @@ export interface GameSession {
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
   specialChipUsedBy: boolean[];
-  specialRevealActiveBySeat: boolean[];
+  specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex
   handResult: WinnerInfo[] | null;
   nextHandReady: boolean[];
   nextDealerSeat: number;

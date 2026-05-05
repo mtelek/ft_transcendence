@@ -53,7 +53,7 @@ function ActionBar({
   myStack,
   pot,
   callAmount,
-  opponent,
+  opponents,
   onAction,
   onUseSpecialChip,
   specialChipUsed,
@@ -63,7 +63,7 @@ function ActionBar({
   myStack: number;
   pot: number;
   callAmount: number;
-  opponent: { username: string; image?: string };
+  opponents: { username: string; image?: string; seatIndex: number }[];
   onAction: (action: string, betSize?: number) => void;
   onUseSpecialChip: (targetId: string) => void;
   specialChipUsed: boolean;
@@ -206,7 +206,7 @@ function ActionBar({
             <SpecialChip
               disabled={false}
               isUsed={specialChipUsed}
-              targets={[{ id: "opponent", username: opponent.username, image: opponent.image }]}
+              targets={opponents.map((o) => ({ id: String(o.seatIndex), username: o.username, image: o.image }))}
               onUse={onUseSpecialChip}
             />
           </div>
@@ -250,7 +250,7 @@ function ResultOverlay({
           href="/dashboard"
           className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full text-lg hover:bg-slate-200 transition-colors">
           Exit to Dashboard
-        </button>
+        </Link>
       </div>
     );
   }
@@ -466,8 +466,9 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     socketRef.current?.emit("nextHand");
   }
 
-  function sendUseSpecialChip(_targetId: string) {
-    socketRef.current?.emit("useSpecialChip");
+  function sendUseSpecialChip(targetId: string) {
+    const targetSeatIndex = parseInt(targetId, 10);
+    socketRef.current?.emit("useSpecialChip", { targetSeatIndex });
   }
 
   if (eliminated) {
@@ -732,7 +733,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               myStack={me.stack}
               pot={pot}
               callAmount={callAmount}
-              opponent={{ username: opponents[0]?.username ?? "", image: opponents[0]?.image }}
+              opponents={opponents}
               onAction={sendAction}
               onUseSpecialChip={sendUseSpecialChip}
               specialChipUsed={snapshot.specialChip.isUsed}

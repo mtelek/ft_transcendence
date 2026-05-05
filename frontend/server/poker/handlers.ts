@@ -21,7 +21,7 @@ function startGame(io: Server, state: PokerServerState, gameId: string, players:
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
     specialChipUsedBy: new Array(n).fill(false),
-    specialRevealActiveBySeat: new Array(n).fill(false),
+    specialRevealActiveBySeat: new Array(n).fill(-1),
     handResult: null,
     nextHandReady: new Array(n).fill(false),
     nextDealerSeat: 1,
@@ -247,7 +247,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       broadcastState(io, state, info.gameId);
     });
 
-    socket.on("useSpecialChip", () => {
+    socket.on("useSpecialChip", ({ targetSeatIndex }: { targetSeatIndex: number }) => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
 
@@ -262,7 +262,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (session.specialChipUsedBy[seat]) return;
 
       session.specialChipUsedBy[seat] = true;
-      session.specialRevealActiveBySeat[seat] = true;
+      session.specialRevealActiveBySeat[seat] = targetSeatIndex;
       broadcastState(io, state, info.gameId);
 
       clearSpecialRevealTimer(info.gameId, seat);
@@ -271,7 +271,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         setTimeout(() => {
           const activeSession = state.games.get(info.gameId);
           if (!activeSession || activeSession.isGameOver) return;
-          activeSession.specialRevealActiveBySeat[seat] = false;
+          activeSession.specialRevealActiveBySeat[seat] = -1;
           specialRevealTimers.delete(specialRevealTimerKey(info.gameId, seat));
           broadcastState(io, state, info.gameId);
         }, 5000)
@@ -293,7 +293,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         session.handResult = null;
         session.lastCommunityCards = [];
         session.lastHoleCards = new Array(session.players.length).fill(null);
-        session.specialRevealActiveBySeat = new Array(session.players.length).fill(false);
+        session.specialRevealActiveBySeat = new Array(session.players.length).fill(-1);
         for (let i = 0; i < session.players.length; i++) clearSpecialRevealTimer(info.gameId, i);
 
         if (hasBustedPlayer(session)) {
