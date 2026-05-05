@@ -13,8 +13,9 @@ export const DEFAULT_SETTINGS: PokerSettings = {
   startingStack: 10_000,
   timer: "off",
   animationSpeed: "normal",
-  cardBackImage: "back01",
-  bannerImage: "/banners/banner1.png",
+  cardBackImage: "back06",
+  bannerImage: "/banners/banner3.png",
+  useSpecialChip: false,
 };
 
 export const ANIMATION_DURATION_MS: Record<AnimationSpeed, number> = {

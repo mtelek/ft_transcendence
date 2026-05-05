@@ -8,6 +8,8 @@ import Image from "next/image";
 import { io, Socket } from "socket.io-client";
 import Statistics from "@/components/poker/stats/statistics";
 import MatchHistory from "@/components/poker/stats/matchHistory";
+import { PokerSettingsProvider } from "@/lib/poker-settings/context";
+import { GameplayTab } from "@/components/settings/tabs/GameplayTab";
 
 type Panel = "host" | "join";
 type Status = "idle" | "waiting" | "matched";
@@ -209,6 +211,13 @@ export default function DashboardPage() {
             </Link>
           </aside>
         </div>
+
+        <PokerSettingsProvider>
+          <section className="w-full bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 text-left">
+            <h2 className="text-white text-lg font-bold mb-3">Gameplay Settings</h2>
+            <GameplayTab />
+          </section>
+        </PokerSettingsProvider>
       </div>
     </div>
   );

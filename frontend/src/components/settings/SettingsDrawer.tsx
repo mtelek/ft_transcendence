@@ -1,16 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { AppearanceTab } from "./tabs/AppearanceTab";
-import { GameplayTab } from "./tabs/GameplayTab";
-
-type TabId = "appearance" | "gameplay";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "appearance", label: "Appearance" },
-  { id: "gameplay", label: "Gameplay" },
-];
 
 export function SettingsDrawer({
   open,
@@ -20,7 +12,6 @@ export function SettingsDrawer({
   onClose: () => void;
 }) {
   const { restoreDefaults } = usePokerSettings();
-  const [tab, setTab] = useState<TabId>("appearance");
 
   useEffect(() => {
     if (!open) return;
@@ -70,31 +61,8 @@ export function SettingsDrawer({
           </button>
         </header>
 
-        <nav className="flex gap-1 px-5 pt-3" role="tablist">
-          {TABS.map((t) => {
-            const active = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={active}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-t-lg transition-colors ${
-                  active
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-slate-900"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
-
         <div className="flex-1 overflow-y-auto px-5 py-5" style={{ background: "#0f172a" }}>
-          {tab === "appearance" && <AppearanceTab />}
-          {tab === "gameplay" && <GameplayTab />}
+          <AppearanceTab />
         </div>
 
         <footer className="border-t border-slate-800 px-5 py-3">

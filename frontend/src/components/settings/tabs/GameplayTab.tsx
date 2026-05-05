@@ -2,27 +2,16 @@
 
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { BLIND_PRESETS, STACK_PRESETS } from "@/lib/poker-settings/defaults";
-import type { AnimationSpeed, TableSize, TimerOption } from "@/lib/poker-settings/types";
+import type { TableSize } from "@/lib/poker-settings/types";
 import { ChipPreset } from "../controls/ChipPreset";
 import { Segmented } from "../controls/Segmented";
 
 const TABLE_OPTIONS: { value: TableSize; label: string }[] = [
   { value: 2, label: "2" },
   { value: 3, label: "3" },
+  { value: 4, label: "4" },
+  { value: 5, label: "5" },
   { value: 6, label: "6" },
-];
-
-const TIMER_OPTIONS: { value: TimerOption; label: string }[] = [
-  { value: "off", label: "Off" },
-  { value: 15, label: "15s" },
-  { value: 30, label: "30s" },
-  { value: 60, label: "60s" },
-];
-
-const SPEED_OPTIONS: { value: AnimationSpeed; label: string }[] = [
-  { value: "slow", label: "Slow" },
-  { value: "normal", label: "Normal" },
-  { value: "fast", label: "Fast" },
 ];
 
 export function GameplayTab() {
@@ -30,9 +19,9 @@ export function GameplayTab() {
   const blindKey = `${settings.blinds.small}/${settings.blinds.big}`;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-row justify-between pb-3 w-full overflow-hidden">
       <div>
-        <label className="text-xs text-slate-300 block mb-2">Table size</label>
+        <label className="text-xs text-slate-300 block mb-1">Table size</label>
         <Segmented
           value={settings.tableSize}
           options={TABLE_OPTIONS}
@@ -41,7 +30,7 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-2">
+        <label className="text-xs text-slate-300 block mb-1">
           Blinds (small / big)
         </label>
         <Segmented
@@ -58,7 +47,7 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-2">Starting stack</label>
+        <label className="text-xs text-slate-300 block mb-1">Starting stack</label>
         <ChipPreset
           value={settings.startingStack}
           options={STACK_PRESETS}
@@ -67,27 +56,16 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-2">Action timer</label>
-        <Segmented
-          value={settings.timer}
-          options={TIMER_OPTIONS}
-          onChange={(v) => update({ timer: v })}
-        />
-        <p className="text-[10px] text-slate-500 mt-2">
-          Shows a countdown ring around the active seat.
-        </p>
+        <label className="text-xs text-slate-300 block mb-1">Special Chip</label>
+        <button
+          type="button"
+          onClick={() => update({ useSpecialChip: !settings.useSpecialChip })}
+          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${settings.useSpecialChip ? "bg-teal-500" : "bg-slate-600"}`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${settings.useSpecialChip ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
       </div>
 
-      <div>
-        <label className="text-xs text-slate-300 block mb-2">
-          Animation speed
-        </label>
-        <Segmented
-          value={settings.animationSpeed}
-          options={SPEED_OPTIONS}
-          onChange={(v) => update({ animationSpeed: v })}
-        />
-      </div>
     </div>
   );
 }
