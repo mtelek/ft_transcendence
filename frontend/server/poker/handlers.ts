@@ -14,11 +14,13 @@ function startGame(
   state: PokerServerState,
   gameId: string,
   players: Array<{ socketId: string; username: string; image?: string }>,
-  blinds: { small: number; big: number }
+  blinds: { small: number; big: number },
+  startingStack: number,
+  useSpecialChip: boolean
 ) {
   const n = players.length;
   const table = new Table({ smallBlind: blinds.small, bigBlind: blinds.big }, n);
-  for (let i = 0; i < n; i++) table.sitDown(i, 1000);
+  for (let i = 0; i < n; i++) table.sitDown(i, startingStack);
   table.startHand(0);
 
   const session: GameSession = {
@@ -26,6 +28,7 @@ function startGame(
     players: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
+    specialChipEnabled: useSpecialChip,
     specialChipUsedBy: new Array(n).fill(false),
     specialRevealActiveBySeat: new Array(n).fill(-1),
     handResult: null,
@@ -86,7 +89,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.leave(`history:${username}`);
     });
 
-    socket.on("hostGame", ({ username, image, gameName, password, gameSize, blinds }: { username: string; image?: string; gameName: string; password: string; gameSize?: number; blinds?: { small: number; big: number } }) => {
+    socket.on("hostGame", ({ username, image, gameName, password, gameSize, blinds, startingStack, useSpecialChip }: { username: string; image?: string; gameName: string; password: string; gameSize?: number; blinds?: { small: number; big: number }; startingStack?: number; useSpecialChip?: boolean }) => {
       const normalizedGameName = gameName.trim();
       if (!normalizedGameName) {
         socket.emit("lobbyError", { message: "Game name is required" });
@@ -118,10 +121,19 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         normalizedBlinds.big = normalizedBlinds.small * 2;
       }
 
+      const requestedStartingStack = startingStack ?? 1000;
+      const normalizedStartingStack =
+        Number.isFinite(requestedStartingStack) && requestedStartingStack > 0
+          ? Math.floor(requestedStartingStack)
+          : 1000;
+      const normalizedUseSpecialChip = Boolean(useSpecialChip);
+
       state.namedLobbies.set(normalizedGameName, {
         password,
         maxPlayers,
         blinds: normalizedBlinds,
+        startingStack: normalizedStartingStack,
+        useSpecialChip: normalizedUseSpecialChip,
         players: [{ socketId: socket.id, username, image }],
       });
       state.reservedGameNames.add(normalizedGameName);
@@ -148,7 +160,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       if (lobby.players.length >= lobby.maxPlayers) {
         state.namedLobbies.delete(normalizedGameName);
-        startGame(io, state, normalizedGameName, lobby.players, lobby.blinds);
+        startGame(io, state, normalizedGameName, lobby.players, lobby.blinds, lobby.startingStack, lobby.useSpecialChip);
       } else {
         // not full yet — notify everyone in the lobby
         const current = lobby.players.length;
@@ -271,6 +283,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
       const session = state.games.get(info.gameId);
       if (!session || session.isGameOver) return;
+      if (!session.specialChipEnabled) return;
 
       if (!session.table.isHandInProgress()) return;
       if (!session.table.isBettingRoundInProgress()) return;

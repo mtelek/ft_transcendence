@@ -21,6 +21,7 @@ export interface GameSession {
   players: PlayerEntry[];
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
+  specialChipEnabled: boolean;
   specialChipUsedBy: boolean[];
   specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex
   handResult: WinnerInfo[] | null;
@@ -61,6 +62,7 @@ export type GameSnapshot = {
   myTurn: boolean;
   legalActions: { actions: string[]; chipRange?: { min: number; max: number } };
   specialChip: {
+    isEnabled: boolean;
     isUsed: boolean;
     revealedOpponentCards: boolean;
   };

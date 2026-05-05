@@ -56,6 +56,7 @@ function ActionBar({
   opponents,
   onAction,
   onUseSpecialChip,
+  specialChipEnabled,
   specialChipUsed,
   bannerImage,
 }: {
@@ -66,6 +67,7 @@ function ActionBar({
   opponents: { username: string; image?: string; seatIndex: number }[];
   onAction: (action: string, betSize?: number) => void;
   onUseSpecialChip: (targetId: string) => void;
+  specialChipEnabled: boolean;
   specialChipUsed: boolean;
   bannerImage: string;
 }) {
@@ -203,12 +205,14 @@ function ActionBar({
                 </span>
               )}
             </button>
-            <SpecialChip
-              disabled={false}
-              isUsed={specialChipUsed}
-              targets={opponents.map((o) => ({ id: String(o.seatIndex), username: o.username, image: o.image }))}
-              onUse={onUseSpecialChip}
-            />
+            {specialChipEnabled && (
+              <SpecialChip
+                disabled={false}
+                isUsed={specialChipUsed}
+                targets={opponents.map((o) => ({ id: String(o.seatIndex), username: o.username, image: o.image }))}
+                onUse={onUseSpecialChip}
+              />
+            )}
           </div>
         )}
       </div>
@@ -736,6 +740,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               opponents={opponents}
               onAction={sendAction}
               onUseSpecialChip={sendUseSpecialChip}
+              specialChipEnabled={snapshot.specialChip.isEnabled}
               specialChipUsed={snapshot.specialChip.isUsed}
               bannerImage={settings.bannerImage}
             />

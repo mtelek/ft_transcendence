@@ -13,6 +13,8 @@ export type NamedLobbyEntry = {
     small: number;
     big: number;
   };
+  startingStack: number;
+  useSpecialChip: boolean;
   players: LobbyPlayer[];
 };
 

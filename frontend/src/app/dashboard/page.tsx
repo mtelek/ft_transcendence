@@ -94,6 +94,8 @@ function DashboardInner() {
       password,
       gameSize: settings.tableSize,
       blinds: settings.blinds,
+      startingStack: settings.startingStack,
+      useSpecialChip: settings.useSpecialChip,
     });
   }
 
