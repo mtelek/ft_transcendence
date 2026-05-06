@@ -240,7 +240,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       const emitGameEvent = (text: string) =>
-        io.to(info.gameId).emit("message", { username: "game", text, type: "game" });
+        io.to(info.gameId).emit("message", { username: "game", text: `DEALER: ${text}`, type: "game" });
 
       const callAmt = Math.min(myStackBefore, Math.max(0, maxOppBetBefore - myBetBefore));
       if (isFold) emitGameEvent(`${actorName} folds`);
@@ -270,7 +270,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
             : session.players.find((p) => p.seatIndex !== info.seatIndex);
           if (winner) {
             session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [], potWon: foldPot }];
-            emitGameEvent(`${winner.username} wins €${foldPot.toLocaleString()}`);
+            emitGameEvent(`${winner.username} wins the pot of €${foldPot.toLocaleString()}`);
           }
         }
 
@@ -284,6 +284,19 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         const commCountBefore = table.communityCards().length;
         advanceRounds(session);
 
+        // fold may have ended the hand after advanceRounds ran endBettingRound
+        if (isFold && !table.isHandInProgress() && !session.handResult) {
+          const chipsAfter = table.seats().map((s) => s?.totalChips ?? 0);
+          const winnerSeatIdx = chipsAfter.findIndex((chips, i) => chips > chipsBefore[i]);
+          const winner = winnerSeatIdx >= 0
+            ? session.players.find((p) => p.seatIndex === winnerSeatIdx)
+            : session.players.find((p) => p.seatIndex !== info.seatIndex);
+          if (winner) {
+            session.handResult = [{ username: winner.username, handName: "Fold", holeCards: [], potWon: foldPot }];
+            emitGameEvent(`${winner.username} wins the pot of €${foldPot.toLocaleString()}`);
+          }
+        }
+
         // emit phase of hand
         const commCountAfter = session.lastCommunityCards.length;
         if (commCountAfter > commCountBefore) {
@@ -293,10 +306,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         }
 
         // emit hand result if showdown just resolved
-        if (session.handResult) {
-          for (const w of session.handResult) {
-            const handInfo = w.handName !== "Fold" ? ` (${w.handName})` : "";
-            emitGameEvent(`${w.username} wins €${w.potWon.toLocaleString()}${handInfo}`);
+        if (session.handResult && session.handResult.length > 0 && session.handResult[0].handName !== "Fold") {
+          const totalPot = session.handResult.reduce((sum, w) => sum + w.potWon, 0);
+          if (session.handResult.length === 1) {
+            const w = session.handResult[0];
+            emitGameEvent(`${w.username} wins the pot of €${totalPot.toLocaleString()} (${w.handName})`);
+          } else {
+            const names = session.handResult.map((w) => w.username).join(" and ");
+            emitGameEvent(`SPLIT POT: ${names} share the pot of €${totalPot.toLocaleString()}`);
           }
         }
 
@@ -374,7 +391,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         try {
           session.table.startHand(session.nextDealerSeat);
           session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
-          io.to(info.gameId).emit("message", { username: "game", text: "— New Hand —", type: "game" });
+          io.to(info.gameId).emit("message", { username: "game", text: "DEALER: — New Hand —", type: "game" });
           broadcastState(io, state, info.gameId);
         } catch (err) {
           console.error("startHand error:", err);
