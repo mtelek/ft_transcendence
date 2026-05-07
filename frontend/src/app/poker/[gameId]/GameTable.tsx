@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Image from "next/image";
@@ -231,6 +231,16 @@ function ActionBar({
 
 // RESULT OVERLAY
 
+function Countdown({ children, resetKey }: { children: (n: number) => ReactNode; resetKey?: string | null }) {
+  const [count, setCount] = useState(5);
+  useEffect(() => {
+    setCount(5);
+    const interval = setInterval(() => setCount((c: number) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [resetKey]);
+  return <>{children(count)}</>;
+}
+
 function ResultOverlay({
   snapshot,
   myUsername,
@@ -242,8 +252,10 @@ function ResultOverlay({
   const totalChips = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
   const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
-  const winner = handResult?.[0];
-  const iWon = winner?.username === myUsername;
+  const myResult = handResult?.find((w) => w.username === myUsername) ?? null;
+  const iWon = myResult != null;
+  const isSplit = (handResult?.length ?? 0) > 1;
+  const winner = iWon ? myResult : (handResult?.[0] ?? null);
 
   if (isMatchOver) {
     const iWonGame = opponents.every((o) => o.totalChips === 0) || (me.totalChips > 0 && opponents.every((o) => o.totalChips < me.totalChips / opponents.length));
@@ -271,30 +283,36 @@ function ResultOverlay({
   if (snapshot.phase !== "finished" || !handResult) return null;
 
   return (
-    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
-      <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
-      <h2 className="text-2xl font-bold text-white">
-        {iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
-      </h2>
-      {winner?.handName && winner.handName !== "Fold" && (
-        <p className="text-slate-300 text-lg">{winner.handName}</p>
-      )}
-      {winner?.handName === "Fold" && (
-        <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
-      )}
-      {iWon && winner?.potWon != null && winner.potWon > 0 && (
-        <p className="text-orange-400 font-semibold text-lg">+€{winner.potWon.toLocaleString()}</p>
-      )}
+    <Countdown resetKey={handResult[0]?.username}>
+      {(countdown) => (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
+          <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
+          <h2 className="text-2xl font-bold text-white">
+            {iWon && isSplit ? "Split Pot!" : iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
+          </h2>
+          {winner?.handName && winner.handName !== "Fold" && (
+            <p className="text-slate-300 text-lg">{winner.handName}</p>
+          )}
+          {winner?.handName === "Fold" && (
+            <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
+          )}
+          {iWon && myResult?.potWon != null && myResult.potWon > 0 && (
+            <p className="text-orange-400 font-semibold text-lg">+€{myResult.potWon.toLocaleString()}</p>
+          )}
 
-      {/* Show winner's cards */}
-      {winner && winner.holeCards.length > 0 && (
-        <div className="flex gap-2 mt-1">
-          {winner.holeCards.map((card, i) => (
-            <CardFaceUp key={i} card={card} />
-          ))}
+          {/* Show winner's cards */}
+          {winner && winner.holeCards.length > 0 && (
+            <div className="flex gap-2 mt-1">
+              {winner.holeCards.map((card, i) => (
+                <CardFaceUp key={i} card={card} />
+              ))}
+            </div>
+          )}
+
+          <p className="text-slate-400 text-sm">Next hand in {countdown}s</p>
         </div>
       )}
-    </div>
+    </Countdown>
   );
 }
 
@@ -473,10 +491,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
-  }
-
-  function sendNextHand() {
-    socketRef.current?.emit("nextHand");
   }
 
   function sendUseSpecialChip(targetId: string) {
@@ -758,18 +772,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             </div>
           )}
 
-          {/* Next Hand button */}
-          {phase === "finished" && !snapshot.isGameOver && (
-            <div className="mt-6 flex flex-col items-center gap-2">
-              <button
-                onClick={sendNextHand}
-                disabled={snapshot.iReadyForNextHand}
-                className="bg-white text-slate-900 font-bold px-10 py-3 rounded-full text-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-              >
-                {snapshot.iReadyForNextHand ? "Waiting for others…" : "Next Hand →"}
-              </button>
-            </div>
-          )}
 
         </div>
       </div>

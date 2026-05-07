@@ -99,17 +99,30 @@ export function advanceRounds(session: GameSession) {
     if (table.areBettingRoundsCompleted()) {
       session.lastCommunityCards = [...table.communityCards()];
       session.lastHoleCards = table.holeCards().map((h) => (h ? [...h] : null));
-      const totalPot = table.pots().reduce((sum, p) => sum + p.size, 0);
+      const pots = table.pots();
       table.showdown();
 
       const rawWinners = table.winners();
-      if (rawWinners.length > 0 && rawWinners[0].length > 0) {
-        const potPerWinner = rawWinners[0].length > 1 ? Math.floor(totalPot / rawWinners[0].length) : totalPot;
-        session.handResult = rawWinners[0].map(([seatIdx, handInfo]) => ({
+      const potWonBySeat = new Map<number, number>();
+      const handInfoBySeat = new Map<number, { ranking: number }>();
+
+      for (let i = 0; i < rawWinners.length; i++) {
+        const potWinners = rawWinners[i];
+        const potSize = pots[i]?.size ?? 0;
+        if (!potWinners || potWinners.length === 0) continue;
+        const share = Math.floor(potSize / potWinners.length);
+        for (const [seatIdx, handInfo] of potWinners) {
+          potWonBySeat.set(seatIdx, (potWonBySeat.get(seatIdx) ?? 0) + share);
+          if (!handInfoBySeat.has(seatIdx)) handInfoBySeat.set(seatIdx, handInfo);
+        }
+      }
+
+      if (potWonBySeat.size > 0) {
+        session.handResult = Array.from(potWonBySeat.entries()).map(([seatIdx, potWon]) => ({
           username: session.players.find((p) => p.seatIndex === seatIdx)!.username,
-          handName: HAND_RANKING_NAMES[handInfo.ranking] ?? "Unknown",
+          handName: HAND_RANKING_NAMES[handInfoBySeat.get(seatIdx)?.ranking ?? -1] ?? "Unknown",
           holeCards: (session.lastHoleCards[seatIdx] ?? []) as PokerCard[],
-          potWon: potPerWinner,
+          potWon,
         }));
       }
       return;
@@ -173,7 +186,6 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
 
   session.table = newTable;
   session.players = activePlayers;
-  session.nextHandReady = new Array(activePlayers.length).fill(false);
   session.lastHoleCards = new Array(activePlayers.length).fill(null);
   session.lastCommunityCards = [];
   session.nextDealerSeat = 0;

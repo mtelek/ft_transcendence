@@ -10,7 +10,6 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     lastCommunityCards,
     lastHoleCards,
     handResult,
-    nextHandReady,
     isGameOver,
     totalPlayers,
     specialChipEnabled,
@@ -107,7 +106,6 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       revealedOpponentCards: (specialRevealActiveBySeat[mySeatIndex] ?? -1) !== -1,
     },
     handResult,
-    iReadyForNextHand: nextHandReady[mySeatIndex] ?? false,
     isGameOver,
     totalPlayers,
   };
