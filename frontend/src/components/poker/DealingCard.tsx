@@ -7,6 +7,20 @@ import { getCardImage, getCardBack } from "@/lib/cards";
 
 type AnyCard = { rank: string; suit: string };
 
+function hashSeed(seed: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function seededOffset(seed: string, amplitude: number) {
+  const unit = hashSeed(seed) / 4294967295;
+  return (unit - 0.5) * amplitude;
+}
+
 export type DealingCardProps = {
   card: AnyCard;
   fromX: number;
@@ -35,9 +49,10 @@ export function DealingCard({
   const dx = toX - fromX;
   const dy = toY - fromY;
 
-  const tilt    = useMemo(() => (Math.random() - 0.5) * 10, []);
-  const jitterX = useMemo(() => (Math.random() - 0.5) * 20, []);
-  const jitterY = useMemo(() => (Math.random() - 0.5) * 10, []);
+  const seed = `${card.rank}:${card.suit}:${fromX}:${fromY}:${toX}:${toY}:${delay}:${faceUp ? "1" : "0"}`;
+  const tilt = useMemo(() => seededOffset(`${seed}:tilt`, 10), [seed]);
+  const jitterX = useMemo(() => seededOffset(`${seed}:jx`, 20), [seed]);
+  const jitterY = useMemo(() => seededOffset(`${seed}:jy`, 10), [seed]);
 
   const cardAnimate = useMemo(() => ({
     x:       [0, dx * 0.55 + jitterX, dx],
@@ -45,8 +60,7 @@ export function DealingCard({
     rotate:  [0, tilt, 0],
     scale:   [0.8, 1.05, 1],
     opacity: [0, 1, 1],
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), []);
+  }), [dx, dy, jitterX, jitterY, tilt]);
 
   return (
     <motion.div

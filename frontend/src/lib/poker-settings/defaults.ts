@@ -1,4 +1,4 @@
-import type { PokerSettings, AnimationSpeed } from "./types";
+import type { PokerSettings} from "./types";
 
 export const DEFAULT_SETTINGS: PokerSettings = {
   theme: "classic-vegas",
@@ -17,11 +17,6 @@ export const DEFAULT_SETTINGS: PokerSettings = {
   useSpecialChip: false,
 };
 
-const ANIMATION_DURATION_MS: Record<AnimationSpeed, number> = {
-  slow: 500,
-  normal: 250,
-  fast: 100,
-};
 
 export const BLIND_PRESETS: Array<{ small: number; big: number }> = [
   { small: 10, big: 20 },

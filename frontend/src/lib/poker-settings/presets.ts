@@ -6,16 +6,6 @@ import type {
   ThemeVisuals,
 } from "./types";
 
-/*const FELT_FILTERS: Record<FeltStyle, string> = {
-  green: "none",
-  red: "hue-rotate(-100deg) saturate(1.4)",
-  blue: "hue-rotate(120deg) saturate(1.2)",
-  brown: "sepia(0.9) hue-rotate(-35deg) saturate(1.4) brightness(0.85)",
-  sage: "sepia(0.3) hue-rotate(20deg) saturate(0.7) brightness(1.1)",
-  amber: "sepia(1) hue-rotate(-20deg) saturate(1.3) brightness(0.95)",
-};
-*/
-
 const BG_FILTERS_BY_FELT: Record<FeltStyle, string> = {
   green: "sepia(1) hue-rotate(90deg) saturate(2) brightness(0.6)",
   red: "sepia(1) hue-rotate(335deg) saturate(5) brightness(0.55)",
@@ -61,13 +51,6 @@ export const PRESETS: Record<Exclude<ThemeId, "custom">, ThemeVisuals> = {
   }),
 };
 
-const PRESET_LABELS: Record<ThemeId, string> = {
-  "classic-vegas": "Classic Vegas",
-  "wood-lodge": "Wood Lodge",
-  garden: "Garden",
-  custom: "Custom",
-};
-
 export const FELT_LABELS: Record<FeltStyle, string> = {
   green: "Green",
   red: "Red",
@@ -75,12 +58,6 @@ export const FELT_LABELS: Record<FeltStyle, string> = {
   brown: "Brown",
   sage: "Sage",
   amber: "Amber",
-};
-
-const CARD_BACK_LABELS: Record<CardBackStyle, string> = {
-  red: "Classic Red",
-  wood: "Wood",
-  floral: "Floral",
 };
 
 export const FELT_SWATCHES: Record<FeltStyle, string> = {

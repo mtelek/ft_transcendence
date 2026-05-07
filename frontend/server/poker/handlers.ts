@@ -215,9 +215,6 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isBettingRoundInProgress() || table.playerToAct() !== info.seatIndex) return;
 
       const isFold = action === "fold";
-      const foldWinner = isFold
-        ? session.players.find((p) => p.seatIndex !== info.seatIndex)!
-        : null;
       // capture pot before the action so it's available after the hand ends
       const potBeforeAction = table.pots().reduce((sum, p) => sum + p.size, 0);
 

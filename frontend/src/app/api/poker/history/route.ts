@@ -79,7 +79,7 @@ export async function GET() {
       losses,
       matches: history,
     });
-  } catch (e) {
+  } catch {
     return jsonError("Failed to load match history", 500);
   }
 }

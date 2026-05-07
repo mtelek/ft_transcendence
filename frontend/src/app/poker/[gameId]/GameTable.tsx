@@ -533,10 +533,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const oppPositions = OPPONENT_POSITIONS[opponents.length] ?? OPPONENT_POSITIONS[1];
 
   // Who is currently acting (not me)?
-  const actingOpponent = opponents.find((o) => {
-    // During betting, the player to act is whoever has myTurn=false and phase is active
-    return !myTurn && phase !== "finished" && phase !== "gameover";
-  });
+  const actingOpponent = !myTurn && phase !== "finished" && phase !== "gameover" ? opponents[0] : undefined;
   const waitingForName = actingOpponent?.username ?? opponents[0]?.username ?? "Opponent";
 
   return (

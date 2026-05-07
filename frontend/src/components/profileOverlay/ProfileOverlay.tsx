@@ -52,8 +52,8 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
   const { data: session } = useSession();
   //Friends currently shown in the overlay
   const [friends, setFriends] = useState<Friend[]>([]);
-  //True only during the inital visible loading state for the friends list
-  const [friendsLoading, setFriendsLoading] = useState(false);
+  // Tracks whether the first friends fetch cycle has completed.
+  const [friendsReady, setFriendsReady] = useState(false);
   //Stores API or action errors related to friends
   const [friendsError, setFriendsError] = useState<string | null>(null);
   //Controlleed input value for the add friend field
@@ -68,13 +68,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     window.dispatchEvent(new Event(FRIENDS_CHANGED_EVENT));
   }
 
-  const loadFriends = useCallback(async (showLoading = false) => {
-    //Only show the visible loading state when explicitly requested
-    //Background polling refreshes stay invisible to the eye
-    if (showLoading) {
-      setFriendsLoading(true);
-    }
-
+  const loadFriends = useCallback(async () => {
     try {
       const data = await apiRequest<{ friends?: Friend[]; pending?: Friend[] }>(
         "/api/auth/friends",
@@ -96,9 +90,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     } catch (error) {
       setFriendsError(error instanceof Error ? error.message : "Failed to load friends");
     } finally {
-      if (showLoading) {
-        setFriendsLoading(false);
-      }
+      setFriendsReady(true);
     }
   }, []);
   async function handleAcceptFriend(friendId: string) {
@@ -208,22 +200,27 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     if (!session?.user) {
       return;
     }
-    if (friends.length === 0) {
-      void loadFriends(true);
-    }
+
+    const requestFriendsRefresh = () => {
+      void loadFriends();
+    };
+
+    // Schedule the first load asynchronously to avoid cascading render warnings.
+    const initialLoadId = window.setTimeout(requestFriendsRefresh, 0);
+
     //Keep updating every few seconds and when you return to the tab so 
     // online status doesn’t get outdated
     const intervalId = window.setInterval(() => {
-      void loadFriends();
+      requestFriendsRefresh();
     }, FRIENDS_REFRESH_MS);
 
     const handleFocus = () => {
-      void loadFriends();
+      requestFriendsRefresh();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void loadFriends();
+        requestFriendsRefresh();
       }
     };
 
@@ -233,11 +230,14 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
     //Clean up polling and browser listeners when the overlay unmounts or
     // when the session idenitiy changes
     return () => {
+      window.clearTimeout(initialLoadId);
       window.clearInterval(intervalId);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [loadFriends, session?.user]);
+
+  const friendsLoading = Boolean(session?.user) && !friendsReady;
 
   return (
     <>
