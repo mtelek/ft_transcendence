@@ -242,8 +242,10 @@ function ResultOverlay({
   const totalChips = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
   const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
-  const winner = handResult?.[0];
-  const iWon = winner?.username === myUsername;
+  const myResult = handResult?.find((w) => w.username === myUsername) ?? null;
+  const iWon = myResult != null;
+  const isSplit = (handResult?.length ?? 0) > 1;
+  const winner = iWon ? myResult : (handResult?.[0] ?? null);
 
   if (isMatchOver) {
     const iWonGame = opponents.every((o) => o.totalChips === 0) || (me.totalChips > 0 && opponents.every((o) => o.totalChips < me.totalChips / opponents.length));
@@ -274,7 +276,7 @@ function ResultOverlay({
     <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
       <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
       <h2 className="text-2xl font-bold text-white">
-        {iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
+        {iWon && isSplit ? "Split Pot!" : iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
       </h2>
       {winner?.handName && winner.handName !== "Fold" && (
         <p className="text-slate-300 text-lg">{winner.handName}</p>
@@ -282,8 +284,8 @@ function ResultOverlay({
       {winner?.handName === "Fold" && (
         <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
       )}
-      {iWon && winner?.potWon != null && winner.potWon > 0 && (
-        <p className="text-orange-400 font-semibold text-lg">+€{winner.potWon.toLocaleString()}</p>
+      {iWon && myResult?.potWon != null && myResult.potWon > 0 && (
+        <p className="text-orange-400 font-semibold text-lg">+€{myResult.potWon.toLocaleString()}</p>
       )}
 
       {/* Show winner's cards */}
