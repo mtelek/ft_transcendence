@@ -25,7 +25,6 @@ export interface GameSession {
   specialChipUsedBy: boolean[];
   specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex
   handResult: WinnerInfo[] | null;
-  nextHandReady: boolean[];
   nextDealerSeat: number;
   isGameOver: boolean;
   totalPlayers: number;
@@ -67,7 +66,6 @@ export type GameSnapshot = {
     revealedOpponentCards: boolean;
   };
   handResult: WinnerInfo[] | null;
-  iReadyForNextHand: boolean;
   isGameOver: boolean;
   totalPlayers: number;
 };

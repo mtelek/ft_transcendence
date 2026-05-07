@@ -32,7 +32,6 @@ function startGame(
     specialChipUsedBy: new Array(n).fill(false),
     specialRevealActiveBySeat: new Array(n).fill(-1),
     handResult: null,
-    nextHandReady: new Array(n).fill(false),
     nextDealerSeat: 1,
     isGameOver: false,
     totalPlayers: n,
@@ -47,9 +46,42 @@ function startGame(
 }
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
-  // Track disconnect timers by username
   const disconnectTimers = new Map<string, NodeJS.Timeout>();
   const specialRevealTimers = new Map<string, NodeJS.Timeout>();
+  const nextHandTimers = new Map<string, NodeJS.Timeout>();
+
+  function scheduleNextHand(gameId: string) {
+    const existing = nextHandTimers.get(gameId);
+    if (existing) clearTimeout(existing);
+
+    nextHandTimers.set(gameId, setTimeout(() => {
+      nextHandTimers.delete(gameId);
+      const session = state.games.get(gameId);
+      if (!session || session.isGameOver) return;
+
+      session.handResult = null;
+      session.lastCommunityCards = [];
+      session.lastHoleCards = new Array(session.players.length).fill(null);
+      session.specialRevealActiveBySeat = new Array(session.players.length).fill(-1);
+      for (let i = 0; i < session.players.length; i++) clearSpecialRevealTimer(gameId, i);
+
+      if (hasBustedPlayer(session)) {
+        const gameOver = handleElimination(io, state, gameId);
+        broadcastState(io, state, gameId);
+        if (gameOver) endGame(io, state, gameId);
+        return;
+      }
+
+      try {
+        session.table.startHand(session.nextDealerSeat);
+        session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
+        io.to(gameId).emit("message", { username: "game", text: "DEALER: — New Hand —", type: "game" });
+        broadcastState(io, state, gameId);
+      } catch (err) {
+        console.error("startHand error:", err);
+      }
+    }, 5000));
+  }
 
   function specialRevealTimerKey(gameId: string, seatIndex: number) {
     return `${gameId}:${seatIndex}`;
@@ -278,6 +310,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
           if (gameOver) endGame(io, state, info.gameId);
+          else if (session.handResult) scheduleNextHand(info.gameId);
           return;
         }
       } else {
@@ -321,6 +354,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           const gameOver = handleElimination(io, state, info.gameId);
           broadcastState(io, state, info.gameId);
           if (gameOver) endGame(io, state, info.gameId);
+          else if (session.handResult) scheduleNextHand(info.gameId);
           return;
         }
         if (table.isHandInProgress()) {
@@ -329,6 +363,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       broadcastState(io, state, info.gameId);
+      if (session.handResult && !session.isGameOver) scheduleNextHand(info.gameId);
     });
 
     socket.on("useSpecialChip", ({ targetSeatIndex }: { targetSeatIndex: number }) => {
@@ -363,41 +398,6 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       );
     });
 
-    socket.on("nextHand", () => {
-      const info = state.socketToGame.get(socket.id);
-      if (!info) return;
-
-      const session = state.games.get(info.gameId);
-      if (!session || session.table.isHandInProgress() || session.isGameOver) return;
-
-      session.nextHandReady[info.seatIndex] = true;
-      broadcastState(io, state, info.gameId);
-
-      if (session.nextHandReady.every(Boolean)) {
-        session.nextHandReady = new Array(session.players.length).fill(false);
-        session.handResult = null;
-        session.lastCommunityCards = [];
-        session.lastHoleCards = new Array(session.players.length).fill(null);
-        session.specialRevealActiveBySeat = new Array(session.players.length).fill(-1);
-        for (let i = 0; i < session.players.length; i++) clearSpecialRevealTimer(info.gameId, i);
-
-        if (hasBustedPlayer(session)) {
-          const gameOver = handleElimination(io, state, info.gameId);
-          broadcastState(io, state, info.gameId);
-          if (gameOver) endGame(io, state, info.gameId);
-          return;
-        }
-
-        try {
-          session.table.startHand(session.nextDealerSeat);
-          session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
-          io.to(info.gameId).emit("message", { username: "game", text: "DEALER: — New Hand —", type: "game" });
-          broadcastState(io, state, info.gameId);
-        } catch (err) {
-          console.error("startHand error:", err);
-        }
-      }
-    });
 
     socket.on("disconnect", () => {
       for (const [name, entry] of state.namedLobbies) {
@@ -420,6 +420,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const info = state.socketToGame.get(socket.id);
       if (info) {
         clearSpecialRevealTimer(info.gameId, info.seatIndex);
+        const existingTimer = nextHandTimers.get(info.gameId);
+        if (existingTimer) { clearTimeout(existingTimer); nextHandTimers.delete(info.gameId); }
         const session = state.games.get(info.gameId);
         if (session && !session.isGameOver) {
           // check if this player still has chips or if theyre already busted (if they discconnect it should not end the other players game)

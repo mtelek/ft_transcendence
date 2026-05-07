@@ -186,7 +186,6 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
 
   session.table = newTable;
   session.players = activePlayers;
-  session.nextHandReady = new Array(activePlayers.length).fill(false);
   session.lastHoleCards = new Array(activePlayers.length).fill(null);
   session.lastCommunityCards = [];
   session.nextDealerSeat = 0;
