@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function persistMatch(io: Server, session: GameSession) {
-  const orderedPlayers = [...session.players].sort((a, b) => a.seatIndex - b.seatIndex);
+  const orderedPlayers = [...session.allPlayers].sort((a, b) => a.seatIndex - b.seatIndex);
   if (orderedPlayers.length === 0) return;
 
   const usernames = orderedPlayers.map((p) => p.username);
@@ -60,9 +60,34 @@ async function persistMatch(io: Server, session: GameSession) {
   );
 
   const savedMatchId = insertResult.rows[0]?.id ?? "unknown";
+
+  
   console.log(
     `[Poker] Match persisted id=${savedMatchId} players=${usernames.join(", ")} winner=${winnerId ?? "none"}`
   );
+
+  for (const playerId of playerIds)
+  {
+    if (!playerId) continue;
+  
+
+    const isWinner = playerId === winnerId;
+
+    await pool.query(
+      `UPDATE "User"
+      SET
+      "wins" = "wins" + $1,
+      "losses" = "losses" + $2,
+      "handsPlayed" = "handsPlayed" + 1
+      WHERE id = $3`,
+      [
+        isWinner ? 1 : 0,
+        isWinner ? 0 : 1,
+        playerId
+      ]
+    );
+    console.log(`Updated stats for ${playerId} isWinner=${isWinner}`);
+  }
 
   for (const username of new Set(usernames)) {
     io.to(`history:${username}`).emit("matchHistoryUpdated", { matchId: savedMatchId });
@@ -81,7 +106,8 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
     });
   }
 
-  for (const p of session.players) {
+  const playersToClean = session.allPlayers;
+  for (const p of playersToClean) {
     state.pendingGames.delete(p.username);
     state.socketToGame.delete(p.socketId);
   }

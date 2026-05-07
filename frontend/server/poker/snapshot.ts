@@ -7,6 +7,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   const {
     table,
     players,
+    allPlayers,
     lastCommunityCards,
     lastHoleCards,
     handResult,
@@ -19,7 +20,12 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   } = session;
 
   const myEntry = players.find((p) => p.seatIndex === mySeatIndex)!;
+
   const oppEntries = players.filter((p) => p.seatIndex !== mySeatIndex);
+
+  // const allPlayersList = allPlayers ?? players;
+  // const myEntry = allPlayersList.find((p) => p.seatIndex === mySeatIndex)!;
+  // const oppEntries = allPlayersList.filter((p) => p.seatIndex !== mySeatIndex);
 
   const seats = table.seats();
   const mySeat = seats[mySeatIndex];
@@ -121,3 +127,23 @@ export function broadcastState(io: Server, state: PokerServerState, gameId: stri
     if (p.socketId) io.to(p.socketId).emit("gameState", buildSnapshot(state, gameId, p.seatIndex));
   }
 }
+
+// export function broadcastState(io: Server, state: PokerServerState, gameId: string) {
+//   const session = state.games.get(gameId);
+//   if (!session) return;
+
+//   const playersToNotify = session.allPlayers ?? session.players;
+//   for (const p of playersToNotify) {
+//     if (p.socketId) io.to(p.socketId).emit("gameState", buildSnapshot(state, gameId, p.seatIndex));
+//   }
+// }
+
+// export function broadcastState(io: Server, state: PokerServerState, gameId: string) {
+//   const session = state.games.get(gameId);
+//   if (!session) return;
+
+//   const playersToNotify = session.allPlayers ?? session.players;
+//   for (const p of playersToNotify) {
+//     if (p.socketId) io.to(p.socketId).emit("gameState", buildSnapshot(state, gameId, p.seatIndex));
+//   }
+// }

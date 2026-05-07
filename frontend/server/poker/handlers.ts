@@ -5,10 +5,20 @@ import type { GameSession } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame, handleElimination } from "./game-flow";
 
+// ----------------------------------------------------------------
+// HELPERS
+// ----------------------------------------------------------------
+
+// checks if any player at the table has 0 chips
 function hasBustedPlayer(session: GameSession) {
   return session.table.seats().some((seat) => seat && seat.totalChips === 0);
 }
 
+// ----------------------------------------------------------------
+// GAME CREATION
+// ----------------------------------------------------------------
+
+// creates a new poker session and notifies all players to navigate to the game page
 function startGame(
   io: Server,
   state: PokerServerState,
@@ -26,6 +36,10 @@ function startGame(
   const session: GameSession = {
     table,
     players: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
+    // allPlayers is a permanent snapshot of all players — never modified
+    // used by persistMatch and endGame to ensure stats/cleanup covers everyone
+    // even after handleElimination removes busted players from session.players
+    allPlayers: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
     specialChipEnabled: useSpecialChip,
@@ -46,8 +60,13 @@ function startGame(
   }
 }
 
+// ----------------------------------------------------------------
+// SOCKET HANDLERS
+// ----------------------------------------------------------------
+
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
-  // Track disconnect timers by username
+
+  // timers for tracking reconnect windows and special chip reveal duration
   const disconnectTimers = new Map<string, NodeJS.Timeout>();
   const specialRevealTimers = new Map<string, NodeJS.Timeout>();
 
@@ -66,6 +85,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
   io.on("connection", (socket) => {
     console.log("[Socket.io] User connected:", socket.id);
 
+    // ----------------------------------------------------------------
+    // CHAT
+    // ----------------------------------------------------------------
+
+    // broadcasts a chat message — scoped to a game room if gameId is provided
     socket.on("message", (data: { username: string; text: string; gameId?: string }) => {
       const { gameId, ...msg } = data;
       if (gameId) {
@@ -75,10 +99,16 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
     });
 
+    // ----------------------------------------------------------------
+    // ROOM SUBSCRIPTIONS
+    // ----------------------------------------------------------------
+
+    // joins the socket.io room for game-scoped chat
     socket.on("joinGameRoom", ({ gameId }: { gameId: string }) => {
       socket.join(gameId);
     });
 
+    // subscribes to match history updates for a specific user
     socket.on("subscribeMatchHistory", ({ username }: { username?: string }) => {
       if (!username) return;
       socket.join(`history:${username}`);
@@ -89,6 +119,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.leave(`history:${username}`);
     });
 
+    // ----------------------------------------------------------------
+    // LOBBY — HOST AND JOIN
+    // ----------------------------------------------------------------
+
+    // creates a named lobby and waits for other players to join
     socket.on("hostGame", ({ username, image, gameName, password, gameSize, blinds, startingStack, useSpecialChip }: { username: string; image?: string; gameName: string; password: string; gameSize?: number; blinds?: { small: number; big: number }; startingStack?: number; useSpecialChip?: boolean }) => {
       const normalizedGameName = gameName.trim();
       if (!normalizedGameName) {
@@ -101,6 +136,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+      // remove player from any existing lobby they might be in
       for (const [name, entry] of state.namedLobbies) {
         if (entry.players.some((p) => p.socketId === socket.id)) {
           state.namedLobbies.delete(name);
@@ -140,6 +176,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.emit("waitingForPlayers", { current: 1, needed: maxPlayers });
     });
 
+    // joins an existing named lobby — starts the game when lobby is full
     socket.on("joinNamedGame", ({ username, image, gameName, password }: { username: string; image?: string; gameName: string; password: string }) => {
       const normalizedGameName = gameName.trim();
       const lobby = state.namedLobbies.get(normalizedGameName);
@@ -159,6 +196,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       lobby.players.push({ socketId: socket.id, username, image });
 
       if (lobby.players.length >= lobby.maxPlayers) {
+        // lobby is full — start the game
         state.namedLobbies.delete(normalizedGameName);
         startGame(io, state, normalizedGameName, lobby.players, lobby.blinds, lobby.startingStack, lobby.useSpecialChip);
       } else {
@@ -169,10 +207,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           io.to(p.socketId).emit("waitingForPlayers", { current, needed });
         }
       }
-
-
     });
 
+    // ----------------------------------------------------------------
+    // GAME — JOIN AND RECONNECT
+    // ----------------------------------------------------------------
+
+    // called when player navigates to the game page
+    // handles both initial join and reconnect after page navigation
     socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
       const pending = state.pendingGames.get(username);
       if (!pending || pending.gameId !== gameId) {
@@ -186,14 +228,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
-
       const entry = session.players.find((p) => p.username === username);
       if (entry) {
-        // clear disconnect timer if reconnecting within 10s
+        // clear disconnect timer if reconnecting within grace period
         if (disconnectTimers.has(username)) {
           clearTimeout(disconnectTimers.get(username));
           disconnectTimers.delete(username);
         }
+        // update socket ID since it changes on every page navigation
         state.socketToGame.delete(entry.socketId);
         entry.socketId = socket.id;
         if (image) entry.image = image;
@@ -204,6 +246,12 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       socket.emit("gameState", buildSnapshot(state, gameId, pending.seatIndex));
     });
 
+    // ----------------------------------------------------------------
+    // GAME — PLAYER ACTIONS
+    // ----------------------------------------------------------------
+
+    // handles fold, check, call, bet, raise
+    // validates it's the player's turn, applies the action, and advances the game state
     socket.on("playerAction", ({ action, betSize }: { action: string; betSize?: number }) => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
@@ -218,13 +266,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const foldWinner = isFold
         ? session.players.find((p) => p.seatIndex !== info.seatIndex)!
         : null;
-      // capture pot before the action so it's available after the hand ends
       const potBeforeAction = table.pots().reduce((sum, p) => sum + p.size, 0);
-
-      // snapshot chip counts before action to detect who won on fold
       const chipsBefore = table.seats().map((s) => s?.totalChips ?? 0);
-
-      // capture preaction state for game messages
       const actorName = session.players.find((p) => p.seatIndex === info.seatIndex)?.username ?? "Unknown";
       const myBetBefore = table.seats()[info.seatIndex]?.betSize ?? 0;
       const myStackBefore = table.seats()[info.seatIndex]?.stack ?? 0;
@@ -239,6 +282,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
+      // helper to emit dealer messages to the game room
       const emitGameEvent = (text: string) =>
         io.to(info.gameId).emit("message", { username: "game", text: `DEALER: ${text}`, type: "game" });
 
@@ -249,10 +293,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       else if (action === "bet") emitGameEvent(`${actorName} bets €${(betSize ?? 0).toLocaleString()}`);
       else if (action === "raise") emitGameEvent(`${actorName} raises to €${(betSize ?? 0).toLocaleString()}`);
 
-      // After fold the pot may already be cleared by the library; use pre-action value
-      const foldPot = isFold
-        ? potBeforeAction + (betSize ?? 0)
-        : 0;
+      const foldPot = isFold ? potBeforeAction + (betSize ?? 0) : 0;
 
       const allHoles = table.holeCards();
       session.lastHoleCards = allHoles.map((h) => {
@@ -261,8 +302,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       });
 
       if (!table.isHandInProgress()) {
+        // hand just ended (fold or all-in resolution)
         if (isFold) {
-          // find who gained chips (chip-diff works for any number of players)
           const chipsAfter = table.seats().map((s) => s?.totalChips ?? 0);
           const winnerSeatIdx = chipsAfter.findIndex((chips, i) => chips > chipsBefore[i]);
           const winner = winnerSeatIdx >= 0
@@ -276,15 +317,15 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
         if (hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
-          broadcastState(io, state, info.gameId);
           if (gameOver) endGame(io, state, info.gameId);
+          broadcastState(io, state, info.gameId);
           return;
         }
       } else {
+        // hand still in progress — advance through any automatic rounds
         const commCountBefore = table.communityCards().length;
         advanceRounds(session);
 
-        // fold may have ended the hand after advanceRounds ran endBettingRound
         if (isFold && !table.isHandInProgress() && !session.handResult) {
           const chipsAfter = table.seats().map((s) => s?.totalChips ?? 0);
           const winnerSeatIdx = chipsAfter.findIndex((chips, i) => chips > chipsBefore[i]);
@@ -297,7 +338,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           }
         }
 
-        // emit phase of hand
+        // announce new street (flop, turn, river)
         const commCountAfter = session.lastCommunityCards.length;
         if (commCountAfter > commCountBefore) {
           const phaseNames: Record<number, string> = { 3: "— Flop —", 4: "— Turn —", 5: "— River —" };
@@ -305,7 +346,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
           if (phaseName) emitGameEvent(phaseName);
         }
 
-        // emit hand result if showdown just resolved
+        // announce showdown winner
         if (session.handResult && session.handResult.length > 0 && session.handResult[0].handName !== "Fold") {
           const totalPot = session.handResult.reduce((sum, w) => sum + w.potWon, 0);
           if (session.handResult.length === 1) {
@@ -319,8 +360,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
         if (!table.isHandInProgress() && hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
-          broadcastState(io, state, info.gameId);
           if (gameOver) endGame(io, state, info.gameId);
+          broadcastState(io, state, info.gameId);
           return;
         }
         if (table.isHandInProgress()) {
@@ -331,6 +372,11 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       broadcastState(io, state, info.gameId);
     });
 
+    // ----------------------------------------------------------------
+    // GAME — SPECIAL CHIP
+    // ----------------------------------------------------------------
+
+    // activates the special chip to reveal an opponent's hole cards for 5 seconds
     socket.on("useSpecialChip", ({ targetSeatIndex }: { targetSeatIndex: number }) => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
@@ -338,7 +384,6 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const session = state.games.get(info.gameId);
       if (!session || session.isGameOver) return;
       if (!session.specialChipEnabled) return;
-
       if (!session.table.isHandInProgress()) return;
       if (!session.table.isBettingRoundInProgress()) return;
       if (session.table.playerToAct() !== info.seatIndex) return;
@@ -350,6 +395,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       session.specialRevealActiveBySeat[seat] = targetSeatIndex;
       broadcastState(io, state, info.gameId);
 
+      // auto-hide the revealed cards after 5 seconds
       clearSpecialRevealTimer(info.gameId, seat);
       specialRevealTimers.set(
         specialRevealTimerKey(info.gameId, seat),
@@ -363,6 +409,12 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       );
     });
 
+    // ----------------------------------------------------------------
+    // GAME — NEXT HAND
+    // ----------------------------------------------------------------
+
+    // called when a player clicks "Next Hand"
+    // starts the next hand once all players are ready
     socket.on("nextHand", () => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
@@ -374,6 +426,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       broadcastState(io, state, info.gameId);
 
       if (session.nextHandReady.every(Boolean)) {
+        // all players ready — reset state and start next hand
         session.nextHandReady = new Array(session.players.length).fill(false);
         session.handResult = null;
         session.lastCommunityCards = [];
@@ -383,8 +436,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
         if (hasBustedPlayer(session)) {
           const gameOver = handleElimination(io, state, info.gameId);
-          broadcastState(io, state, info.gameId);
           if (gameOver) endGame(io, state, info.gameId);
+          broadcastState(io, state, info.gameId);
           return;
         }
 
@@ -399,7 +452,17 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
     });
 
+    // ----------------------------------------------------------------
+    // DISCONNECT
+    // ----------------------------------------------------------------
+
+    // handles player disconnects — differentiates between:
+    // 1. player leaving lobby before game starts
+    // 2. eliminated player closing the tab (game continues)
+    // 3. active player disconnecting mid-game (ends the game)
+    // 4. player navigating away after game naturally ended (ignored)
     socket.on("disconnect", () => {
+      // remove from lobby if still waiting for a game to start
       for (const [name, entry] of state.namedLobbies) {
         const idx = entry.players.findIndex((p) => p.socketId === socket.id);
         if (idx !== -1) {
@@ -408,7 +471,6 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
             state.namedLobbies.delete(name);
             state.reservedGameNames.delete(name);
           } else {
-            // notify remaining lobby members
             for (const p of entry.players) {
               io.to(p.socketId).emit("waitingForPlayers", { current: entry.players.length, needed: entry.maxPlayers });
             }
@@ -418,26 +480,31 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       const info = state.socketToGame.get(socket.id);
+      console.log(`[disconnect] socketId=${socket.id} foundInMap=${!!info}`);
       if (info) {
         clearSpecialRevealTimer(info.gameId, info.seatIndex);
         const session = state.games.get(info.gameId);
+
         if (session && !session.isGameOver) {
-          // check if this player still has chips or if theyre already busted (if they discconnect it should not end the other players game)
-         
           const seat = session.table.seats()[info.seatIndex];
           const alreadyEliminated = !seat || seat.totalChips === 0;
 
           if (alreadyEliminated) {
-            //  remove them; the game continues as if they closed the tab
+            // eliminated player closed tab — remove them silently, game continues
             session.players = session.players.filter((p) => p.socketId !== socket.id);
           } else {
-            for (const p of session.players) {
-              if (p.socketId !== socket.id) io.to(p.socketId).emit("opponentDisconnected");
+            // active player disconnected mid-game — end the game
+            // only emit opponentDisconnected if game wasn't already won naturally
+            if (!session.isGameOver) {
+              for (const p of session.players) {
+                if (p.socketId !== socket.id) io.to(p.socketId).emit("opponentDisconnected");
+              }
+              session.isGameOver = true;
+              endGame(io, state, info.gameId);
             }
-            session.isGameOver = true;
-            endGame(io, state, info.gameId);
           }
         }
+        // always clean up this socket from tracking map
         state.socketToGame.delete(socket.id);
       }
 
