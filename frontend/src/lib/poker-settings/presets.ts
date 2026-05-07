@@ -61,7 +61,7 @@ export const PRESETS: Record<Exclude<ThemeId, "custom">, ThemeVisuals> = {
   }),
 };
 
-export const PRESET_LABELS: Record<ThemeId, string> = {
+const PRESET_LABELS: Record<ThemeId, string> = {
   "classic-vegas": "Classic Vegas",
   "wood-lodge": "Wood Lodge",
   garden: "Garden",
@@ -77,7 +77,7 @@ export const FELT_LABELS: Record<FeltStyle, string> = {
   amber: "Amber",
 };
 
-export const CARD_BACK_LABELS: Record<CardBackStyle, string> = {
+const CARD_BACK_LABELS: Record<CardBackStyle, string> = {
   red: "Classic Red",
   wood: "Wood",
   floral: "Floral",

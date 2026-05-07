@@ -27,7 +27,7 @@ export interface Achievement {
   completed: boolean;
 }
 
-export interface LevelNode {
+interface LevelNode {
   level: number;
   completed: boolean;
   current: boolean;

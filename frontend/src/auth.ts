@@ -93,7 +93,7 @@ function applyTokenToSession(
   session.user.hasPassword = Boolean(token.hasPassword);
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const { handlers, auth } = NextAuth({
   ...authConfig,
 
   adapter: {
@@ -334,4 +334,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
+export { auth };
 export const { GET, POST } = handlers;

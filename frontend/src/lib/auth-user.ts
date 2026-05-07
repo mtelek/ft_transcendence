@@ -8,7 +8,7 @@ type SessionLike = {
   };
 };
 
-export function getSessionIdentity(session: SessionLike) {
+function getSessionIdentity(session: SessionLike) {
   //Extract whichever stable identity fields are available from the session
   const email = session.user?.email ?? undefined;
   const username = session.user?.name ?? undefined;

@@ -2,14 +2,14 @@ import { Table } from "poker-ts";
 
 export type PokerCard = { rank: string; suit: string };
 
-export interface PlayerEntry {
+interface PlayerEntry {
   socketId: string;
   username: string;
   image?: string;
   seatIndex: number;
 }
 
-export interface WinnerInfo {
+interface WinnerInfo {
   username: string;
   handName: string;
   holeCards: PokerCard[];
