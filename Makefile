@@ -36,10 +36,13 @@ dev-clean:
 
 dev-reset: dev-clean dev
 
+lint:
+	docker compose -f docker-compose.dev.yaml run --rm --no-deps frontend sh -lc "npm install --include=dev && npm run lint"
+
 knip:
 	docker compose -f docker-compose.dev.yaml run --rm --no-deps frontend sh -lc "npm install --include=dev && npx -y knip || true"
 
 fclean: clean
 	rm -f $(ENV_FILE)
 
-.PHONY: up down clean reset setup dev dev-down dev-clean dev-reset knip fclean
+.PHONY: up down clean reset setup dev dev-down dev-clean dev-reset lint knip fclean
