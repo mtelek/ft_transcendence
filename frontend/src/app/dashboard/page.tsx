@@ -26,7 +26,7 @@ function DashboardInner() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const socketRef = useRef<Socket | null>(null);
-  const [panel, setPanel] = useState<Panel>("host");
+  const [panel, setPanel] = useState<Panel>("join");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
   const { settings } = usePokerSettings();
