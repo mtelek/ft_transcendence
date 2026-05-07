@@ -231,13 +231,13 @@ function ActionBar({
 
 // RESULT OVERLAY
 
-function Countdown({ children, key: _key }: { children: (n: number) => ReactNode; key: string }) {
+function Countdown({ children, resetKey }: { children: (n: number) => ReactNode; resetKey?: string | null }) {
   const [count, setCount] = useState(5);
   useEffect(() => {
     setCount(5);
     const interval = setInterval(() => setCount((c: number) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [resetKey]);
   return <>{children(count)}</>;
 }
 
@@ -283,7 +283,7 @@ function ResultOverlay({
   if (snapshot.phase !== "finished" || !handResult) return null;
 
   return (
-    <Countdown key={handResult[0]?.username}>
+    <Countdown resetKey={handResult[0]?.username}>
       {(countdown) => (
         <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
           <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
