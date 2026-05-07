@@ -271,6 +271,12 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 
     {/* Main profile actions. */}
 		<div className="mt-4 flex flex-col items-start gap-3">
+      <Link 
+        href={`/profile/${session?.user?.name}`}
+        onClick={onClose} 
+        className="w-28 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition text-center">
+        Profile
+      </Link>
 			<Link 
         href="/settings"
         onClick={onClose} 
