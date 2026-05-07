@@ -1,5 +1,5 @@
 // Runs on the server: gets session for this request.
-import { getExistingUserSessionOrNull } from "@/lib/require-existing-user-session";
+import { getExistingUserSessionOrNull } from "@/lib/existingUserSession";
 import HeaderClient from "./HeaderClient";
 
 export default async function Header() {

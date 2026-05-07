@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS: PokerSettings = {
   useSpecialChip: false,
 };
 
-export const ANIMATION_DURATION_MS: Record<AnimationSpeed, number> = {
+const ANIMATION_DURATION_MS: Record<AnimationSpeed, number> = {
   slow: 500,
   normal: 250,
   fast: 100,

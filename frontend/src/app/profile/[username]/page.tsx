@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 import { useEffect, useState } from "react";
 import { ALL_ACHIEVEMENTS } from "@/constants/Achievements"

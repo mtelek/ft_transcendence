@@ -4,10 +4,10 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import LogoutButton from "./LogoutButton";
+import LogoutButton from "../authentication/LogoutButton";
 import { motion } from "framer-motion"
 import Link from "next/link";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { apiRequest } from "@/lib/client-api";
 
 //Friend object - returned by the friends API

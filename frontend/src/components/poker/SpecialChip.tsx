@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { PlayerAvatar } from "@/components/authentication/PlayerAvatar";
 
 type SpecialChipProps = {
   disabled: boolean;

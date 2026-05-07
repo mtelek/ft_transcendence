@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { io, Socket } from "socket.io-client";
-import Statistics from "@/components/poker/stats/statistics";
-import MatchHistory from "@/components/poker/stats/matchHistory";
+import Statistics from "@/components/statistics/statistics";
+import MatchHistory from "@/components/statistics/matchHistory";
 import { PokerSettingsProvider, usePokerSettings } from "@/lib/poker-settings/context";
 import { GameplayTab } from "@/components/settings/tabs/GameplayTab";
 
@@ -56,7 +56,7 @@ function DashboardInner() {
     socket.on("gameStarted", ({ gameId }: { gameId: string }) => {
       setStatus("matched");
       socket.disconnect();
-      router.push(`/poker/game/${gameId}`);
+      router.push(`/poker/${gameId}`);
     });
 
     socket.on("lobbyError", ({ message }: { message: string }) => {

@@ -1,4 +1,4 @@
-import PokerBackground from "@/components/PokerBackground";
+import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 import Link from "next/link";
 

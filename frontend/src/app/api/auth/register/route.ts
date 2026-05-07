@@ -1,4 +1,4 @@
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { jsonError, jsonOk } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";

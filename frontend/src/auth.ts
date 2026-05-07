@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { AVATAR_PREFIX, saveRemoteAvatarAsUploaded, toAvatarPath } from "@/lib/avatar-utils";
 import { authConfig } from "@/auth.config";
 import Google from "next-auth/providers/google";

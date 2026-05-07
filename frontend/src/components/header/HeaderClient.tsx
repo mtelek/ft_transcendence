@@ -3,12 +3,12 @@
 //This header uses client-side hooks and interactive UI state
 import { useState } from "react";
 import Link from "next/link";
-import ProfileOverlay from "@/components/ProfileOverlay";
+import ProfileOverlay from "@/components/profileOverlay/ProfileOverlay";
 import { AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import type { Session } from "next-auth";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 
 export default function HeaderClient({ session }: { session: Session | null }) {
   //Controls whether the profile side overlay is visible

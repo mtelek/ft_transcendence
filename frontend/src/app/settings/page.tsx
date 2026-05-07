@@ -2,9 +2,9 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { apiRequest } from "@/lib/client-api";
-import EditableFieldRow from "@/components/EditableFieldRow";
+import EditableFieldRow from "@/components/authentication/EditableFieldRow";
 import Image from "next/image";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 

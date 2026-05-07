@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import GoogleLogin from "@/components/GoogleLogin";
-import PokerBackground from "@/components/PokerBackground";
+import GoogleLogin from "@/components/authentication/GoogleLogin";
+import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 export default function LoginPage() {
