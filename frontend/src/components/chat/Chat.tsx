@@ -119,18 +119,18 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
 
       {/* Input — hidden when chat is closed */}
       {!closed && (
-        <form onSubmit={sendMessage} className="flex border-t border-white/10">
+        <form onSubmit={sendMessage} className="flex border-t border-white/10 transition-all focus-within:ring-2 focus-within:ring-white/50">
           <input
             id="chat"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-2 outline-none text-white bg-white/10 placeholder-slate-400 text-sm"
+            className="flex-1 px-4 py-2 rounded-l text-white bg-white/10 placeholder-slate-400 text-sm transition-all focus:bg-white/20 outline-none"
             autoComplete="off"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-black text-white hover:bg-gray-800 text-sm"
+            className="px-4 py-2 rounded-r bg-black text-white hover:bg-gray-800 text-sm"
           >
             Send
           </button>

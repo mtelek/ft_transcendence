@@ -9,6 +9,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     players,
     lastCommunityCards,
     lastHoleCards,
+    startingStack,
     handResult,
     isGameOver,
     totalPlayers,
@@ -88,6 +89,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   return {
     gameId,
     phase,
+    startingStack,
     me: {
       username: myEntry.username,
       image: myEntry.image,

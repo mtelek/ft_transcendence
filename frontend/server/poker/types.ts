@@ -22,6 +22,7 @@ export interface GameSession {
   players: PlayerEntry[];
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
+  startingStack: number;
   specialChipEnabled: boolean;
   specialChipUsedBy: boolean[];
   specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex
@@ -47,6 +48,7 @@ export type OpponentSnapshot = {
 export type GameSnapshot = {
   gameId: string;
   phase: "preflop" | "flop" | "turn" | "river" | "finished" | "gameover";
+  startingStack: number;
   me: {
     username: string;
     image?: string;
