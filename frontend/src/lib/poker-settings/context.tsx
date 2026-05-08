@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -12,7 +11,6 @@ import {
 import type { CustomChoice, PokerSettings, ThemeVisuals } from "./types";
 import { DEFAULT_SETTINGS } from "./defaults";
 import { PRESETS, resolveCustom } from "./presets";
-import { clearSettings, loadSettings, saveSettings } from "./storage";
 
 type Ctx = {
   settings: PokerSettings;
@@ -20,26 +18,12 @@ type Ctx = {
   update: (partial: Partial<PokerSettings>) => void;
   updateCustom: (partial: Partial<CustomChoice>) => void;
   restoreDefaults: () => void;
-  hydrated: boolean;
 };
 
 const PokerSettingsContext = createContext<Ctx | null>(null);
 
 export function PokerSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PokerSettings>(DEFAULT_SETTINGS);
-  const [hydrated, setHydrated] = useState(false);
-
-useEffect(() => {
-  const saved = loadSettings();
-  if (saved) {
-    setTimeout(() => setSettings(saved), 0);
-  }
-  setTimeout(() => setHydrated(true), 0);
-}, []);
-
-  useEffect(() => {
-    if (hydrated) saveSettings(settings);
-  }, [settings, hydrated]);
 
   const update = useCallback((partial: Partial<PokerSettings>) => {
     setSettings((prev) => ({ ...prev, ...partial }));
@@ -55,7 +39,6 @@ useEffect(() => {
 
   const restoreDefaults = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);
-    clearSettings();
   }, []);
 
   const visuals = useMemo<ThemeVisuals>(() => {
@@ -64,8 +47,8 @@ useEffect(() => {
   }, [settings]);
 
   const value = useMemo<Ctx>(
-    () => ({ settings, visuals, update, updateCustom, restoreDefaults, hydrated }),
-    [settings, visuals, update, updateCustom, restoreDefaults, hydrated],
+    () => ({ settings, visuals, update, updateCustom, restoreDefaults }),
+    [settings, visuals, update, updateCustom, restoreDefaults],
   );
 
   return (

@@ -29,7 +29,7 @@ function DashboardInner() {
   const [panel, setPanel] = useState<Panel>("join");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
-  const { settings } = usePokerSettings();
+  const { settings, restoreDefaults } = usePokerSettings();
   const [password, setPassword] = useState("");
   const [waitingInfo, setWaitingInfo] = useState<{ current: number; needed: number } | null>(null);
   const [error, setError] = useState("");
@@ -74,6 +74,9 @@ function DashboardInner() {
   }, []);
 
   function openPanel(p: Panel) {
+    if (panel === "host" && p !== "host") {
+      restoreDefaults();
+    }
     setPanel(p);
     setError("");
     setGameName("");
@@ -150,7 +153,7 @@ function DashboardInner() {
               socketRef.current?.disconnect();
               socketRef.current = null;
               setStatus("idle");
-              setPanel("none");
+              setPanel("join");
               setWaitingInfo(null);
             }}
             className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
