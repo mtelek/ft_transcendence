@@ -7,6 +7,7 @@ interface PlayerEntry {
   username: string;
   image?: string;
   seatIndex: number;
+  isActive: boolean;
 }
 
 interface WinnerInfo {
@@ -41,6 +42,7 @@ export type OpponentSnapshot = {
   holeCards: (PokerCard | null)[];
   isDealer: boolean;
   seatIndex: number;
+  isDisconnected: boolean;
 };
 
 export type GameSnapshot = {

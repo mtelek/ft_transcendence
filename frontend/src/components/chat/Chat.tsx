@@ -82,7 +82,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
             className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors"
             title={closed || size === "small" ? "Full size" : "Minimize"}
           >
-            {closed || size === "small" ? "□" : "−"}
+            {closed || size === "small" ? "▲" : "▼"}
           </button>
           <button
             type="button"
@@ -98,11 +98,11 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
       {/* Messages */}
       {!closed && (
         <div
-          className="chat-scrollbar overflow-y-auto p-3 flex flex-col gap-2 bg-transparent transition-all"
+          className="chat-scrollbar overflow-y-auto p-3 flex flex-col gap-1 bg-transparent transition-all"
           style={{ height: size === "full" ? "16rem" : "auto" }}
         >
           {visibleMessages.map((msg, i) => (
-            <div key={i}>
+            <div key={i} className="leading-tight text-sm">
               {msg.type === "game" ? (
                 <span className="text-amber-400 italic text-xs">{msg.text}</span>
               ) : (

@@ -43,9 +43,29 @@ function DashboardInner() {
     }
   }, [sessionStatus, router]);
 
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    const socket = getSocket();
+    socket.emit("checkPendingGame", { username });
+    socket.once("hasPendingGame", ({ gameId }: { gameId: string | null }) => {
+      if (gameId) {
+        socket.disconnect();
+        socketRef.current = null;
+        router.push(`/poker/${gameId}`);
+      } else {
+        setStatus("idle");
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, username]);
+
   function getSocket(): Socket {
-    if (socketRef.current) return socketRef.current;
-    const socket = io(); // Uses current origin (host/protocol)
+    if (socketRef.current?.connected) return socketRef.current;
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current = null;
+    }
+    const socket = io();
     socketRef.current = socket;
 
     socket.on("waitingForPlayers", (info: { current: number; needed: number }) => {
@@ -56,6 +76,7 @@ function DashboardInner() {
     socket.on("gameStarted", ({ gameId }: { gameId: string }) => {
       setStatus("matched");
       socket.disconnect();
+      socketRef.current = null;
       router.push(`/poker/${gameId}`);
     });
 

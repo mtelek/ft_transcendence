@@ -99,7 +99,7 @@ function ActionBar({
 
   return (
     <div
-      className="flex flex-col gap-3 mt-6"
+      className="inline-flex flex-col gap-3 mt-6"
       style={{
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
@@ -348,6 +348,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
+  const [showChat, setShowChat] = useState(true);
+  const [chatPopupOpen, setChatPopupOpen] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
@@ -357,6 +359,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
   const [settledCount, setSettledCount] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
+  const actionBarRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const lastDealHandRef = useRef<string | null>(null);
   const communityCountRef = useRef(0);
   const [prevCommunityCount, setPrevCommunityCount] = useState(0);
@@ -377,10 +381,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
     socket.on("gameState", (state: GameSnapshot) => {
       setSnapshot(state);
-    });
-
-    socket.on("opponentDisconnected", () => {
-      setDisconnected(true);
     });
 
     socket.on("eliminated", () => {
@@ -489,6 +489,56 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     communityCountRef.current = snapshot?.communityCards.length ?? 0;
   }, [snapshot?.communityCards.length]);
 
+  useEffect(() => {
+    if (showChat) {
+      setChatPopupOpen(false);
+    }
+  }, [showChat]);
+
+  useEffect(() => {
+    const updateChatVisibility = () => {
+      if (!snapshot || disconnected || eliminated) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionBarVisible =
+        snapshot.myTurn && snapshot.phase !== "finished" && snapshot.phase !== "gameover";
+
+      if (!actionBarVisible) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionEl = actionBarRef.current;
+      const chatEl = chatRef.current;
+      if (!actionEl || !chatEl) {
+        setShowChat(true);
+        return;
+      }
+
+      const a = actionEl.getBoundingClientRect();
+      const c = chatEl.getBoundingClientRect();
+      const overlaps = !(c.right < a.left || c.left > a.right || c.bottom < a.top || c.top > a.bottom);
+      setShowChat(!overlaps);
+    };
+
+    updateChatVisibility();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(updateChatVisibility);
+      if (actionBarRef.current) ro.observe(actionBarRef.current);
+      if (chatRef.current) ro.observe(chatRef.current);
+    }
+    window.addEventListener("resize", updateChatVisibility);
+
+    return () => {
+      window.removeEventListener("resize", updateChatVisibility);
+      ro?.disconnect();
+    };
+  }, [snapshot, disconnected, eliminated]);
+
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
   }
@@ -506,19 +556,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           <p className="text-white text-2xl font-bold">You&apos;ve been eliminated!</p>
           <p className="text-slate-400">You ran out of chips.</p>
           <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full hover:bg-slate-200 transition-colors">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (disconnected) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
             Back to Dashboard
           </Link>
         </div>
@@ -656,6 +693,9 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   )}
                 </div>
                 <span className="text-white text-xs font-medium">{opp.username}</span>
+                {opp.isDisconnected && (
+                  <span className="bg-red-600/80 text-white text-[10px] px-2 py-0.5 rounded-full">Disconnected</span>
+                )}
                 <div className="flex items-center gap-1.5">
                   {opp.isDealer && (
                     <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
@@ -663,7 +703,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   <PlayerAvatar
                     src={opp.image}
                     fallback={opp.username}
-                    className={`w-10 h-10 rounded-full border-2 ${isOppTurn ? "border-green-400" : "border-slate-400"}`}
+                    className={`w-10 h-10 rounded-full border-2 ${opp.isDisconnected ? "border-red-500 opacity-50" : isOppTurn ? "border-green-400" : "border-slate-400"}`}
                   />
                 </div>
                 <div className="flex items-end gap-2 mt-1">
@@ -744,10 +784,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               )}
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Action bar + controls */}
-        <div style={{ position: "relative", zIndex: 60 }}>
+        {/* Separate action bar box aligned under the table stage box */}
+        <div
+          ref={actionBarRef}
+          className="relative w-full max-w-4xl flex justify-center"
+          style={{ zIndex: 60, minHeight: "200px" }}
+        >
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
               legalActions={legalActions}
@@ -768,15 +813,36 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               Waiting for {waitingForName}...
             </div>
           )}
-
-
         </div>
       </div>
 
-      {/* Chat */}
-      <div className="fixed bottom-4 left-4 w-80" style={{ zIndex: 40 }}>
+      {/* Chat (normal mode when there is no collision) */}
+      <div
+        ref={chatRef}
+        className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
+        style={{ zIndex: 40 }}
+      >
         <Chat username={username} gameId={gameId} />
       </div>
+
+      {/* Chat button + compact popup when full chat would collide with action bar */}
+      {!showChat && (
+        <>
+          <button
+            type="button"
+            onClick={() => setChatPopupOpen((open) => !open)}
+            className="fixed bottom-4 left-4 z-[70] rounded-full bg-black/80 text-white text-sm font-semibold px-4 py-2 border border-white/20 hover:bg-black/90 transition-colors"
+          >
+            {chatPopupOpen ? "Hide Chat" : "Chat"}
+          </button>
+
+          {chatPopupOpen && (
+            <div className="fixed bottom-16 left-4 w-80 z-[80]">
+              <Chat username={username} gameId={gameId} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
