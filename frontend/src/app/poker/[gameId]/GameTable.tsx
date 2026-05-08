@@ -349,6 +349,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
+  const [showChat, setShowChat] = useState(true);
   const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
@@ -358,6 +359,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
   const [settledCount, setSettledCount] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
+  const actionBarRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const lastDealHandRef = useRef<string | null>(null);
   const communityCountRef = useRef(0);
   const [prevCommunityCount, setPrevCommunityCount] = useState(0);
@@ -489,6 +492,50 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     setPrevCommunityCount(communityCountRef.current);
     communityCountRef.current = snapshot?.communityCards.length ?? 0;
   }, [snapshot?.communityCards.length]);
+
+  useEffect(() => {
+    const updateChatVisibility = () => {
+      if (!snapshot || disconnected || eliminated) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionBarVisible =
+        snapshot.myTurn && snapshot.phase !== "finished" && snapshot.phase !== "gameover";
+
+      if (!actionBarVisible) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionEl = actionBarRef.current;
+      const chatEl = chatRef.current;
+      if (!actionEl || !chatEl) {
+        setShowChat(true);
+        return;
+      }
+
+      const a = actionEl.getBoundingClientRect();
+      const c = chatEl.getBoundingClientRect();
+      const overlaps = !(c.right < a.left || c.left > a.right || c.bottom < a.top || c.top > a.bottom);
+      setShowChat(!overlaps);
+    };
+
+    updateChatVisibility();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(updateChatVisibility);
+      if (actionBarRef.current) ro.observe(actionBarRef.current);
+      if (chatRef.current) ro.observe(chatRef.current);
+    }
+    window.addEventListener("resize", updateChatVisibility);
+
+    return () => {
+      window.removeEventListener("resize", updateChatVisibility);
+      ro?.disconnect();
+    };
+  }, [snapshot, disconnected, eliminated]);
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
@@ -751,7 +798,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         </div>
 
         {/* Action bar + controls */}
-        <div style={{ position: "relative", zIndex: 60 }}>
+        <div ref={actionBarRef} style={{ position: "relative", zIndex: 60 }}>
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
               legalActions={legalActions}
@@ -778,7 +825,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       </div>
 
       {/* Chat */}
-      <div className="fixed bottom-4 left-4 w-80" style={{ zIndex: 40 }}>
+      <div
+        ref={chatRef}
+        className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
+        style={{ zIndex: 40 }}
+      >
         <Chat username={username} gameId={gameId} />
       </div>
     </div>
