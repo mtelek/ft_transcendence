@@ -32,6 +32,7 @@ function startGame(
     players: players.map((p, i) => ({ socketId: p.socketId, username: p.username, image: p.image, seatIndex: i })),
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
+    startingStack,
     specialChipEnabled: useSpecialChip,
     specialChipUsedBy: new Array(n).fill(false),
     specialRevealActiveBySeat: new Array(n).fill(-1),

@@ -20,8 +20,8 @@ import Link from "next/link";
 
 // opponent seat positions as [top%, left%] , depending if 2 or 3 players
 const OPPONENT_POSITIONS: Record<number, [number, number][]> = {
-  1: [[12, 50]],
-  2: [[12, 25], [12, 75]],
+  1: [[16, 50]],
+  2: [[16, 25], [16, 75]],
 };
 
 function CardFaceUp({ card }: { card: PokerCard }) {
@@ -104,7 +104,6 @@ function ActionBar({
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -264,11 +263,11 @@ function ResultOverlay({
       ? me.username
       : opponents.reduce((best, o) => (o.totalChips > (opponents.find(x => x.username === best)?.totalChips ?? 0) ? o.username : best), opponents[0]?.username ?? "");
     return (
-      <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
-        <h2 className="text-3xl font-bold text-white">
+      <div className="fixed bottom-4 right-4 bg-slate-900/95 border border-slate-700 rounded-lg p-8 w-80 flex flex-col items-center gap-6 z-50 shadow-2xl">
+        <h2 className="text-3xl font-bold text-white text-center">
           {iWonGame ? "You win the game!" : isGameOver && me.totalChips > 0 ? "You win the game!" : "You have lost!"}
         </h2>
-        <p className="text-slate-300">
+        <p className="text-slate-300 text-center">
           Winner: <span className="font-bold text-yellow-400">{isGameOver && me.totalChips > 0 ? me.username : actualWinner}</span>
           {" "}— €{totalChips.toLocaleString()} chips
         </p>
@@ -286,16 +285,16 @@ function ResultOverlay({
   return (
     <Countdown key={handResult[0]?.username ?? "none"}>
       {(countdown) => (
-        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
-          <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
-          <h2 className="text-2xl font-bold text-white">
+        <div className="fixed bottom-4 right-4 bg-slate-900/95 border border-slate-700 rounded-lg p-6 w-80 flex flex-col items-center gap-4 z-50 shadow-2xl">
+          <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={200} height={200} className="object-contain" />
+          <h2 className="text-2xl font-bold text-white text-center">
             {iWon && isSplit ? "Split Pot!" : iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
           </h2>
           {winner?.handName && winner.handName !== "Fold" && (
-            <p className="text-slate-300 text-lg">{winner.handName}</p>
+            <p className="text-slate-300 text-lg text-center">{winner.handName}</p>
           )}
           {winner?.handName === "Fold" && (
-            <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
+            <p className="text-slate-300 text-center">{iWon ? "Opponent folded" : "You folded"}</p>
           )}
           {iWon && myResult?.potWon != null && myResult.potWon > 0 && (
             <p className="text-orange-400 font-semibold text-lg">+€{myResult.potWon.toLocaleString()}</p>
@@ -310,7 +309,7 @@ function ResultOverlay({
             </div>
           )}
 
-          <p className="text-slate-400 text-sm">Next hand in {countdown}s</p>
+          <p className="text-slate-400 text-sm text-center">Next hand in {countdown}s</p>
         </div>
       )}
     </Countdown>
@@ -537,8 +536,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   const { me, opponents, communityCards, pot, myTurn, legalActions, phase } = snapshot;
   const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
-  const totalChipsAll = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
-  const maxBalance = Math.round(totalChipsAll / (opponents.length + 1));
+  const maxBalance = snapshot.startingStack;
 
   // callAmount: how much to call = max opponent bet - my current bet
   const maxOppBet = opponents.reduce((m, o) => Math.max(m, o.betSize), 0);
@@ -554,6 +552,21 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
       <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
+      <div className="fixed left-4 top-28 z-50 flex flex-col items-start gap-1">
+        <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
+          {PHASE_LABELS[phase] ?? phase}
+        </span>
+        {myTurn && (
+          <span className="bg-green-500/80 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
+            Your turn
+          </span>
+        )}
+        {!myTurn && phase !== "finished" && phase !== "gameover" && (
+          <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
+            {waitingForName}&apos;s turn
+          </span>
+        )}
+      </div>
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
         <Image
@@ -582,23 +595,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-        {/* Phase badge */}
-        <div className="flex items-center gap-3 mb-4">
-          <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
-            {PHASE_LABELS[phase] ?? phase}
-          </span>
-          {myTurn && (
-            <span className="bg-green-500/80 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-              Your turn
-            </span>
-          )}
-          {!myTurn && phase !== "finished" && phase !== "gameover" && (
-            <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
-              {waitingForName}&apos;s turn
-            </span>
-          )}
-        </div>
-
         {/* Table container */}
         <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
           {/* Table image */}
@@ -671,7 +667,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   />
                 </div>
                 <div className="flex items-end gap-2 mt-1">
-                  <ChipStacks balance={opp.totalChips} maxBalance={maxBalance} />
+                  <ChipStacks balance={opp.stack} maxBalance={maxBalance} />
                   <div className="flex gap-1">
                     {dealPhase === "done"
                       ? opp.holeCards.map((card, i) =>
@@ -724,7 +720,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                       <div key={i} ref={(el) => { myCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
                     ))}
               </div>
-              <ChipStacks balance={me.totalChips} maxBalance={maxBalance} />
+              <ChipStacks balance={me.stack} maxBalance={maxBalance} />
             </div>
             <div className="flex items-center gap-1.5">
               {me.isDealer && (
