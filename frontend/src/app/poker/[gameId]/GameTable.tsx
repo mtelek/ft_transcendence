@@ -99,12 +99,12 @@ function ActionBar({
 
   return (
     <div
-      className="flex flex-col gap-3 mt-6"
+      className="inline-flex flex-col gap-3 mt-6"
       style={{
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.45))",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -350,6 +350,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [showChat, setShowChat] = useState(true);
+  const [chatPopupOpen, setChatPopupOpen] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
@@ -494,6 +495,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   }, [snapshot?.communityCards.length]);
 
   useEffect(() => {
+    if (showChat) {
+      setChatPopupOpen(false);
+    }
+  }, [showChat]);
+
+  useEffect(() => {
     const updateChatVisibility = () => {
       if (!snapshot || disconnected || eliminated) {
         setShowChat(true);
@@ -629,8 +636,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-        {/* Phase badge */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* Top status box */}
+        <div className="relative z-40 w-full max-w-4xl min-h-6 flex items-center justify-center gap-3 mb-1">
           <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
             {PHASE_LABELS[phase] ?? phase}
           </span>
@@ -646,8 +653,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           )}
         </div>
 
-        {/* Table container */}
-        <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
+        {/* Transparent table stage box (keeps players and table in one aligned region) */}
+        <div className="relative w-full max-w-4xl bg-transparent pt-12 md:pt-14">
+          {/* Table container */}
+          <div ref={tableRef} className="relative w-full aspect-[16/10]" style={{ zIndex: 10 }}>
           {/* Table image */}
           <Image
             src="/pokertable_no_bg.png"
@@ -795,10 +804,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               )}
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Action bar + controls */}
-        <div ref={actionBarRef} style={{ position: "relative", zIndex: 60 }}>
+        {/* Separate action bar box aligned under the table stage box */}
+        <div
+          ref={actionBarRef}
+          className="relative w-full max-w-4xl flex justify-center"
+          style={{ zIndex: 60, minHeight: "200px" }}
+        >
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
               legalActions={legalActions}
@@ -819,12 +833,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               Waiting for {waitingForName}...
             </div>
           )}
-
-
         </div>
       </div>
 
-      {/* Chat */}
+      {/* Chat (normal mode when there is no collision) */}
       <div
         ref={chatRef}
         className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
@@ -832,6 +844,25 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       >
         <Chat username={username} gameId={gameId} />
       </div>
+
+      {/* Chat button + compact popup when full chat would collide with action bar */}
+      {!showChat && (
+        <>
+          <button
+            type="button"
+            onClick={() => setChatPopupOpen((open) => !open)}
+            className="fixed bottom-4 left-4 z-[70] rounded-full bg-black/80 text-white text-sm font-semibold px-4 py-2 border border-white/20 hover:bg-black/90 transition-colors"
+          >
+            {chatPopupOpen ? "Hide Chat" : "Chat"}
+          </button>
+
+          {chatPopupOpen && (
+            <div className="fixed bottom-16 left-4 w-80 z-[80]">
+              <Chat username={username} gameId={gameId} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

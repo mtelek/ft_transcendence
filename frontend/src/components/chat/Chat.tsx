@@ -82,7 +82,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
             className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors"
             title={closed || size === "small" ? "Full size" : "Minimize"}
           >
-            {closed || size === "small" ? "□" : "−"}
+            {closed || size === "small" ? "▲" : "▼"}
           </button>
           <button
             type="button"
