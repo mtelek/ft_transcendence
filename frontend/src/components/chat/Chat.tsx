@@ -9,24 +9,13 @@ interface Message {
   type?: "chat" | "game";
 }
 
-type ChatSize = "full" | "small" | "minimized";
-
-const SIZE_ICONS: Record<ChatSize, string> = {
-  full: "▼",
-  small: "×",
-  minimized: "▲",
-};
-
-const NEXT_SIZE: Record<ChatSize, ChatSize> = {
-  full: "small",
-  small: "minimized",
-  minimized: "full",
-};
+type ChatSize = "full" | "small";
 
 export default function Chat({ username, gameId }: { username: string; gameId?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [size, setSize] = useState<ChatSize>("full");
+  const [size, setSize] = useState<ChatSize>("small");
+  const [closed, setClosed] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -60,8 +49,8 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
   }, [gameId]);
 
   useEffect(() => {
-    if (size === "full") bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, size]);
+    if (!closed && size === "full") bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, size, closed]);
 
   function sendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,25 +61,44 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
 
   const visibleMessages = size === "small" ? messages.slice(-2) : messages;
 
+  function handleSizeToggle() {
+    if (closed) {
+      setClosed(false);
+      setSize("full");
+      return;
+    }
+    setSize((prev) => (prev === "full" ? "small" : "full"));
+  }
+
   return (
     <div className="flex flex-col w-full max-w-lg border rounded-lg overflow-hidden bg-black/70 backdrop-blur-sm">
-      {/* Header with minimize button */}
+      {/* Header controls are always visible */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-black/50 border-b border-white/10">
         <span className="text-slate-400 text-xs font-medium">Chat</span>
-        <button
-          type="button"
-          onClick={() => setSize((s) => NEXT_SIZE[s])}
-          className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors"
-          title={`Switch to ${NEXT_SIZE[size]} view`}
-        >
-          {SIZE_ICONS[size]}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleSizeToggle}
+            className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors"
+            title={closed || size === "small" ? "Full size" : "Minimize"}
+          >
+            {closed || size === "small" ? "□" : "−"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setClosed(true)}
+            className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors"
+            title="Close chat"
+          >
+            x
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
-      {size !== "minimized" && (
+      {!closed && (
         <div
-          className="overflow-y-auto p-3 flex flex-col gap-2 bg-transparent transition-all"
+          className="chat-scrollbar overflow-y-auto p-3 flex flex-col gap-2 bg-transparent transition-all"
           style={{ height: size === "full" ? "16rem" : "auto" }}
         >
           {visibleMessages.map((msg, i) => (
@@ -109,8 +117,8 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
         </div>
       )}
 
-      {/* Input — hidden when minimized */}
-      {size !== "minimized" && (
+      {/* Input — hidden when chat is closed */}
+      {!closed && (
         <form onSubmit={sendMessage} className="flex border-t border-white/10">
           <input
             id="chat"
