@@ -15,6 +15,7 @@ interface WinnerInfo {
   handName: string;
   holeCards: PokerCard[];
   potWon: number;
+  fromSplit?: boolean; // true only when this player shared a pot in a genuine tie
 }
 
 export interface GameSession {

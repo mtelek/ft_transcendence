@@ -254,8 +254,8 @@ function ResultOverlay({
   const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
   const myResult = handResult?.find((w) => w.username === myUsername) ?? null;
-  const iWon = myResult != null;
-  const isSplit = (handResult?.length ?? 0) > 1;
+  const isSplit = handResult?.some((w) => w.fromSplit) ?? false;
+  const iWon = isSplit ? (myResult?.fromSplit === true) : (myResult != null && handResult?.[0]?.username === myUsername);
   const winner = iWon ? myResult : (handResult?.[0] ?? null);
 
   if (isMatchOver) {

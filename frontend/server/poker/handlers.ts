@@ -69,8 +69,9 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       for (let i = 0; i < session.players.length; i++) clearSpecialRevealTimer(gameId, i);
 
       if (hasBustedPlayer(session)) {
-        const gameOver = handleElimination(io, state, gameId);
+        const { gameOver, eliminatedSockets } = handleElimination(io, state, gameId);
         broadcastState(io, state, gameId);
+        for (const s of eliminatedSockets) io.to(s).emit("eliminated");
         if (gameOver) endGame(io, state, gameId);
         return;
       }
@@ -84,8 +85,9 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         broadcastState(io, state, gameId);
         if (session.handResult) {
           if (hasBustedPlayer(session)) {
-            const gameOver = handleElimination(io, state, gameId);
+            const { gameOver, eliminatedSockets } = handleElimination(io, state, gameId);
             broadcastState(io, state, gameId);
+            setTimeout(() => { for (const s of eliminatedSockets) io.to(s).emit("eliminated"); }, 5000);
             if (gameOver) endGame(io, state, gameId);
             else scheduleNextHand(gameId);
           } else {
@@ -167,8 +169,10 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       if (hasBustedPlayer(session)) {
-        const gameOver = handleElimination(io, state, gameId);
         broadcastState(io, state, gameId);
+        const { gameOver, eliminatedSockets } = handleElimination(io, state, gameId);
+        broadcastState(io, state, gameId);
+        setTimeout(() => { for (const s of eliminatedSockets) io.to(s).emit("eliminated"); }, 5000);
         if (gameOver) endGame(io, state, gameId);
         else if (session.handResult) scheduleNextHand(gameId);
         return;
@@ -208,8 +212,10 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       if (!table.isHandInProgress() && hasBustedPlayer(session)) {
-        const gameOver = handleElimination(io, state, gameId);
         broadcastState(io, state, gameId);
+        const { gameOver, eliminatedSockets } = handleElimination(io, state, gameId);
+        broadcastState(io, state, gameId);
+        setTimeout(() => { for (const s of eliminatedSockets) io.to(s).emit("eliminated"); }, 5000);
         if (gameOver) endGame(io, state, gameId);
         else if (session.handResult) scheduleNextHand(gameId);
         return;

@@ -105,6 +105,7 @@ export function advanceRounds(session: GameSession) {
       const rawWinners = table.winners();
       const potWonBySeat = new Map<number, number>();
       const handInfoBySeat = new Map<number, { ranking: number }>();
+      const splitSeats = new Set<number>();
 
       for (let i = 0; i < rawWinners.length; i++) {
         const potWinners = rawWinners[i];
@@ -114,6 +115,7 @@ export function advanceRounds(session: GameSession) {
         for (const [seatIdx, handInfo] of potWinners) {
           potWonBySeat.set(seatIdx, (potWonBySeat.get(seatIdx) ?? 0) + share);
           if (!handInfoBySeat.has(seatIdx)) handInfoBySeat.set(seatIdx, handInfo);
+          if (potWinners.length > 1) splitSeats.add(seatIdx);
         }
       }
 
@@ -123,6 +125,7 @@ export function advanceRounds(session: GameSession) {
           handName: HAND_RANKING_NAMES[handInfoBySeat.get(seatIdx)?.ranking ?? -1] ?? "Unknown",
           holeCards: (session.lastHoleCards[seatIdx] ?? []) as PokerCard[],
           potWon,
+          fromSplit: splitSeats.has(seatIdx),
         }));
       }
       return;
@@ -137,9 +140,9 @@ export function advanceRounds(session: GameSession) {
 
 // returns true if the game is now over (1 or 0 players with chips).
 // eliminates busted players: notifies them, removes them from session, reseats remaining on a fresh table (with 2 seats)
-export function handleElimination(io: Server, state: PokerServerState, gameId: string): boolean {
+export function handleElimination(io: Server, state: PokerServerState, gameId: string): { gameOver: boolean; eliminatedSockets: string[] } {
   const session = state.games.get(gameId);
-  if (!session) return true;
+  if (!session) return { gameOver: true, eliminatedSockets: [] };
 
   const seats = session.table.seats();
 
@@ -153,8 +156,9 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     return !seat || seat.totalChips === 0;
   });
 
+  const eliminatedSockets: string[] = [];
   for (const p of bustedPlayers) {
-    io.to(p.socketId).emit("eliminated");
+    eliminatedSockets.push(p.socketId);
     state.socketToGame.delete(p.socketId);
     state.pendingGames.delete(p.username);
   }
@@ -168,7 +172,7 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     });
     session.players = activePlayers;
     session.isGameOver = true;
-    return true;
+    return { gameOver: true, eliminatedSockets };
   }
 
   // create a fresh table with the surviving players
@@ -191,5 +195,5 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
   session.nextDealerSeat = 0;
   // keep handResult so players see who won the last hand before clicking "next hand"
 
-  return false;
+  return { gameOver: false, eliminatedSockets };
 }
