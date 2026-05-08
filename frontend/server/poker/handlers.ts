@@ -123,6 +123,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     const isFold = action === "fold";
     const seats = table.seats() as any[];
     const potBeforeAction = (table.pots() as any[]).reduce((sum: number, p) => sum + p.size, 0);
+    const betsBeforeAction = seats.reduce((sum: number, s) => sum + (s?.betSize ?? 0), 0);
     const chipsBefore = seats.map((s) => s?.totalChips ?? 0);
     const actorName = session.players.find((p) => p.seatIndex === seatIndex)?.username ?? "Unknown";
     const myBetBefore = seats[seatIndex]?.betSize ?? 0;
@@ -147,7 +148,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     else if (action === "bet") emitGameEvent(`${actorName} bets €${(betSize ?? 0).toLocaleString()}`);
     else if (action === "raise") emitGameEvent(`${actorName} raises to €${(betSize ?? 0).toLocaleString()}`);
 
-    const foldPot = isFold ? potBeforeAction + (betSize ?? 0) : 0;
+    const foldPot = isFold ? potBeforeAction + betsBeforeAction : 0;
 
     const allHoles = table.holeCards() as any[];
     session.lastHoleCards = allHoles.map((h: any) => {

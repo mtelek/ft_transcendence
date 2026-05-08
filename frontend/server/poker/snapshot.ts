@@ -74,7 +74,12 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   else if (!handActuallyInProgress) phase = "finished";
   else phase = table.roundOfBetting();
 
-  const pot = handActuallyInProgress ? table.pots().reduce((sum, p) => sum + p.size, 0) : 0;
+  const currentBets = handActuallyInProgress
+    ? (seats as any[]).reduce((sum: number, s: any) => sum + (s?.betSize ?? 0), 0)
+    : 0;
+  const pot = handActuallyInProgress
+    ? table.pots().reduce((sum: number, p: { size: number }) => sum + p.size, 0) + currentBets
+    : 0;
 
   const myTurn = bettingInProgress && table.playerToAct() === mySeatIndex;
   const rawLegal = myTurn ? table.legalActions() : { actions: [] as string[] };
