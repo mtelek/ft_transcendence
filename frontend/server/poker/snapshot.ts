@@ -65,6 +65,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       holeCards: oppHoleCards,
       isDealer: dealerSeat === oppEntry.seatIndex,
       seatIndex: oppEntry.seatIndex,
+      isDisconnected: !oppEntry.isActive,
     };
   });
 

@@ -349,7 +349,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
-  const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
 
@@ -378,10 +377,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
     socket.on("gameState", (state: GameSnapshot) => {
       setSnapshot(state);
-    });
-
-    socket.on("opponentDisconnected", () => {
-      setDisconnected(true);
     });
 
     socket.on("eliminated", () => {
@@ -507,19 +502,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           <p className="text-white text-2xl font-bold">You&apos;ve been eliminated!</p>
           <p className="text-slate-400">You ran out of chips.</p>
           <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full hover:bg-slate-200 transition-colors">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (disconnected) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
             Back to Dashboard
           </Link>
         </div>
@@ -660,6 +642,9 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   )}
                 </div>
                 <span className="text-white text-xs font-medium">{opp.username}</span>
+                {opp.isDisconnected && (
+                  <span className="bg-red-600/80 text-white text-[10px] px-2 py-0.5 rounded-full">Disconnected</span>
+                )}
                 <div className="flex items-center gap-1.5">
                   {opp.isDealer && (
                     <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
@@ -667,7 +652,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   <PlayerAvatar
                     src={opp.image}
                     fallback={opp.username}
-                    className={`w-10 h-10 rounded-full border-2 ${isOppTurn ? "border-green-400" : "border-slate-400"}`}
+                    className={`w-10 h-10 rounded-full border-2 ${opp.isDisconnected ? "border-red-500 opacity-50" : isOppTurn ? "border-green-400" : "border-slate-400"}`}
                   />
                 </div>
                 <div className="flex items-end gap-2 mt-1">
