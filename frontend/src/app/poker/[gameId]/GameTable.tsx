@@ -534,8 +534,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const waitingForName = actingOpponent?.username ?? opponents[0]?.username ?? "Opponent";
 
   return (
-    <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
-      <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
+    <div className="poker-ui relative min-h-screen flex flex-col items-center justify-center p-4">
+      <p className="fixed top-3 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
         <Image
