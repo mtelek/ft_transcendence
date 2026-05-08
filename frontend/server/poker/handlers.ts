@@ -79,8 +79,21 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         session.table.startHand(session.nextDealerSeat);
         session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
         io.to(gameId).emit("message", { username: "game", text: "DEALER: — New Hand —", type: "game" });
+        // advance rounds automatically if a player is allin 
+        advanceRounds(session);
         broadcastState(io, state, gameId);
-        autoActForDisconnected(gameId);
+        if (session.handResult) {
+          if (hasBustedPlayer(session)) {
+            const gameOver = handleElimination(io, state, gameId);
+            broadcastState(io, state, gameId);
+            if (gameOver) endGame(io, state, gameId);
+            else scheduleNextHand(gameId);
+          } else {
+            scheduleNextHand(gameId);
+          }
+        } else {
+          autoActForDisconnected(gameId);
+        }
       } catch (err) {
         console.error("startHand error:", err);
       }
@@ -218,9 +231,22 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isHandInProgress() || !table.isBettingRoundInProgress()) break;
       const actorSeat = table.playerToAct();
       const actor = session.players.find((p) => p.seatIndex === actorSeat);
-      if (!actor || actor.isActive) break;
+      if (!actor) break;
+      const seats = table.seats() as any[];
+      const isAllIn = (seats[actorSeat]?.stack ?? 1) === 0;
+      const myBet = seats[actorSeat]?.betSize ?? 0;
+      const maxOppBet = seats
+        .filter((_: unknown, i: number) => i !== actorSeat)
+        .reduce((max: number, s: any) => Math.max(max, s?.betSize ?? 0), 0);
+      const callCost = Math.max(0, maxOppBet - myBet);
       const legal = table.legalActions();
-      const action = legal.actions.includes("check") ? "check" : "fold";
+      const canBetOrRaise = legal.actions.includes("bet") || legal.actions.includes("raise");
+      const isFreeCall = !isAllIn && callCost === 0 && !canBetOrRaise;
+      if (actor.isActive && !isAllIn && !isFreeCall) break;
+      if (!legal.actions.length) break;
+      const action = legal.actions.includes("check") ? "check"
+        : (isAllIn || isFreeCall) && legal.actions.includes("call") ? "call"
+        : "fold";
       applyAction(gameId, actorSeat, action);
     }
   }
