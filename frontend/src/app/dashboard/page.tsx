@@ -43,6 +43,20 @@ function DashboardInner() {
     }
   }, [sessionStatus, router]);
 
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    const socket = getSocket();
+    socket.emit("checkPendingGame", { username });
+    socket.once("hasPendingGame", ({ gameId }: { gameId: string | null }) => {
+      if (gameId) {
+        socket.disconnect();
+        socketRef.current = null;
+        router.push(`/poker/${gameId}`);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, username]);
+
   function getSocket(): Socket {
     if (socketRef.current) return socketRef.current;
     const socket = io(); // Uses current origin (host/protocol)

@@ -410,6 +410,18 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     });
 
 
+    socket.on("checkPendingGame", ({ username }: { username: string }) => {
+      const pending = state.pendingGames.get(username);
+      if (pending) {
+        const session = state.games.get(pending.gameId);
+        if (session && !session.isGameOver) {
+          socket.emit("hasPendingGame", { gameId: pending.gameId });
+          return;
+        }
+      }
+      socket.emit("hasPendingGame", { gameId: null });
+    });
+
     socket.on("disconnect", () => {
       for (const [name, entry] of state.namedLobbies) {
         const idx = entry.players.findIndex((p) => p.socketId === socket.id);
