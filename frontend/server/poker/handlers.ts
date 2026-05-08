@@ -364,6 +364,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       state.socketToGame.set(socket.id, { gameId, seatIndex: pending.seatIndex });
       socket.join(gameId);
       socket.emit("gameState", buildSnapshot(state, gameId, pending.seatIndex));
+      broadcastState(io, state, gameId);
     });
 
     socket.on("playerAction", ({ action, betSize }: { action: string; betSize?: number }) => {
