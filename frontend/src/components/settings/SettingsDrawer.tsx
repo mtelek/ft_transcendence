@@ -38,10 +38,9 @@ export function SettingsDrawer({
         className="border-l border-slate-800 shadow-2xl flex flex-col"
         style={{
           position: "fixed",
-          top: "50%",
+          top: "4px",
           right: "16px",
-          transform: "translateY(-50%)",
-          height: "70vh",
+          height: "min(70vh, calc(100vh - 24px))",
           width: "min(380px, 90vw)",
           zIndex: 75,
           background: "#020617",

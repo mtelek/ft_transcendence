@@ -18,8 +18,8 @@ export function SettingsGearButton({
       className="rounded-full flex items-center justify-center transition-transform hover:scale-110"
       style={{
         position: "fixed",
-        top: "80px",
-        right: "16px",
+        top: "12px",
+        right: "24px",
         zIndex: 80,
         width: "48px",
         height: "48px",
