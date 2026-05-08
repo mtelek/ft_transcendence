@@ -6,7 +6,11 @@ import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame, handleElimination } from "./game-flow";
 
 function hasBustedPlayer(session: GameSession) {
-  return session.table.seats().some((seat) => seat && seat.totalChips === 0);
+  const seats = session.table.seats();
+  return session.players.some((p) => {
+    const seat = seats[p.seatIndex];
+    return !seat || seat.totalChips === 0;
+  });
 }
 
 function startGame(
