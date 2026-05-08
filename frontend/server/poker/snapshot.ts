@@ -52,7 +52,9 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
         oppHoleCards = [oppActualHoleCards[0] ?? null, oppActualHoleCards[1] ?? null];
       }
     } else {
-      oppHoleCards = lastHoleCards[oppEntry.seatIndex] ?? [null, null];
+      const isFoldResult = session.handResult?.[0]?.handName === "Fold";
+      oppHoleCards = isFoldResult ? [null, null] : lastHoleCards[oppEntry.seatIndex] ?? [null, null];
+
     }
     return {
       username: oppEntry.username,
