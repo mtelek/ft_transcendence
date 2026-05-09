@@ -492,6 +492,115 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     });
 
     // ----------------------------------------------------------------
+    // GAME — GIVE UP GAME
+    // ----------------------------------------------------------------
+    // permanent disconnect: player gives up and cannot rejoin; game ends only if 1 player remains
+    socket.on("giveUp", () => {
+      const info = state.socketToGame.get(socket.id);
+      if (!info) return;
+
+      const session = state.games.get(info.gameId);
+      if (!session || session.isGameOver) return;
+
+      const giver = session.players.find((p) => p.seatIndex === info.seatIndex);
+      if (!giver) return;
+
+      // Announce the give up first
+      io.to(info.gameId).emit("message", {
+        username: "game",
+        text: `DEALER: ${giver.username} gave up`,
+        type: "game",
+      });
+
+      const seats = session.table.seats() as any[];
+      const seatTotals = seats.map((seat) => Math.max(0, seat?.totalChips ?? 0));
+      const giverTotalChips = seatTotals[info.seatIndex] ?? 0;
+
+      // Zero out giver total and transfer to the last active opponent in heads-up.
+      // poker-ts facade seats() returns mapped objects, so we rebuild table totals below.
+      seatTotals[info.seatIndex] = 0;
+
+      // Prevent rejoin and socket reconnection
+      state.pendingGames.delete(giver.username);
+      state.socketToGame.delete(socket.id);
+      void clearActiveGameForUser(giver.username, info.gameId);
+
+      // Check if game will end (1 or fewer active players remaining)
+      const activePlayers = session.players.filter((p) => {
+        if (p.seatIndex === info.seatIndex) return false;
+        return (seatTotals[p.seatIndex] ?? 0) > 0;
+      });
+
+      const gameWillEnd = activePlayers.length <= 1;
+      if (gameWillEnd && giverTotalChips > 0 && activePlayers.length === 1) {
+        const winnerSeatIndex = activePlayers[0].seatIndex;
+        seatTotals[winnerSeatIndex] = (seatTotals[winnerSeatIndex] ?? 0) + giverTotalChips;
+      }
+
+      if (gameWillEnd) {
+        const rebuiltTable = new Table({ smallBlind: 10, bigBlind: 20 }, session.totalPlayers);
+        for (let i = 0; i < session.totalPlayers; i++) {
+          rebuiltTable.sitDown(i, Math.max(0, Math.floor(seatTotals[i] ?? 0)));
+        }
+        session.table = rebuiltTable;
+      }
+
+      if (gameWillEnd) {
+        // Game ends — only 1 or 0 players left
+        session.isGameOver = true;
+        broadcastState(io, state, info.gameId);
+        endGame(io, state, info.gameId);
+      } else {
+        // Game continues — reseat remaining players and restart hand to avoid stale turn state.
+        const continuingPlayers = activePlayers;
+        const blinds = session.table.forcedBets();
+        const rebuiltTable = new Table(
+          { smallBlind: blinds.smallBlind, bigBlind: blinds.bigBlind },
+          continuingPlayers.length
+        );
+
+        for (const p of session.players) clearSpecialRevealTimer(info.gameId, p.seatIndex);
+
+        continuingPlayers.forEach((p, newSeat) => {
+          rebuiltTable.sitDown(newSeat, Math.max(0, Math.floor(seatTotals[p.seatIndex] ?? 0)));
+        });
+
+        try {
+          rebuiltTable.startHand(0);
+        } catch (err) {
+          console.error("startHand error after giveUp reseat:", err);
+        }
+
+        continuingPlayers.forEach((p, newSeat) => {
+          p.seatIndex = newSeat;
+          p.isActive = true;
+          const socketEntry = state.socketToGame.get(p.socketId);
+          if (socketEntry) socketEntry.seatIndex = newSeat;
+          state.pendingGames.set(p.username, { gameId: info.gameId, seatIndex: newSeat });
+        });
+
+        session.table = rebuiltTable;
+        session.players = continuingPlayers;
+        session.handResult = null;
+        session.lastCommunityCards = [];
+        session.lastHoleCards = new Array(continuingPlayers.length).fill(null);
+        session.specialChipUsedBy = new Array(continuingPlayers.length).fill(false);
+        session.specialRevealActiveBySeat = new Array(continuingPlayers.length).fill(-1);
+        session.nextDealerSeat = continuingPlayers.length > 1 ? 1 : 0;
+
+        io.to(info.gameId).emit("message", {
+          username: "game",
+          text: "DEALER: — New Hand —",
+          type: "game",
+        });
+
+        io.to(socket.id).emit("eliminated");
+        broadcastState(io, state, info.gameId);
+        autoActForDisconnected(info.gameId);
+      }
+    });
+
+    // ----------------------------------------------------------------
     // GAME — SPECIAL CHIP
     // ----------------------------------------------------------------
 
