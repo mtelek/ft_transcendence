@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function persistMatch(io: Server, session: GameSession) {
-  const orderedPlayers = [...session.players].sort((a, b) => a.seatIndex - b.seatIndex);
+  const orderedPlayers = [...session.allPlayers].sort((a, b) => a.seatIndex - b.seatIndex);
   if (orderedPlayers.length === 0) return;
 
   const usernames = orderedPlayers.map((p) => p.username);
@@ -60,9 +60,34 @@ async function persistMatch(io: Server, session: GameSession) {
   );
 
   const savedMatchId = insertResult.rows[0]?.id ?? "unknown";
+
+
   console.log(
     `[Poker] Match persisted id=${savedMatchId} players=${usernames.join(", ")} winner=${winnerId ?? "none"}`
   );
+
+  for (const playerId of playerIds)
+  {
+    if (!playerId) continue;
+
+
+    const isWinner = playerId === winnerId;
+
+    await pool.query(
+      `UPDATE "User"
+      SET
+      "wins" = "wins" + $1,
+      "losses" = "losses" + $2,
+      "handsPlayed" = "handsPlayed" + 1
+      WHERE id = $3`,
+      [
+        isWinner ? 1 : 0,
+        isWinner ? 0 : 1,
+        playerId
+      ]
+    );
+    console.log(`Updated stats for ${playerId} isWinner=${isWinner}`);
+  }
 
   for (const username of new Set(usernames)) {
     io.to(`history:${username}`).emit("matchHistoryUpdated", { matchId: savedMatchId });
@@ -70,8 +95,15 @@ async function persistMatch(io: Server, session: GameSession) {
 }
 
 export function endGame(io: Server, state: PokerServerState, gameId: string) {
+  console.log(`\n>>>>>> [endGame] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
-  if (!session) return;
+  if (!session) {
+    console.log(`[endGame] !!! session=null, bailing out`);
+    return;
+  }
+
+  console.log(`[endGame] allPlayers: ${session.allPlayers.map(p => `${p.username}(socket=${p.socketId})`).join(', ')}`);
+  console.log(`[endGame] socketToGame keys BEFORE cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
 
   if (!session.matchSaved) {
     session.matchSaved = true;
@@ -83,9 +115,12 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
 
   const usernames = session.players.map((p) => p.username);
 
-  for (const p of session.players) {
+  const playersToClean = session.allPlayers;
+  for (const p of playersToClean) {
     state.pendingGames.delete(p.username);
+    const wasInMap = state.socketToGame.has(p.socketId);
     state.socketToGame.delete(p.socketId);
+    console.log(`[endGame]   cleaned ${p.username} socket=${p.socketId} wasInMap=${wasInMap}`);
   }
   //clear active game for all players in the database
 
@@ -98,7 +133,8 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
 
   state.reservedGameNames.delete(gameId);
   state.games.delete(gameId);
-  console.log(`Game ${gameId} ended - players released`);
+  console.log(`[endGame] socketToGame keys AFTER cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
+  console.log(`<<<<<< [endGame] DONE for gameId=${gameId}\n`);
 }
 
 export function advanceRounds(session: GameSession) {
@@ -145,11 +181,13 @@ export function advanceRounds(session: GameSession) {
   }
 }
 
-// returns true if the game is now over (1 or 0 players with chips).
-// eliminates busted players: notifies them, removes them from session, reseats remaining on a fresh table (with 2 seats)
 export function handleElimination(io: Server, state: PokerServerState, gameId: string): boolean {
+  console.log(`\n>>>>>> [handleElimination] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
-  if (!session) return true;
+  if (!session) {
+    console.log(`[handleElimination] !!! session=null, returning true`);
+    return true;
+  }
 
   const seats = session.table.seats();
 
@@ -162,6 +200,21 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     const seat = seats[p.seatIndex];
     return !seat || seat.totalChips === 0;
   });
+
+  console.log(`[handleElimination] active=[${activePlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
+  console.log(`[handleElimination] busted=[${bustedPlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
+
+  const gameWillEnd = activePlayers.length <= 1;
+  console.log(`[handleElimination] gameWillEnd=${gameWillEnd} (activePlayers.length=${activePlayers.length})`);
+
+  if (gameWillEnd) {
+    console.log(`[handleElimination] >>> GAME OVER PATH <<< setting session.isGameOver=true`);
+    session.isGameOver = true;
+    console.log(`<<<<<< [handleElimination] returning true\n`);
+    return true;
+  }
+
+  console.log(`[handleElimination] MULTI-PLAYER PATH`);
 
   for (const p of bustedPlayers) {
     io.to(p.socketId).emit("eliminated");
@@ -176,19 +229,6 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     });
   }
 
-  if (activePlayers.length <= 1) {
-    // re-index the single winner to seat 0 for snapshot consistency
-    activePlayers.forEach((p, newSeat) => {
-      const entry = state.socketToGame.get(p.socketId);
-      if (entry) entry.seatIndex = newSeat;
-      p.seatIndex = newSeat;
-    });
-    session.players = activePlayers;
-    session.isGameOver = true;
-    return true;
-  }
-
-  // create a fresh table with the surviving players
   const newTable = new Table({ smallBlind: 10, bigBlind: 20 }, activePlayers.length);
   activePlayers.forEach((p, newSeat) => {
     const oldSeat = seats[p.seatIndex];
@@ -206,7 +246,7 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
   session.lastHoleCards = new Array(activePlayers.length).fill(null);
   session.lastCommunityCards = [];
   session.nextDealerSeat = 0;
-  // keep handResult so players see who won the last hand before clicking "next hand"
 
+  console.log(`<<<<<< [handleElimination] returning false (game continues)\n`);
   return false;
 }

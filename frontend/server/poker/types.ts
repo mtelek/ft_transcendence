@@ -19,7 +19,8 @@ interface WinnerInfo {
 
 export interface GameSession {
   table: InstanceType<typeof Table>;
-  players: PlayerEntry[];
+  players: PlayerEntry[];     //avtive players
+  allPlayers: PlayerEntry[];  //all players
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
   startingStack: number;

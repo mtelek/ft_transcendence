@@ -18,12 +18,37 @@ import { SpecialChip } from "@/components/poker/SpecialChip";
 import { getCardImage, getCardBack } from "@/lib/cards";
 import Link from "next/link";
 
-// opponent seat positions as [top%, left%] , depending if 2 or 3 players
+// ----------------------------------------------------------------
+// CONSTANTS
+// ----------------------------------------------------------------
+
+// seat positions for opponents as [top%, left%] based on player count
 const OPPONENT_POSITIONS: Record<number, [number, number][]> = {
   1: [[16, 50]],
   2: [[16, 25], [16, 75]],
 };
 
+// maps game phase keys to display labels shown in the phase badge
+const PHASE_LABELS: Record<string, string> = {
+  preflop: "Pre-flop",
+  flop: "Flop",
+  turn: "Turn",
+  river: "River",
+  finished: "Showdown",
+  gameover: "Game Over",
+};
+
+// interval between each card being dealt in the animation (seconds)
+const DEAL_CARD_INTERVAL = 0.2;
+
+// placeholder card used for opponent face-down cards during deal animation
+const PLACEHOLDER_CARD: PokerCard = { rank: "A", suit: "spades" };
+
+// ----------------------------------------------------------------
+// CARD COMPONENTS
+// ----------------------------------------------------------------
+
+// renders a face-up card using the card image
 function CardFaceUp({ card }: { card: PokerCard }) {
   return (
     <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg select-none">
@@ -32,6 +57,7 @@ function CardFaceUp({ card }: { card: PokerCard }) {
   );
 }
 
+// renders a face-down card using the selected card back image
 function CardFaceDown({ backImage = "back01" }: { backImage?: string }) {
   return (
     <div className="w-14 h-20 rounded-md overflow-hidden shadow-lg">
@@ -40,14 +66,19 @@ function CardFaceDown({ backImage = "back01" }: { backImage?: string }) {
   );
 }
 
+// empty placeholder slot shown before community cards are dealt
 function EmptyCommunitySlot() {
   return (
     <div className="w-14 h-20 bg-slate-800/50 rounded-lg border border-slate-600/30 shadow-xl" />
   );
 }
 
+// ----------------------------------------------------------------
 // ACTION BAR
+// ----------------------------------------------------------------
 
+// bottom action panel shown when it's the player's turn
+// contains fold/check/call/bet/raise buttons, a raise slider, and the special chip button
 function ActionBar({
   legalActions,
   myStack,
@@ -76,6 +107,7 @@ function ActionBar({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
 
+  // reset raise amount when chip range changes (new hand or new betting round)
   useEffect(() => {
     const timeout = setTimeout(() => {
       setRaiseAmount(chipRange?.min ?? 0);
@@ -141,7 +173,7 @@ function ActionBar({
         marginBottom: "10px"
       }}
     >
-      {/* Top row: preset chips (left) + slider (right) — only when canBetOrRaise */}
+      {/* preset bet size buttons + slider — only shown when bet/raise is possible */}
       {canBetOrRaise && (
         <div className="flex items-center gap-16 pl-1">
           <div className="flex gap-2">
@@ -167,7 +199,7 @@ function ActionBar({
         </div>
       )}
 
-      {/* Primary action buttons — equal height via items-stretch */}
+      {/* primary action buttons */}
       <div className="flex items-stretch gap-3">
         {canFold && (
           <button
@@ -201,6 +233,7 @@ function ActionBar({
         )}
         {canBetOrRaise && (
           <div className="flex flex-1 items-center justify-center gap-3">
+            {/* bet/raise button with inline amount editor */}
             <button
               ref={raiseButtonRef}
               disabled={!canBetOrRaise}
@@ -245,6 +278,7 @@ function ActionBar({
                 </span>
               )}
             </button>
+            {/* special chip button — lets player reveal opponent's cards for 5 seconds */}
             {specialChipEnabled && (
               <SpecialChip
                 disabled={false}
@@ -260,8 +294,12 @@ function ActionBar({
   );
 }
 
-// RESULT OVERLAY
+// ----------------------------------------------------------------
+// COUNTDOWN
+// ----------------------------------------------------------------
 
+// counts down from 5 to 0; used inside the hand-result overlay to show
+// when the next hand will auto-start (the server schedules it server-side)
 function Countdown({ children }: { children: (n: number) => ReactNode }) {
   const [count, setCount] = useState(5);
 
@@ -273,6 +311,13 @@ function Countdown({ children }: { children: (n: number) => ReactNode }) {
   return <>{children(count)}</>;
 }
 
+// ----------------------------------------------------------------
+// RESULT OVERLAY
+// ----------------------------------------------------------------
+
+// shown as a fixed bottom-right card when a hand ends or the full game ends.
+// displays win/loss message, winner name, winning hand, and either a countdown
+// to the next hand or an exit button (when the match is fully over).
 function ResultOverlay({
   snapshot,
   myUsername,
@@ -284,11 +329,13 @@ function ResultOverlay({
   const totalChips = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
   const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
+  // find this player's win record (for split-pot detection)
   const myResult = handResult?.find((w) => w.username === myUsername) ?? null;
   const iWon = myResult != null;
   const isSplit = (handResult?.length ?? 0) > 1;
   const winner = iWon ? myResult : (handResult?.[0] ?? null);
 
+  // full game over screen — shown when match is completely finished
   if (isMatchOver) {
     const iWonGame = opponents.every((o) => o.totalChips === 0) || (me.totalChips > 0 && opponents.every((o) => o.totalChips < me.totalChips / opponents.length));
     const actualWinner = me.totalChips > 0
@@ -312,6 +359,8 @@ function ResultOverlay({
     );
   }
 
+  // single hand result — shown between hands after showdown or fold,
+  // with a countdown until the server auto-deals the next hand
   if (snapshot.phase !== "finished" || !handResult) return null;
 
   return (
@@ -332,7 +381,7 @@ function ResultOverlay({
             <p className="text-orange-400 font-semibold text-lg">+€{myResult.potWon.toLocaleString()}</p>
           )}
 
-          {/* Show winner's cards */}
+          {/* show winner's hole cards after showdown */}
           {winner && winner.holeCards.length > 0 && (
             <div className="flex gap-2 mt-1">
               {winner.holeCards.map((card, i) => (
@@ -348,19 +397,11 @@ function ResultOverlay({
   );
 }
 
-// PHASE BADGE
+// ----------------------------------------------------------------
+// DEAL ANIMATION TYPE
+// ----------------------------------------------------------------
 
-const PHASE_LABELS: Record<string, string> = {
-  preflop: "Pre-flop",
-  flop: "Flop",
-  turn: "Turn",
-  river: "River",
-  finished: "Showdown",
-  gameover: "Game Over",
-};
-
-// MAIN GAME
-
+// describes a single card being animated from the deck to a seat
 type DealEntry = {
   id: string;
   card: PokerCard;
@@ -372,8 +413,9 @@ type DealEntry = {
   faceUp: boolean;
 };
 
-const DEAL_CARD_INTERVAL = 0.2;
-const PLACEHOLDER_CARD: PokerCard = { rank: "A", suit: "spades" };
+// ----------------------------------------------------------------
+// MAIN GAME COMPONENT
+// ----------------------------------------------------------------
 
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
   const { settings, visuals } = usePokerSettings();
@@ -386,7 +428,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
 
-  // Dealing animation state
+  // ----------------------------------------------------------------
+  // DEAL ANIMATION STATE
+  // ----------------------------------------------------------------
+
   const [dealPhase, setDealPhase] = useState<"idle" | "dealing" | "done">("idle");
   const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
   const [settledCount, setSettledCount] = useState(0);
@@ -396,29 +441,38 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const lastDealHandRef = useRef<string | null>(null);
   const communityCountRef = useRef(0);
   const [prevCommunityCount, setPrevCommunityCount] = useState(0);
-  // Ghost card slot refs: myCardSlotRefs[0..1], oppCardSlotRefs[oppIndex][0..1]
+
+  // refs to ghost card slots — used to calculate where to animate cards to
   const myCardSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
   const oppCardSlotRefs = useRef<(HTMLDivElement | null)[][]>([
     [null, null],
     [null, null],
   ]);
 
+  // ----------------------------------------------------------------
+  // SOCKET SETUP
+  // ----------------------------------------------------------------
+
   useEffect(() => {
-    const socket: Socket = io(); // Uses current origin (host/protocol)
+    const socket: Socket = io();
     socketRef.current = socket;
 
+    // join the game room as soon as socket connects
     socket.on("connect", () => {
       socket.emit("joinGame", { gameId, username, image });
     });
 
+    // update game state whenever server sends a new snapshot
     socket.on("gameState", (state: GameSnapshot) => {
       setSnapshot(state);
     });
 
+    // show eliminated screen if this player ran out of chips
     socket.on("eliminated", () => {
       setEliminated(true);
     });
 
+    // redirect to dashboard if server rejects this player
     socket.on("error", (err: { message: string }) => {
       if (err.message && err.message.toLowerCase().includes("not authorized")) {
         router.replace("/dashboard");
@@ -427,12 +481,17 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       }
     });
 
+    // disconnect socket when component unmounts
     return () => {
       socket.disconnect();
     };
   }, [gameId, username, image, router]);
 
-  // reset to inactive when a hand finishes
+  // ----------------------------------------------------------------
+  // DEAL ANIMATION EFFECTS
+  // ----------------------------------------------------------------
+
+  // reset deal animation when a hand ends
   useEffect(() => {
     if (snapshot?.phase === "finished" || snapshot?.phase === "gameover") {
       setTimeout(() => {
@@ -444,7 +503,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [snapshot?.phase]);
 
-  // trigger deal animation when new preflop hand arrives
+  // trigger deal animation at the start of each new preflop hand
   useEffect(() => {
     if (!snapshot || snapshot.phase !== "preflop" || dealPhase !== "idle") return;
     if (!tableRef.current) return;
@@ -452,6 +511,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     const cards = snapshot.me.holeCards.filter(Boolean) as PokerCard[];
     if (cards.length < 2) return;
 
+    // use hole card identity as a hand ID to avoid re-triggering on re-renders
     const handId = cards.map((c) => `${c.rank}${c.suit}`).join("");
     if (handId === lastDealHandRef.current) return;
     lastDealHandRef.current = handId;
@@ -475,7 +535,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     const entries: DealEntry[] = [];
     let cardIdx = 0;
 
-    // Deal round 1: me card 0, then each opponent card 0
+    // deal round 1: my first card, then each opponent's first card
     const me0 = slotCenter(myCardSlotRefs.current[0], w * 0.5, h * 0.88);
     entries.push({ id: "me-0", card: cards[0], fromX: deckX, fromY: deckY, toX: me0.x, toY: me0.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: true });
 
@@ -485,7 +545,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       entries.push({ id: `opp-${oi}-0`, card: PLACEHOLDER_CARD, fromX: deckX, fromY: deckY, toX: opp0.x, toY: opp0.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: false });
     });
 
-    // Deal round 2: me card 1, then each opponent card 1
+    // deal round 2: my second card, then each opponent's second card
     const me1 = slotCenter(myCardSlotRefs.current[1], w * 0.5, h * 0.88);
     entries.push({ id: "me-1", card: cards[1], fromX: deckX, fromY: deckY, toX: me1.x, toY: me1.y, delay: cardIdx++ * DEAL_CARD_INTERVAL, faceUp: true });
 
@@ -500,7 +560,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     setDealPhase("dealing");
   }, [snapshot, dealPhase]);
 
-  // When all cards have settled, switch to "done"
+  // switch deal phase to "done" once all cards have finished animating
   useEffect(() => {
     if (dealPhase === "dealing" && dealEntries.length > 0 && settledCount >= dealEntries.length) {
       const t = setTimeout(() => setDealPhase("done"), 300);
@@ -508,7 +568,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [settledCount, dealEntries.length, dealPhase]);
 
-  // In non-preflop phases, cards must always be visible
+  // in non-preflop phases cards must always be visible immediately
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "preflop" && dealPhase !== "dealing") {
@@ -516,17 +576,26 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     }
   }, [snapshot, dealPhase]);
 
+  // track community card count to trigger flip animation on new cards
   useEffect(() => {
     setPrevCommunityCount(communityCountRef.current);
     communityCountRef.current = snapshot?.communityCards.length ?? 0;
   }, [snapshot?.communityCards.length]);
 
+  // ----------------------------------------------------------------
+  // CHAT VISIBILITY
+  // ----------------------------------------------------------------
+
+  // close the floating chat popup whenever the regular chat becomes visible again
   useEffect(() => {
     if (showChat) {
       setChatPopupOpen(false);
     }
   }, [showChat]);
 
+  // detect collisions between the action bar and the chat box.
+  // when they overlap, hide the chat and surface a small "Chat" toggle button
+  // that opens a compact chat popup above it.
   useEffect(() => {
     const updateChatVisibility = () => {
       if (!snapshot || disconnected || eliminated) {
@@ -571,6 +640,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     };
   }, [snapshot, disconnected, eliminated]);
 
+  // ----------------------------------------------------------------
+  // SOCKET ACTION SENDERS
+  // ----------------------------------------------------------------
+
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
   }
@@ -580,6 +653,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     socketRef.current?.emit("useSpecialChip", { targetSeatIndex });
   }
 
+  // ----------------------------------------------------------------
+  // EARLY RETURN SCREENS
+  // ----------------------------------------------------------------
+
+  // shown when this player ran out of chips and was eliminated
   if (eliminated) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -595,6 +673,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     );
   }
 
+  // loading spinner shown while waiting for first game state from server
   if (!snapshot) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -603,23 +682,34 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     );
   }
 
+  // ----------------------------------------------------------------
+  // DERIVED STATE
+  // ----------------------------------------------------------------
+
   const { me, opponents, communityCards, pot, myTurn, legalActions, phase } = snapshot;
   const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
+  // chip stacks are sized relative to the starting stack (consistent visual across the game)
   const maxBalance = snapshot.startingStack;
 
-  // callAmount: how much to call = max opponent bet - my current bet
+  // how much it costs to call — capped at the player's available stack
   const maxOppBet = opponents.reduce((m, o) => Math.max(m, o.betSize), 0);
   const callAmount = Math.min(me.stack, Math.max(0, maxOppBet - me.betSize));
 
+  // pad community cards to always show 5 slots
   const communitySlots = Array.from({ length: 5 }, (_, i) => communityCards[i] ?? null);
   const oppPositions = OPPONENT_POSITIONS[opponents.length] ?? OPPONENT_POSITIONS[1];
 
-  // Who is currently acting (not me)?
+  // name of the opponent currently acting (shown in waiting label)
   const actingOpponent = !myTurn && phase !== "finished" && phase !== "gameover" ? opponents[0] : undefined;
   const waitingForName = actingOpponent?.username ?? opponents[0]?.username ?? "Opponent";
 
+  // ----------------------------------------------------------------
+  // RENDER
+  // ----------------------------------------------------------------
+
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
+      {/* top-left status bar — room id + phase badge + turn indicator */}
       <div className="fixed top-4 left-4 z-50 flex flex-row items-center gap-2 flex-wrap">
         <span className="text-slate-400 text-xs">Room: {gameId}</span>
         <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
@@ -636,7 +726,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           </span>
         )}
       </div>
-      {/* Background */}
+
+      {/* Background — either static image or animated variant */}
       {visuals.backgroundVariant === "static" ? (
         <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
           <Image
@@ -655,6 +746,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           <PokerBackground variant={visuals.backgroundVariant} />
         </div>
       )}
+
+      {/* vignette overlay */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -662,13 +755,17 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           zIndex: 1,
         }}
       />
+
+      {/* settings gear + drawer */}
       <SettingsGearButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-        {/* Table container */}
+
+        {/* main table container — holds all seats, cards, and the result overlay */}
         <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
-          {/* Table image */}
+
+          {/* table felt image */}
           <Image
             src="/pokertable_no_bg.png"
             alt="Poker table"
@@ -678,12 +775,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />
 
-          {/* Result overlay */}
+          {/* result overlay — shown after hand ends or game ends */}
           {(snapshot.phase === "finished" || isMatchOver) && (
             <ResultOverlay snapshot={snapshot} myUsername={username} />
           )}
 
-          {/* Pot + Community cards */}
+          {/* pot amount + community cards */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
             {pot > 0 && (
               <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
@@ -706,7 +803,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             </div>
           </div>
 
-          {/* Opponent seats */}
+          {/* opponent seats — positioned absolutely based on player count */}
           {opponents.map((opp, oi) => {
             const [topPct, leftPct] = oppPositions[oi] ?? [12, 50];
             const isOppTurn = !myTurn && phase !== "finished" && phase !== "gameover";
@@ -727,6 +824,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   )}
                 </div>
                 <span className="text-white text-xs font-medium">{opp.username}</span>
+                {/* disconnected indicator — shown when opponent loses connection but game continues */}
                 {opp.isDisconnected && (
                   <span className="bg-red-600/80 text-white text-[10px] px-2 py-0.5 rounded-full">Disconnected</span>
                 )}
@@ -743,6 +841,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                 <div className="flex items-end gap-2 mt-1">
                   <ChipStacks balance={opp.stack} maxBalance={maxBalance} />
                   <div className="flex gap-1">
+                    {/* show actual cards after deal animation, ghost slots during animation */}
                     {dealPhase === "done"
                       ? opp.holeCards.map((card, i) =>
                           card ? <CardFaceUp key={i} card={card} /> : <CardFaceDown key={i} backImage={settings.cardBackImage} />
@@ -763,7 +862,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             );
           })}
 
-          {/* Animated dealing cards overlay */}
+          {/* animated cards flying from deck to seats */}
           {dealPhase === "dealing" && dealEntries.map((entry) => (
             <DealingCard
               key={entry.id}
@@ -779,7 +878,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             />
           ))}
 
-          {/* My seat (bottom) */}
+          {/* my seat at the bottom of the table */}
           <div
             className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2"
             style={{ top: "88%", left: "50%" }}
@@ -820,12 +919,13 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           </div>
         </div>
 
-        {/* Separate action bar box aligned under the table stage box */}
+        {/* action bar container — has a reserved minHeight so chat-collision math has something to compare against */}
         <div
           ref={actionBarRef}
           className="relative w-full max-w-4xl flex justify-center"
           style={{ zIndex: 60, minHeight: "200px" }}
         >
+          {/* action buttons — only shown when it's my turn */}
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
               legalActions={legalActions}
@@ -841,6 +941,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             />
           )}
 
+          {/* waiting message — shown when it's the opponent's turn */}
           {!myTurn && phase !== "finished" && phase !== "gameover" && (
             <div className="mt-6 px-8 py-4 text-slate-400 text-sm">
               Waiting for {waitingForName}...
@@ -849,7 +950,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         </div>
       </div>
 
-      {/* Chat (normal mode when there is no collision) */}
+      {/* chat box — fixed to bottom left, hidden when it would collide with the action bar */}
       <div
         ref={chatRef}
         className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
@@ -858,7 +959,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
         <Chat username={username} gameId={gameId} />
       </div>
 
-      {/* Chat button + compact popup when full chat would collide with action bar */}
+      {/* compact chat fallback — shown only when the regular chat would overlap the action bar */}
       {!showChat && (
         <>
           <button
