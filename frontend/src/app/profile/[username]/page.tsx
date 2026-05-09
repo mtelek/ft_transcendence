@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 import { useEffect, useState } from "react";
@@ -19,7 +19,8 @@ type ProfileUser = {
 }
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
   const { username } = useParams<{ username: string }>();
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,14 @@ export default function ProfilePage() {
   const isOwnProfile = session?.user?.name === username;
 
   useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [sessionStatus, router]);
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+
     async function fetchUser() {
       try {
         const res = await fetch(`/api/user/${username}`);
@@ -39,9 +48,10 @@ export default function ProfilePage() {
       }
     }
     void fetchUser();
-  }, [username]);
+  }, [username, sessionStatus]);
 
-  if (loading) return <p className="text-white p-6">Loading...</p>
+  if (sessionStatus === "loading" || loading) return <p className="text-white p-6">Loading...</p>
+  if (sessionStatus === "unauthenticated") return null;
   if (!user) return <p className="text-white p-6">User not found</p>
 
   return (
