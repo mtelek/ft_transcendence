@@ -126,8 +126,37 @@ function ActionBar({
   const minBet = chipRange?.min ?? 0;
   const maxBet = chipRange?.max ?? myStack;
   const step = 1;
+  const sliderRef = useRef<HTMLInputElement>(null);
+  const raiseButtonRef = useRef<HTMLButtonElement>(null);
+  const [specialChipSliderShift, setSpecialChipSliderShift] = useState(0);
+  const [specialChipSliderWidth, setSpecialChipSliderWidth] = useState(0);
 
   const quickBtn = "bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+
+  useEffect(() => {
+    if (!specialChipEnabled || !canBetOrRaise) {
+      setSpecialChipSliderShift(0);
+      setSpecialChipSliderWidth(0);
+      return;
+    }
+
+    const syncSpecialChipSlider = () => {
+      const sliderEl = sliderRef.current;
+      const raiseButtonEl = raiseButtonRef.current;
+      if (!sliderEl || !raiseButtonEl) return;
+
+      const sliderRect = sliderEl.getBoundingClientRect();
+      const raiseRect = raiseButtonEl.getBoundingClientRect();
+      const sliderLeft = sliderRect.left;
+      const raiseLeft = raiseRect.left;
+      setSpecialChipSliderShift(Math.round(raiseLeft - sliderLeft));
+      setSpecialChipSliderWidth(Math.round(raiseRect.width));
+    };
+
+    syncSpecialChipSlider();
+    window.addEventListener("resize", syncSpecialChipSlider);
+    return () => window.removeEventListener("resize", syncSpecialChipSlider);
+  }, [specialChipEnabled, canBetOrRaise, canFold, canCheck, canCall, callAmount]);
 
   return (
     <div
@@ -146,7 +175,7 @@ function ActionBar({
     >
       {/* preset bet size buttons + slider — only shown when bet/raise is possible */}
       {canBetOrRaise && (
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-16 pl-1">
           <div className="flex gap-2">
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(minBet)} className={quickBtn}>Min</button>
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round((pot + 2 * callAmount) / 2))))} className={quickBtn}>½ Pot</button>
@@ -154,6 +183,7 @@ function ActionBar({
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
           </div>
           <input
+            ref={sliderRef}
             id="raiseamount"
             type="range"
             min={minBet}
@@ -162,7 +192,8 @@ function ActionBar({
             value={raiseAmount}
             disabled={!canBetOrRaise}
             onChange={(e) => setRaiseAmount(Number(e.target.value))}
-            className="w-36 accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            style={specialChipEnabled && specialChipSliderWidth > 0 ? { width: `${specialChipSliderWidth}px`, transform: `translateX(${specialChipSliderShift}px)` } : undefined}
             autoComplete="off"
           />
         </div>
@@ -204,6 +235,7 @@ function ActionBar({
           <div className="flex flex-1 items-center justify-center gap-3">
             {/* bet/raise button with inline amount editor */}
             <button
+              ref={raiseButtonRef}
               disabled={!canBetOrRaise}
               onClick={() => {
                 let amount = raiseAmount;

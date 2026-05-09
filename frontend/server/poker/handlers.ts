@@ -4,6 +4,9 @@ import type { PokerServerState } from "./state";
 import type { GameSession } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame, handleElimination } from "./game-flow";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // ----------------------------------------------------------------
 // HELPERS
@@ -391,7 +394,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     // called when player navigates to the game page
     // handles both initial join and reconnect after page navigation or disconnect
-    socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
+    socket.on("joinGame", async ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
       const pending = state.pendingGames.get(username);
       if (!pending || pending.gameId !== gameId) {
         socket.emit("error", { message: "Not authorized for this game" });
@@ -426,6 +429,13 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       state.socketToGame.set(socket.id, { gameId, seatIndex: pending.seatIndex });
+      // Keep DB active-game marker in sync, but do not block game join on DB hiccups.
+      void pool.query(
+        'UPDATE "User" SET "activeGameId" = $1, "activeGameSeatIndex" = $2 WHERE "username" = $3',
+        [gameId, pending.seatIndex, username]
+      ).catch((err) => {
+        console.error(`Failed setting active game for ${username}:`, err);
+      });
       socket.join(gameId);
       socket.emit("gameState", buildSnapshot(state, gameId, pending.seatIndex));
       broadcastState(io, state, gameId);

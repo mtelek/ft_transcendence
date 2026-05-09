@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { DEFAULT_AVATAR } from "@/constants/avatar";
 import { apiRequest } from "@/lib/client-api";
@@ -20,7 +21,14 @@ function getErrorMessage(err: unknown, fallback: string) {
 
 export default function Home() {
   //Session gives current user data; update lets us refresh client session values after edits
-  const { data: session, update } = useSession();
+  const { data: session, status: sessionStatus, update } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [sessionStatus, router]);
 
   //Avatar picker state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
