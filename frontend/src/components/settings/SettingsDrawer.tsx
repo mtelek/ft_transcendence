@@ -38,7 +38,7 @@ export function SettingsDrawer({
         className="border-l border-slate-800 shadow-2xl flex flex-col"
         style={{
           position: "fixed",
-          top: "4px",
+          top: "6px",
           right: "16px",
           height: "min(70vh, calc(100vh - 24px))",
           width: "min(380px, 90vw)",
@@ -50,14 +50,6 @@ export function SettingsDrawer({
       >
         <header className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
           <h2 className="text-lg font-semibold text-white">Settings</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close settings"
-            className="w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-xl leading-none"
-          >
-            ×
-          </button>
         </header>
 
         <div className="flex-1 overflow-y-auto px-5 py-5" style={{ background: "#0f172a" }}>
