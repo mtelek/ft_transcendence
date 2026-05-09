@@ -32,6 +32,7 @@ export interface GameSession {
   isGameOver: boolean;
   totalPlayers: number;
   matchSaved: boolean;
+  handsPlayedByUsername: Record<string, number>;
 }
 
 export type OpponentSnapshot = {
