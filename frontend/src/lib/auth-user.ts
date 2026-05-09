@@ -35,6 +35,13 @@ export async function findUserFromSession(session: SessionLike) {
         ...(identity.username ? [{ username: identity.username }] : []),
       ],
     },
-    select: { id: true, username: true, email: true, password: true },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      password: true,
+      activeGameId: true,
+      activeGameSeatIndex: true,
+    },
   });
 }
