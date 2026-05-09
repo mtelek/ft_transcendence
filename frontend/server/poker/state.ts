@@ -1,12 +1,12 @@
 import type { GameSession } from "./types";
 
-export type LobbyPlayer = {
+type LobbyPlayer = {
   socketId: string;
   username: string;
   image?: string;
 };
 
-export type NamedLobbyEntry = {
+type NamedLobbyEntry = {
   password: string;
   maxPlayers: number;
   blinds: {
@@ -18,12 +18,12 @@ export type NamedLobbyEntry = {
   players: LobbyPlayer[];
 };
 
-export type PendingGameEntry = {
+type PendingGameEntry = {
   gameId: string;
   seatIndex: number;
 };
 
-export type SocketGameEntry = {
+type SocketGameEntry = {
   gameId: string;
   seatIndex: number;
 };

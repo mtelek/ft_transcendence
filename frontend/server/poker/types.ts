@@ -2,14 +2,15 @@ import { Table } from "poker-ts";
 
 export type PokerCard = { rank: string; suit: string };
 
-export interface PlayerEntry {
+interface PlayerEntry {
   socketId: string;
   username: string;
   image?: string;
   seatIndex: number;
+  isActive: boolean;
 }
 
-export interface WinnerInfo {
+interface WinnerInfo {
   username: string;
   handName: string;
   holeCards: PokerCard[];
@@ -22,11 +23,11 @@ export interface GameSession {
   allPlayers: PlayerEntry[];  //all players
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
+  startingStack: number;
   specialChipEnabled: boolean;
   specialChipUsedBy: boolean[];
   specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex
   handResult: WinnerInfo[] | null;
-  nextHandReady: boolean[];
   nextDealerSeat: number;
   isGameOver: boolean;
   totalPlayers: number;
@@ -42,11 +43,13 @@ export type OpponentSnapshot = {
   holeCards: (PokerCard | null)[];
   isDealer: boolean;
   seatIndex: number;
+  isDisconnected: boolean;
 };
 
 export type GameSnapshot = {
   gameId: string;
   phase: "preflop" | "flop" | "turn" | "river" | "finished" | "gameover";
+  startingStack: number;
   me: {
     username: string;
     image?: string;
@@ -68,7 +71,6 @@ export type GameSnapshot = {
     revealedOpponentCards: boolean;
   };
   handResult: WinnerInfo[] | null;
-  iReadyForNextHand: boolean;
   isGameOver: boolean;
   totalPlayers: number;
 };

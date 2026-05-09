@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import PokerBackground from "@/components/PokerBackground";
+import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

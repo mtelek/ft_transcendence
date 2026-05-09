@@ -1,4 +1,4 @@
-import { requireExistingUserSession } from "@/lib/require-existing-user-session";
+import { requireExistingUserSession } from "@/lib/existingUserSession";
 import { PokerSettingsProvider } from "@/lib/poker-settings/context";
 import GameTable from "./GameTable";
 

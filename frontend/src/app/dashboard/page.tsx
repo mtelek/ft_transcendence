@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { io, Socket } from "socket.io-client";
-import Statistics from "@/components/poker/stats/statistics";
-import MatchHistory from "@/components/poker/stats/matchHistory";
+import Statistics from "@/components/statistics/statistics";
+import MatchHistory from "@/components/statistics/matchHistory";
 import { PokerSettingsProvider, usePokerSettings } from "@/lib/poker-settings/context";
 import { GameplayTab } from "@/components/settings/tabs/GameplayTab";
 
@@ -26,10 +26,10 @@ function DashboardInner() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const socketRef = useRef<Socket | null>(null);
-  const [panel, setPanel] = useState<Panel>("host");
+  const [panel, setPanel] = useState<Panel>("join");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
-  const { settings } = usePokerSettings();
+  const { settings, restoreDefaults } = usePokerSettings();
   const [password, setPassword] = useState("");
   const [waitingInfo, setWaitingInfo] = useState<{ current: number; needed: number } | null>(null);
   const [error, setError] = useState("");
@@ -43,9 +43,29 @@ function DashboardInner() {
     }
   }, [sessionStatus, router]);
 
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    const socket = getSocket();
+    socket.emit("checkPendingGame", { username });
+    socket.once("hasPendingGame", ({ gameId }: { gameId: string | null }) => {
+      if (gameId) {
+        socket.disconnect();
+        socketRef.current = null;
+        router.push(`/poker/${gameId}`);
+      } else {
+        setStatus("idle");
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, username]);
+
   function getSocket(): Socket {
-    if (socketRef.current) return socketRef.current;
-    const socket = io(); // Uses current origin (host/protocol)
+    if (socketRef.current?.connected) return socketRef.current;
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current = null;
+    }
+    const socket = io();
     socketRef.current = socket;
 
     socket.on("waitingForPlayers", (info: { current: number; needed: number }) => {
@@ -56,7 +76,8 @@ function DashboardInner() {
     socket.on("gameStarted", ({ gameId }: { gameId: string }) => {
       setStatus("matched");
       socket.disconnect();
-      router.push(`/poker/game/${gameId}`);
+      socketRef.current = null;
+      router.push(`/poker/${gameId}`);
     });
 
     socket.on("lobbyError", ({ message }: { message: string }) => {
@@ -74,6 +95,9 @@ function DashboardInner() {
   }, []);
 
   function openPanel(p: Panel) {
+    if (panel === "host" && p !== "host") {
+      restoreDefaults();
+    }
     setPanel(p);
     setError("");
     setGameName("");
@@ -150,7 +174,7 @@ function DashboardInner() {
               socketRef.current?.disconnect();
               socketRef.current = null;
               setStatus("idle");
-              setPanel("none");
+              setPanel("join");
               setWaitingInfo(null);
             }}
             className="text-slate-500 hover:text-slate-300 text-sm transition-colors"

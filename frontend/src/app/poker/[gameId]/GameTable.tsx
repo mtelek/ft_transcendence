@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Image from "next/image";
-import type { GameSnapshot, PokerCard } from "../../../../../server";
-import Chat from "@/components/Chat";
-import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { ChipStacks } from "@/components/ChipStack";
+import type { GameSnapshot, PokerCard } from "../../../../server";
+import Chat from "@/components/chat/Chat";
+import { PlayerAvatar } from "@/components/authentication/PlayerAvatar";
+import { ChipStacks } from "@/components/poker/ChipStack";
 import { usePokerSettings } from "@/lib/poker-settings/context";
 import { SettingsGearButton } from "@/components/settings/SettingsGearButton";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
-import PokerBackground from "@/components/PokerBackground";
+import PokerBackground from "@/components/background/PokerBackground";
 import { DealingCard } from "@/components/poker/DealingCard";
 import { FlipCommunityCard } from "@/components/poker/FlipCommunityCard";
 import { SpecialChip } from "@/components/poker/SpecialChip";
@@ -24,8 +24,8 @@ import Link from "next/link";
 
 // seat positions for opponents as [top%, left%] based on player count
 const OPPONENT_POSITIONS: Record<number, [number, number][]> = {
-  1: [[12, 50]],
-  2: [[12, 25], [12, 75]],
+  1: [[16, 50]],
+  2: [[16, 25], [16, 75]],
 };
 
 // maps game phase keys to display labels shown in the phase badge
@@ -131,12 +131,11 @@ function ActionBar({
 
   return (
     <div
-      className="flex flex-col gap-3 mt-6"
+      className="inline-flex flex-col gap-3 mt-6"
       style={{
         backgroundImage: `url('${bannerImage}')`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
         paddingTop: "20px",
         paddingBottom: "20px",
         paddingLeft: "80px",
@@ -264,11 +263,29 @@ function ActionBar({
 }
 
 // ----------------------------------------------------------------
+// COUNTDOWN
+// ----------------------------------------------------------------
+
+// counts down from 5 to 0; used inside the hand-result overlay to show
+// when the next hand will auto-start (the server schedules it server-side)
+function Countdown({ children }: { children: (n: number) => ReactNode }) {
+  const [count, setCount] = useState(5);
+
+  useEffect(() => {
+    const interval = setInterval(() => setCount((c: number) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <>{children(count)}</>;
+}
+
+// ----------------------------------------------------------------
 // RESULT OVERLAY
 // ----------------------------------------------------------------
 
-// shown on top of the table when a hand ends or the full game ends
-// displays win/loss message, winner name, winning hand, and exit button
+// shown as a fixed bottom-right card when a hand ends or the full game ends.
+// displays win/loss message, winner name, winning hand, and either a countdown
+// to the next hand or an exit button (when the match is fully over).
 function ResultOverlay({
   snapshot,
   myUsername,
@@ -280,8 +297,11 @@ function ResultOverlay({
   const totalChips = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
   const isMatchOver = isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
 
-  const winner = handResult?.[0];
-  const iWon = winner?.username === myUsername;
+  // find this player's win record (for split-pot detection)
+  const myResult = handResult?.find((w) => w.username === myUsername) ?? null;
+  const iWon = myResult != null;
+  const isSplit = (handResult?.length ?? 0) > 1;
+  const winner = iWon ? myResult : (handResult?.[0] ?? null);
 
   // full game over screen — shown when match is completely finished
   if (isMatchOver) {
@@ -290,11 +310,11 @@ function ResultOverlay({
       ? me.username
       : opponents.reduce((best, o) => (o.totalChips > (opponents.find(x => x.username === best)?.totalChips ?? 0) ? o.username : best), opponents[0]?.username ?? "");
     return (
-      <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-6 z-30 rounded-xl">
-        <h2 className="text-3xl font-bold text-white">
+      <div className="fixed bottom-4 right-4 bg-slate-900/95 border border-slate-700 rounded-lg p-8 w-80 flex flex-col items-center gap-6 z-50 shadow-2xl">
+        <h2 className="text-3xl font-bold text-white text-center">
           {iWonGame ? "You win the game!" : isGameOver && me.totalChips > 0 ? "You win the game!" : "You have lost!"}
         </h2>
-        <p className="text-slate-300">
+        <p className="text-slate-300 text-center">
           Winner: <span className="font-bold text-yellow-400">{isGameOver && me.totalChips > 0 ? me.username : actualWinner}</span>
           {" "}— €{totalChips.toLocaleString()} chips
         </p>
@@ -307,33 +327,41 @@ function ResultOverlay({
     );
   }
 
-  // single hand result — shown between hands after showdown or fold
+  // single hand result — shown between hands after showdown or fold,
+  // with a countdown until the server auto-deals the next hand
   if (snapshot.phase !== "finished" || !handResult) return null;
 
   return (
-    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4 z-30 rounded-xl">
-      <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={288} height={288} className="object-contain" />
-      <h2 className="text-2xl font-bold text-white">
-        {iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
-      </h2>
-      {winner?.handName && winner.handName !== "Fold" && (
-        <p className="text-slate-300 text-lg">{winner.handName}</p>
-      )}
-      {winner?.handName === "Fold" && (
-        <p className="text-slate-300">{iWon ? "Opponent folded" : "You folded"}</p>
-      )}
-      {iWon && winner?.potWon != null && winner.potWon > 0 && (
-        <p className="text-orange-400 font-semibold text-lg">+€{winner.potWon.toLocaleString()}</p>
-      )}
-      {/* show winner's hole cards after showdown */}
-      {winner && winner.holeCards.length > 0 && (
-        <div className="flex gap-2 mt-1">
-          {winner.holeCards.map((card, i) => (
-            <CardFaceUp key={i} card={card} />
-          ))}
+    <Countdown key={handResult[0]?.username ?? "none"}>
+      {(countdown) => (
+        <div className="fixed bottom-4 right-4 bg-slate-900/95 border border-slate-700 rounded-lg p-6 w-80 flex flex-col items-center gap-4 z-50 shadow-2xl">
+          <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={200} height={200} className="object-contain" />
+          <h2 className="text-2xl font-bold text-white text-center">
+            {iWon && isSplit ? "Split Pot!" : iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
+          </h2>
+          {winner?.handName && winner.handName !== "Fold" && (
+            <p className="text-slate-300 text-lg text-center">{winner.handName}</p>
+          )}
+          {winner?.handName === "Fold" && (
+            <p className="text-slate-300 text-center">{iWon ? "Opponent folded" : "You folded"}</p>
+          )}
+          {iWon && myResult?.potWon != null && myResult.potWon > 0 && (
+            <p className="text-orange-400 font-semibold text-lg">+€{myResult.potWon.toLocaleString()}</p>
+          )}
+
+          {/* show winner's hole cards after showdown */}
+          {winner && winner.holeCards.length > 0 && (
+            <div className="flex gap-2 mt-1">
+              {winner.holeCards.map((card, i) => (
+                <CardFaceUp key={i} card={card} />
+              ))}
+            </div>
+          )}
+
+          <p className="text-slate-400 text-sm text-center">Next hand in {countdown}s</p>
         </div>
       )}
-    </div>
+    </Countdown>
   );
 }
 
@@ -362,6 +390,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
+  const [showChat, setShowChat] = useState(true);
+  const [chatPopupOpen, setChatPopupOpen] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
@@ -374,6 +404,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [dealEntries, setDealEntries] = useState<DealEntry[]>([]);
   const [settledCount, setSettledCount] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
+  const actionBarRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const lastDealHandRef = useRef<string | null>(null);
   const communityCountRef = useRef(0);
   const [prevCommunityCount, setPrevCommunityCount] = useState(0);
@@ -401,11 +433,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     // update game state whenever server sends a new snapshot
     socket.on("gameState", (state: GameSnapshot) => {
       setSnapshot(state);
-    });
-
-    // show disconnected screen if opponent leaves mid-game
-    socket.on("opponentDisconnected", () => {
-      setDisconnected(true);
     });
 
     // show eliminated screen if this player ran out of chips
@@ -524,15 +551,69 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   }, [snapshot?.communityCards.length]);
 
   // ----------------------------------------------------------------
+  // CHAT VISIBILITY
+  // ----------------------------------------------------------------
+
+  // close the floating chat popup whenever the regular chat becomes visible again
+  useEffect(() => {
+    if (showChat) {
+      setChatPopupOpen(false);
+    }
+  }, [showChat]);
+
+  // detect collisions between the action bar and the chat box.
+  // when they overlap, hide the chat and surface a small "Chat" toggle button
+  // that opens a compact chat popup above it.
+  useEffect(() => {
+    const updateChatVisibility = () => {
+      if (!snapshot || disconnected || eliminated) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionBarVisible =
+        snapshot.myTurn && snapshot.phase !== "finished" && snapshot.phase !== "gameover";
+
+      if (!actionBarVisible) {
+        setShowChat(true);
+        return;
+      }
+
+      const actionEl = actionBarRef.current;
+      const chatEl = chatRef.current;
+      if (!actionEl || !chatEl) {
+        setShowChat(true);
+        return;
+      }
+
+      const a = actionEl.getBoundingClientRect();
+      const c = chatEl.getBoundingClientRect();
+      const overlaps = !(c.right < a.left || c.left > a.right || c.bottom < a.top || c.top > a.bottom);
+      setShowChat(!overlaps);
+    };
+
+    updateChatVisibility();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(updateChatVisibility);
+      if (actionBarRef.current) ro.observe(actionBarRef.current);
+      if (chatRef.current) ro.observe(chatRef.current);
+    }
+    window.addEventListener("resize", updateChatVisibility);
+
+    return () => {
+      window.removeEventListener("resize", updateChatVisibility);
+      ro?.disconnect();
+    };
+  }, [snapshot, disconnected, eliminated]);
+
+  // ----------------------------------------------------------------
   // SOCKET ACTION SENDERS
   // ----------------------------------------------------------------
 
   function sendAction(action: string, betSize?: number) {
     socketRef.current?.emit("playerAction", { action, betSize });
-  }
-
-  function sendNextHand() {
-    socketRef.current?.emit("nextHand");
   }
 
   function sendUseSpecialChip(targetId: string) {
@@ -560,20 +641,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     );
   }
 
-  //shown when the opponent disconnected mid-game
-  if (disconnected) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white text-2xl mb-4">Opponent disconnected</p>
-          <Link href="/dashboard" className="bg-white text-slate-900 font-bold px-6 py-2 rounded-full">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   // loading spinner shown while waiting for first game state from server
   if (!snapshot) {
     return (
@@ -589,8 +656,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   const { me, opponents, communityCards, pot, myTurn, legalActions, phase } = snapshot;
   const isMatchOver = snapshot.isGameOver || me.totalChips === 0 || opponents.every((o) => o.totalChips === 0);
-  const totalChipsAll = me.totalChips + opponents.reduce((s, o) => s + o.totalChips, 0);
-  const maxBalance = Math.round(totalChipsAll / (opponents.length + 1));
+  // chip stacks are sized relative to the starting stack (consistent visual across the game)
+  const maxBalance = snapshot.startingStack;
 
   // how much it costs to call — capped at the player's available stack
   const maxOppBet = opponents.reduce((m, o) => Math.max(m, o.betSize), 0);
@@ -601,7 +668,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const oppPositions = OPPONENT_POSITIONS[opponents.length] ?? OPPONENT_POSITIONS[1];
 
   // name of the opponent currently acting (shown in waiting label)
-  const actingOpponent = opponents.find(() => !myTurn && phase !== "finished" && phase !== "gameover");
+  const actingOpponent = !myTurn && phase !== "finished" && phase !== "gameover" ? opponents[0] : undefined;
   const waitingForName = actingOpponent?.username ?? opponents[0]?.username ?? "Opponent";
 
   // ----------------------------------------------------------------
@@ -610,29 +677,47 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
-      <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
+      {/* top-left status bar — room id + phase badge + turn indicator */}
+      <div className="fixed top-4 left-4 z-50 flex flex-row items-center gap-2 flex-wrap">
+        <span className="text-slate-400 text-xs">Room: {gameId}</span>
+        <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
+          {PHASE_LABELS[phase] ?? phase}
+        </span>
+        {myTurn && (
+          <span className="bg-green-500/80 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
+            Your turn
+          </span>
+        )}
+        {!myTurn && phase !== "finished" && phase !== "gameover" && (
+          <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
+            {waitingForName}&apos;s turn
+          </span>
+        )}
+      </div>
 
       {/* Background — either static image or animated variant */}
       {visuals.backgroundVariant === "static" ? (
-        <Image
-          src="/dark-poker-background-of-spades-and-clubs.jpg"
-          alt=""
-          aria-hidden="true"
-          fill
-          sizes="100vw"
-          loading="eager"
-          className="object-cover"
-          style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
-        />
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+          <Image
+            src="/dark-poker-background-of-spades-and-clubs.jpg"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="100vw"
+            loading="eager"
+            className="object-cover"
+            style={{ filter: visuals.bgFilter, transition: "filter 400ms ease" }}
+          />
+        </div>
       ) : (
-        <div className="absolute inset-0" style={{ zIndex: 0 }}>
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
           <PokerBackground variant={visuals.backgroundVariant} />
         </div>
       )}
 
       {/* vignette overlay */}
       <div
-        className="absolute inset-0"
+        className="fixed inset-0 pointer-events-none"
         style={{
           background: "radial-gradient(ellipse at center, transparent 40%, rgba(255,255,255,0.15) 100%)",
           zIndex: 1,
@@ -644,23 +729,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <div className="relative flex flex-col items-center w-full">
-
-        {/* phase badge + turn indicator */}
-        <div className="flex items-center gap-3 mb-4">
-          <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
-            {PHASE_LABELS[phase] ?? phase}
-          </span>
-          {myTurn && (
-            <span className="bg-green-500/80 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-              Your turn
-            </span>
-          )}
-          {!myTurn && phase !== "finished" && phase !== "gameover" && (
-            <span className="bg-slate-700/80 text-slate-300 text-sm px-3 py-1 rounded-full">
-              {waitingForName}&apos;s turn
-            </span>
-          )}
-        </div>
 
         {/* main table container — holds all seats, cards, and the result overlay */}
         <div ref={tableRef} className="relative w-full max-w-4xl aspect-[16/10]" style={{ zIndex: 10 }}>
@@ -724,6 +792,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   )}
                 </div>
                 <span className="text-white text-xs font-medium">{opp.username}</span>
+                {/* disconnected indicator — shown when opponent loses connection but game continues */}
+                {opp.isDisconnected && (
+                  <span className="bg-red-600/80 text-white text-[10px] px-2 py-0.5 rounded-full">Disconnected</span>
+                )}
                 <div className="flex items-center gap-1.5">
                   {opp.isDealer && (
                     <span className="w-5 h-5 rounded-full bg-yellow-400 text-slate-900 text-[10px] font-black flex items-center justify-center">D</span>
@@ -731,11 +803,11 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                   <PlayerAvatar
                     src={opp.image}
                     fallback={opp.username}
-                    className={`w-10 h-10 rounded-full border-2 ${isOppTurn ? "border-green-400" : "border-slate-400"}`}
+                    className={`w-10 h-10 rounded-full border-2 ${opp.isDisconnected ? "border-red-500 opacity-50" : isOppTurn ? "border-green-400" : "border-slate-400"}`}
                   />
                 </div>
                 <div className="flex items-end gap-2 mt-1">
-                  <ChipStacks balance={opp.totalChips} maxBalance={maxBalance} />
+                  <ChipStacks balance={opp.stack} maxBalance={maxBalance} />
                   <div className="flex gap-1">
                     {/* show actual cards after deal animation, ghost slots during animation */}
                     {dealPhase === "done"
@@ -789,7 +861,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                       <div key={i} ref={(el) => { myCardSlotRefs.current[i] = el; }} className="w-14 h-20 rounded-md border border-slate-600/30 bg-slate-800/30" />
                     ))}
               </div>
-              <ChipStacks balance={me.totalChips} maxBalance={maxBalance} />
+              <ChipStacks balance={me.stack} maxBalance={maxBalance} />
             </div>
             <div className="flex items-center gap-1.5">
               {me.isDealer && (
@@ -815,8 +887,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
           </div>
         </div>
 
-        {/* action bar + game controls */}
-        <div style={{ position: "relative", zIndex: 60 }}>
+        {/* action bar container — has a reserved minHeight so chat-collision math has something to compare against */}
+        <div
+          ref={actionBarRef}
+          className="relative w-full max-w-4xl flex justify-center"
+          style={{ zIndex: 60, minHeight: "200px" }}
+        >
           {/* action buttons — only shown when it's my turn */}
           {myTurn && phase !== "finished" && phase !== "gameover" && (
             <ActionBar
@@ -839,26 +915,36 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
               Waiting for {waitingForName}...
             </div>
           )}
-
-          {/* next hand button — shown after a hand ends but before the game is over */}
-          {phase === "finished" && !snapshot.isGameOver && (
-            <div className="mt-6 flex flex-col items-center gap-2">
-              <button
-                onClick={sendNextHand}
-                disabled={snapshot.iReadyForNextHand}
-                className="bg-white text-slate-900 font-bold px-10 py-3 rounded-full text-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-              >
-                {snapshot.iReadyForNextHand ? "Waiting for others…" : "Next Hand →"}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* chat box — fixed to bottom left */}
-      <div className="fixed bottom-4 left-4 w-80" style={{ zIndex: 40 }}>
+      {/* chat box — fixed to bottom left, hidden when it would collide with the action bar */}
+      <div
+        ref={chatRef}
+        className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
+        style={{ zIndex: 40 }}
+      >
         <Chat username={username} gameId={gameId} />
       </div>
+
+      {/* compact chat fallback — shown only when the regular chat would overlap the action bar */}
+      {!showChat && (
+        <>
+          <button
+            type="button"
+            onClick={() => setChatPopupOpen((open) => !open)}
+            className="fixed bottom-4 left-4 z-[70] rounded-full bg-black/80 text-white text-sm font-semibold px-4 py-2 border border-white/20 hover:bg-black/90 transition-colors"
+          >
+            {chatPopupOpen ? "Hide Chat" : "Chat"}
+          </button>
+
+          {chatPopupOpen && (
+            <div className="fixed bottom-16 left-4 w-80 z-[80]">
+              <Chat username={username} gameId={gameId} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -10,8 +10,8 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
     allPlayers,
     lastCommunityCards,
     lastHoleCards,
+    startingStack,
     handResult,
-    nextHandReady,
     isGameOver,
     totalPlayers,
     specialChipEnabled,
@@ -59,7 +59,9 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
         oppHoleCards = [oppActualHoleCards[0] ?? null, oppActualHoleCards[1] ?? null];
       }
     } else {
-      oppHoleCards = lastHoleCards[oppEntry.seatIndex] ?? [null, null];
+      const isFoldResult = session.handResult?.[0]?.handName === "Fold";
+      oppHoleCards = isFoldResult ? [null, null] : lastHoleCards[oppEntry.seatIndex] ?? [null, null];
+
     }
     return {
       username: oppEntry.username,
@@ -70,6 +72,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       holeCards: oppHoleCards,
       isDealer: dealerSeat === oppEntry.seatIndex,
       seatIndex: oppEntry.seatIndex,
+      isDisconnected: !oppEntry.isActive,
     };
   });
 
@@ -92,6 +95,7 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   return {
     gameId,
     phase,
+    startingStack,
     me: {
       username: myEntry.username,
       image: myEntry.image,
@@ -113,7 +117,6 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
       revealedOpponentCards: (specialRevealActiveBySeat[mySeatIndex] ?? -1) !== -1,
     },
     handResult,
-    iReadyForNextHand: nextHandReady[mySeatIndex] ?? false,
     isGameOver,
     totalPlayers,
   };

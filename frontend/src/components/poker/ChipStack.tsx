@@ -12,7 +12,7 @@ const STACK_HEIGHT = CHIP_OVERLAP * 2 + CHIP_H;
 
 const STACK_IMAGES = ["/chips/chips3.png", "/chips/chips4.png", "/chips/chips7.png"];
 
-export function getChipDistribution(balance: number, maxBalance: number): ChipStackData[] {
+function getChipDistribution(balance: number, maxBalance: number): ChipStackData[] {
   const ratio = maxBalance > 0 ? Math.min(1, Math.max(0, balance / maxBalance)) : 0;
   const total = Math.round(ratio * 9);
   const s0 = Math.ceil(total / 3);

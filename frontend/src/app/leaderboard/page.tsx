@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import Leaderboard from "@/components/poker/stats/Leaderboard";
-import { requireExistingUserSession } from "@/lib/require-existing-user-session";
+import Leaderboard from "@/components/statistics/Leaderboard";
+import { requireExistingUserSession } from "@/lib/existingUserSession";
 
 export default async function LeaderboardPage() {
   await requireExistingUserSession();

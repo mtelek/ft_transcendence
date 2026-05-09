@@ -1,6 +1,6 @@
 export type TableSize = 2 | 3 | 4 | 5 | 6;
-export type TimerOption = "off" | 15 | 30 | 60;
-export type AnimationSpeed = "slow" | "normal" | "fast";
+type TimerOption = "off" | 15 | 30 | 60;
+type AnimationSpeed = "slow" | "normal" | "fast";
 export type BgVariant = "static" | "classic" | "wood" | "garden";
 
 export type ThemeId = "classic-vegas" | "wood-lodge" | "garden" | "custom";

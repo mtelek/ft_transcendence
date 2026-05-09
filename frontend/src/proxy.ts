@@ -1,4 +1,4 @@
-import { getExistingUserSessionOrNull } from "@/lib/require-existing-user-session";
+import { getExistingUserSessionOrNull } from "@/lib/existingUserSession";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {

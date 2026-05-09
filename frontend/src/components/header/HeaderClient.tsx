@@ -3,21 +3,51 @@
 //This header uses client-side hooks and interactive UI state
 import { useState } from "react";
 import Link from "next/link";
-import ProfileOverlay from "@/components/ProfileOverlay";
+import ProfileOverlay from "@/components/profileOverlay/ProfileOverlay";
 import { AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import type { Session } from "next-auth";
-import { DEFAULT_AVATAR } from "@/lib/avatar";
+import { DEFAULT_AVATAR } from "@/constants/avatar";
 
 export default function HeaderClient({ session }: { session: Session | null }) {
   //Controls whether the profile side overlay is visible
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   //Prefer live session updates from next-auth on the client,
   // then fall back to server-provided session props
   const { data: liveSession } = useSession();
   const activeSession = liveSession ?? session;
+
+  const profileButton = activeSession ? (
+    <>
+      {/* Avatar button opens/closes the profile overlay */}
+      <button onClick={() => setOpen(!open)}>
+        <div className="w-10 h-10 bg-gray-500 rounded-full overflow-hidden flex items-center justify-center">
+          <Image
+            // Keep a safe default image when no user avatar is available
+            src={activeSession.user?.image ?? DEFAULT_AVATAR}
+            alt="User Avatar"
+            width={40}
+            height={40}
+            className="object-cover w-full h-full"
+          />
+        </div>
+      </button>
+
+      {/* AnimatePresence lets the overlay run exit animation on close */}
+      <AnimatePresence>
+        {open && <ProfileOverlay onClose={() => setOpen(false)} />}
+      </AnimatePresence>
+    </>
+  ) : null;
+
+  // Hide the global header on active poker game pages.
+  if (/^\/poker\/[^/]+$/.test(pathname)) {
+    return null;
+  }
 
   return (
     //Top navigation container used across authenticated and guest states
@@ -46,24 +76,7 @@ export default function HeaderClient({ session }: { session: Session | null }) {
               Play Poker
             </Link>
 
-            {/* Avatar button opens/closes the profile overlay */}
-            <button onClick={() => setOpen(!open)}>
-              <div className="w-10 h-10 bg-gray-500 rounded-full overflow-hidden flex items-center justify-center">
-                <Image
-                  // Keep a safe default image when no user avatar is available
-                  src={activeSession?.user?.image ?? DEFAULT_AVATAR}
-                  alt="User Avatar"
-                  width={40}
-                  height={40}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-            </button>
-
-            {/* AnimatePresence lets the overlay run exit animation on close */}
-            <AnimatePresence>
-              {open && <ProfileOverlay onClose={() => setOpen(false)} />}
-            </AnimatePresence>
+            {profileButton}
           </>
         ) : (
           <>
