@@ -114,13 +114,25 @@ export default function ProfilePage() {
           <div className="flex flex-wrap gap-4">
             {ALL_ACHIEVEMENTS.map((achievement) => {
               const unlocked = user.achievements.some(a => a.type === achievement.type)
+              const iconIsImage = achievement.icon.startsWith("/") || achievement.icon.endsWith(".png")
               return (
                 <div
                   key={achievement.type}
                   className={`relative flex flex-col items-center gap-2 group ${unlocked ? "opacity-100" : "opacity-50"}`}
                 >
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 ${unlocked ? "border-teal-500 bg-teal-900" : "border-gray-600 bg-gray-800"}`}>
-                    {achievement.icon}
+                    {iconIsImage ? (
+                      <Image
+                        src={achievement.icon}
+                        alt={`${achievement.label} icon`}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 object-contain"
+                        unoptimized
+                      />
+                    ) : (
+                      <span aria-hidden="true">{achievement.icon}</span>
+                    )}
                   </div>
                   <span className="text-xs text-center text-gray-300">{achievement.label}</span>
                   <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap border border-gray-600 z-10">
