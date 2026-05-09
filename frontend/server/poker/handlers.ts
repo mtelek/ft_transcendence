@@ -74,6 +74,37 @@ function startGame(
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
+  async function clearActiveGameForUser(username: string, expectedGameId?: string) {
+    try {
+      if (expectedGameId) {
+        await pool.query(
+          'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1 AND "activeGameId" = $2',
+          [username, expectedGameId]
+        );
+        return;
+      }
+
+      await pool.query(
+        'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1',
+        [username]
+      );
+    } catch (err) {
+      console.error(`Failed clearing active game marker for ${username}:`, err);
+    }
+  }
+
+  // On restart, in-memory games are gone, so clear stale DB game markers globally.
+  void pool
+    .query(
+      'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "activeGameId" IS NOT NULL OR "activeGameSeatIndex" IS NOT NULL'
+    )
+    .then(() => {
+      console.log("[Poker] Cleared stale active game markers at startup");
+    })
+    .catch((err) => {
+      console.error("[Poker] Failed clearing stale active game markers at startup:", err);
+    });
+
   // timers for tracking special chip reveal duration and auto-advance to next hand
   const specialRevealTimers = new Map<string, NodeJS.Timeout>();
   const nextHandTimers = new Map<string, NodeJS.Timeout>();
@@ -397,12 +428,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     socket.on("joinGame", async ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
       const pending = state.pendingGames.get(username);
       if (!pending || pending.gameId !== gameId) {
+        await clearActiveGameForUser(username, gameId);
         socket.emit("error", { message: "Not authorized for this game" });
         return;
       }
 
       const session = state.games.get(gameId);
       if (!session) {
+        await clearActiveGameForUser(username, gameId);
         socket.emit("error", { message: "Game not found" });
         return;
       }

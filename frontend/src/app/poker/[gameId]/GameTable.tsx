@@ -474,7 +474,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
     // redirect to dashboard if server rejects this player
     socket.on("error", (err: { message: string }) => {
-      if (err.message && err.message.toLowerCase().includes("not authorized")) {
+      const message = err.message?.toLowerCase() ?? "";
+      if (message.includes("not authorized") || message.includes("game not found")) {
         router.replace("/dashboard");
       } else {
         console.error("Socket error:", err.message);
@@ -486,6 +487,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       socket.disconnect();
     };
   }, [gameId, username, image, router]);
+
+  // if no snapshot arrives after reconnect/startup, leave stale game page.
+  useEffect(() => {
+    if (snapshot) return;
+    const timeoutId = window.setTimeout(() => {
+      router.replace("/dashboard");
+    }, 8000);
+    return () => window.clearTimeout(timeoutId);
+  }, [snapshot, router]);
 
   // ----------------------------------------------------------------
   // DEAL ANIMATION EFFECTS
