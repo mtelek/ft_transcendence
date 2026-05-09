@@ -420,6 +420,8 @@ type DealEntry = {
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
   const { settings, visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  //giving up confirmation
+  const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [showChat, setShowChat] = useState(true);
@@ -662,6 +664,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     const targetSeatIndex = parseInt(targetId, 10);
     socketRef.current?.emit("useSpecialChip", { targetSeatIndex });
   }
+  //functon to handle giving up
+
+  function handleGiveUp() {
+    socketRef.current?.emit("giveUp");
+    setGiveUpConfirm(false);
+  }
 
   // ----------------------------------------------------------------
   // EARLY RETURN SCREENS
@@ -769,6 +777,45 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       {/* settings gear + drawer */}
       <SettingsGearButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* give up button */}
+      {!isMatchOver && (
+        <button
+          onClick={() => setGiveUpConfirm(true)}
+          className="fixed top-5 z-50 bg-pokerred text-white text-xs font-bold px-3 py-2 rounded-full"
+          style={{ right: "5.0rem" }}
+          title="Give up - forfeit the hand and give your chips to your opponent(s)"
+        >
+          Give Up
+        </button>
+      )}
+
+      {/* give up confirm dialog */}
+      {giveUpConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 max-w-xs w-full text-center shadow-xl">
+            <p className="text-gray-400 font-bold text-lg">Give up?</p>
+            <p className="text-gray-400 text-sm">
+              Your chips will be given to your opponent{opponents.length > 1 ? "s" : ""}.
+              This cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-center mt-2">
+              <button
+                onClick={() => setGiveUpConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-full border border-gray-400 text-gray-400 hover:border-white/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGiveUp}
+                className="flex-1 px-4 py-2 rounded-full bg-pokerred text-gray-300 font-bold"
+              >
+                Give Up
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative flex flex-col items-center w-full">
 
