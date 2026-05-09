@@ -588,8 +588,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
   return (
     <div className="poker-ui relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-4">
-      <p className="fixed top-20 left-4 text-slate-400 text-xs z-50">Room: {gameId}</p>
-      <div className="fixed left-4 top-28 z-50 flex flex-col items-start gap-1">
+      <div className="fixed top-4 left-4 z-50 flex flex-row items-center gap-2 flex-wrap">
+        <span className="text-slate-400 text-xs">Room: {gameId}</span>
         <span className="bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full border border-white/20">
           {PHASE_LABELS[phase] ?? phase}
         </span>
@@ -606,23 +606,25 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       </div>
       {/* Background */}
       {visuals.backgroundVariant === "static" ? (
-        <Image
-          src="/dark-poker-background-of-spades-and-clubs.jpg"
-          alt=""
-          aria-hidden="true"
-          fill
-          sizes="100vw"
-          loading="eager"
-          className="object-cover"
-          style={{ filter: visuals.bgFilter, zIndex: 0, transition: "filter 400ms ease" }}
-        />
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+          <Image
+            src="/dark-poker-background-of-spades-and-clubs.jpg"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="100vw"
+            loading="eager"
+            className="object-cover"
+            style={{ filter: visuals.bgFilter, transition: "filter 400ms ease" }}
+          />
+        </div>
       ) : (
-        <div className="absolute inset-0" style={{ zIndex: 0 }}>
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
           <PokerBackground variant={visuals.backgroundVariant} />
         </div>
       )}
       <div
-        className="absolute inset-0"
+        className="fixed inset-0 pointer-events-none"
         style={{
           background: "radial-gradient(ellipse at center, transparent 40%, rgba(255,255,255,0.15) 100%)",
           zIndex: 1,
@@ -783,7 +785,6 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
                 </div>
               )}
             </div>
-          </div>
           </div>
         </div>
 
