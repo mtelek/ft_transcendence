@@ -112,13 +112,18 @@ for (const playerId of playerIds)
   const player = orderedPlayers.find((p) => idByUsername.get(p.username) === playerId);
   const handsThisMatch = player ? (session.handsPlayedByUsername[player.username] ?? 0) : 0;
 
-  await pool.query(
+  const updated = await pool.query<{
+    wins: number;
+    losses: number;
+    handsPlayed: number;
+  }>(
     `UPDATE "User"
     SET
     "wins" = "wins" + $1,
     "losses" = "losses" + $2,
     "handsPlayed" = "handsPlayed" + $3
-    WHERE id = $4`,
+    WHERE id = $4
+    RETURNING "wins", "losses", "handsPlayed"`,
     [
       isWinner ? 1 : 0,
       isWinner ? 0 : 1,
@@ -126,13 +131,35 @@ for (const playerId of playerIds)
       playerId
     ]
   );
-  console.log(`Updated stats for ${playerId} isWinner=${isWinner} handsThisMatch=${handsThisMatch}`);
-}
 
-  for (const username of new Set(usernames)) {
-    io.to(`history:${username}`).emit("matchHistoryUpdated", { matchId: savedMatchId });
+  if (updated.rows.length === 0) continue;
+  const stats = { ...updated.rows[0], isWinner };
+
+  console.log(`Updated stats for ${playerId} isWinner=${isWinner} handsThisMatch=${handsThisMatch}`);
+
+  const existing = await pool.query<{ type: string }>(
+      `SELECT "type" FROM "Achievement" WHERE "userId" = $1`,
+      [playerId]
+    );
+  const alreadyUnlocked = new Set(existing.rows.map((r) => r.type));
+
+
+  const newAchievements = computeNewAchievements(stats, alreadyUnlocked);
+  for (const type of newAchievements) {
+  await pool.query(
+    `INSERT INTO "Achievement" ("id", "userId", "type") VALUES ($1, $2, $3) ON CONFLICT ("userId", "type") DO NOTHING`,
+    [randomUUID().replace(/-/g, ""), playerId, type]
+    );
+  console.log(`[Achievement] ${player?.username ?? playerId} unlocked: ${type}`);
+  }
   }
 }
+
+
+
+
+
+
 
 export function endGame(io: Server, state: PokerServerState, gameId: string) {
   console.log(`\n>>>>>> [endGame] CALLED for gameId=${gameId}`);
