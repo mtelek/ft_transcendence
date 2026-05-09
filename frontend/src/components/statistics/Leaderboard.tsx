@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const FRIENDS_CHANGED_EVENT = "friends:changed";
@@ -60,7 +61,18 @@ function LeaderboardTable({
               {rows.map((player, index) => (
                 <tr key={player.id} className="border-t border-white/5 text-slate-200">
                   <td className="px-3 py-2 text-slate-400">{index + 1}</td>
-                  <td className="px-3 py-2 truncate max-w-[140px]">{player.name}</td>
+                  <td className="px-3 py-2 truncate max-w-[140px]">
+                    {player.name !== "Unknown" ? (
+                      <Link
+                        href={`/profile/${encodeURIComponent(player.name)}`}
+                        className="hover:text-white underline-offset-2 hover:underline"
+                      >
+                        {player.name}
+                      </Link>
+                    ) : (
+                      player.name
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right font-medium text-emerald-300">{player.wins}</td>
                 </tr>
               ))}
