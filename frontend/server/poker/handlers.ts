@@ -8,6 +8,8 @@ import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+
+
 // ----------------------------------------------------------------
 // HELPERS
 // ----------------------------------------------------------------
@@ -59,6 +61,7 @@ function startGame(
     isGameOver: false,
     totalPlayers: n,
     matchSaved: false,
+    handsPlayedByUsername: Object.fromEntries(players.map((p) => [p.username, 1])),
   };
 
   state.games.set(gameId, session);
@@ -136,6 +139,16 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       try {
         session.table.startHand(session.nextDealerSeat);
         session.nextDealerSeat = (session.nextDealerSeat + 1) % session.players.length;
+
+        // increments the handsPlayed for each user
+        const seats = session.table.seats();
+        for (const p of session.players) {
+        if (seats[p.seatIndex]) {
+          session.handsPlayedByUsername[p.username] =
+            (session.handsPlayedByUsername[p.username] ?? 0) + 1;
+          }
+        }
+
         io.to(gameId).emit("message", { username: "game", text: "DEALER: — New Hand —", type: "game" });
         broadcastState(io, state, gameId);
         autoActForDisconnected(gameId);

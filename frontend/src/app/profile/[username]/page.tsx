@@ -109,42 +109,41 @@ export default function ProfilePage() {
         
 
 
-        <div className="mt-8 max-w-2xl">
-          <h2 className="text-xl font-bold mb-4">Achievements</h2>
-          <div className="flex flex-wrap gap-4">
-            {ALL_ACHIEVEMENTS.map((achievement) => {
-              const unlocked = user.achievements.some(a => a.type === achievement.type)
-              const iconIsImage = achievement.icon.startsWith("/") || achievement.icon.endsWith(".png")
-              return (
-                <div
-                  key={achievement.type}
-                  className={`relative flex flex-col items-center gap-2 group ${unlocked ? "opacity-100" : "opacity-50"}`}
-                >
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 ${unlocked ? "border-teal-500 bg-teal-900" : "border-gray-600 bg-gray-800"}`}>
-                    {iconIsImage ? (
-                      <Image
-                        src={achievement.icon}
-                        alt={`${achievement.label} icon`}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 object-contain"
-                        unoptimized
-                      />
-                    ) : (
-                      <span aria-hidden="true">{achievement.icon}</span>
-                    )}
-                  </div>
-                  <span className="text-xs text-center text-gray-300">{achievement.label}</span>
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap border border-gray-600 z-10">
-                    {achievement.description}
-                  </div>
-                </div>
-              )
-            })}
+<div className="mt-8 max-w-2xl">
+  <h2 className="text-xl font-bold mb-4">Achievements</h2>
+  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+    {ALL_ACHIEVEMENTS.map((achievement) => {
+      const unlocked = user.achievements.some((a) => a.type === achievement.type);
+      return (
+        <div
+          key={achievement.type}
+          className="relative flex flex-col items-center gap-2 group"
+        >
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 ${
+              unlocked
+                ? "border-teal-500 bg-teal-900 opacity-100"
+                : "border-gray-600 bg-gray-800 opacity-50"
+            }`}
+          >
+            {achievement.icon}
+          </div>
+          <span
+            className={`text-xs text-center text-gray-300 ${
+              unlocked ? "opacity-100" : "opacity-50"
+            }`}
+          >
+            {achievement.label}
+          </span>
+          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap border border-gray-600 z-10">
+            {achievement.description}
           </div>
         </div>
-
+      );
+    })}
       </div>
-    </div>
+      </div>
+  </div>  
+  </div>  
   );
 }
