@@ -45,26 +45,26 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
             <h1 className="text-2xl font-bold mb-6 text-center text-white">Login</h1>
             <label className="flex flex-col gap-2 text-sm text-white" htmlFor="identifier">
-              <span>Email or Username</span>
+              <span className="sr-only">Email or Username</span>
               <input
                 id="identifier"
                 type="text"
                 placeholder="Email or Username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="p-3 border rounded text-black"
+                className="w-full p-3 border rounded text-white placeholder:text-gray-400 bg-transparent"
                 autoComplete="username"
               />
             </label>
             <label className="flex flex-col gap-2 text-sm text-white" htmlFor="password">
-              <span>Password</span>
+              <span className="sr-only">Password</span>
               <input
                 id="password"
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="p-3 border rounded text-black"
+                className="w-full p-3 border rounded text-white placeholder:text-gray-400 bg-transparent"
                 autoComplete="current-password"
               />
             </label>

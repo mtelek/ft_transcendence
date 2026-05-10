@@ -81,7 +81,7 @@ export default function Register() {
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
           <label className="flex flex-col gap-2 text-sm text-black" htmlFor="email">
-            <span>Email</span>
+            <span className="sr-only">Email</span>
             <input
               id="email"
               type="email"
@@ -93,7 +93,7 @@ export default function Register() {
             />
           </label>
           <label className="flex flex-col gap-2 text-sm text-black" htmlFor="username">
-            <span>Username</span>
+            <span className="sr-only">Username</span>
             <input
               id="username"
               type="text"
@@ -106,7 +106,7 @@ export default function Register() {
             />
           </label>
           <label className="flex flex-col gap-2 text-sm text-black" htmlFor="password">
-            <span>Password</span>
+            <span className="sr-only">Password</span>
             <input
               id="password"
               type="password"
