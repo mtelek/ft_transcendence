@@ -247,6 +247,8 @@ export function advanceRounds(session: GameSession) {
         const potWinners = rawWinners[i];
         const potSize = pots[i]?.size ?? 0;
         if (!potWinners || potWinners.length === 0) continue;
+        // Side pot with one winner = uncontested excess chips returned by poker-ts internally.
+        if (i > 0 && potWinners.length === 1) continue;
         const share = Math.floor(potSize / potWinners.length);
         for (const [seatIdx, handInfo] of potWinners) {
           potWonBySeat.set(seatIdx, (potWonBySeat.get(seatIdx) ?? 0) + share);
