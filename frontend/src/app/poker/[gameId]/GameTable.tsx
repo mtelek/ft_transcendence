@@ -369,7 +369,15 @@ function ResultOverlay({
     <Countdown key={handResult[0]?.username ?? "none"}>
       {(countdown) => (
         <div className="fixed bottom-4 right-4 bg-slate-900/95 border border-slate-700 rounded-lg p-6 w-80 flex flex-col items-center gap-4 z-50 shadow-2xl">
-          <Image src={iWon ? "/winner.png" : "/loser.png"} alt={iWon ? "Winner" : "Loser"} width={200} height={200} className="object-contain" />
+          <div className="relative h-[200px] w-[200px]">
+            <Image
+              src={iWon ? "/winner.png" : "/loser.png"}
+              alt={iWon ? "Winner" : "Loser"}
+              fill
+              sizes="200px"
+              className="object-contain"
+            />
+          </div>
           <h2 className="text-2xl font-bold text-white text-center">
             {iWon && isSplit ? "Split Pot!" : iWon ? "You win!" : `${winner?.username ?? "Opponent"} wins!`}
           </h2>
