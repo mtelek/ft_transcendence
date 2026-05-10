@@ -24,54 +24,35 @@ function computeNewAchievements(
   if (stats.handsPlayed > 0 && !alreadyUnlocked.has("FIRST_GAME")) {
     earned.push("FIRST_GAME");
     if (!stats.isWinner) earned.push("FIRST_GAME_LOSS");
-    else  earned.push("FIRST_GAME_WIN");
   }
 
   // WIN BASED — only when the player won this match AND just hit a threshold
   if (stats.isWinner) {
     const winThresholds: Array<{ count: number; type: string }> = [
+      { count: 1,  type: "WIN_1"  },
       { count: 3,  type: "WIN_3"  },
       { count: 5,  type: "WIN_5"  },
       { count: 10, type: "WIN_10" },
       { count: 25, type: "WIN_25" },
-      { count: 50, type: "WIN_50" },
-      { count: 100, type: "WIN_100" },
     ];
     for (const { count, type } of winThresholds) {
       if (stats.wins === count) earned.push(type);
     }
   }
 
-  // GAMES PLAYED
-  const matchesPlayed = stats.wins + stats.losses;
-  if (matchesPlayed === 10)  earned.push("PLAY_10");
-  if (matchesPlayed === 50)  earned.push("PLAY_50");
-  if (matchesPlayed === 100) earned.push("PLAY_100");
-
-  // HANDS PLAYED —
-  if (stats.handsPlayed >= 50   && !alreadyUnlocked.has("HANDS_50"))   earned.push("HANDS_50");
-  if (stats.handsPlayed >= 250  && !alreadyUnlocked.has("HANDS_250"))  earned.push("HANDS_250");
-  if (stats.handsPlayed >= 1000 && !alreadyUnlocked.has("HANDS_1000")) earned.push("HANDS_1000")
-  
-  // STREAKS
-
-  // EXTRA
-  const hour = new Date().getHours();
-  if ((hour >= 0 && hour < 5) && !alreadyUnlocked.has("NIGHT_OWL")) {
-  earned.push("NIGHT_OWL");
-  }
-  if ((hour >= 6 && hour < 7) && !alreadyUnlocked.has("EARLY_BIRD")) {
-  earned.push("EARLY_BIRD");
-  }
-
   // defensive: filter out any that were already unlocked
   return earned.filter((t) => !alreadyUnlocked.has(t));
 }
+
+// ----------------------------------------------------------------
+// PERSIST MATCH
+// ----------------------------------------------------------------
 
 async function persistMatch(io: Server, session: GameSession) {
   const orderedPlayers = [...session.allPlayers].sort((a, b) => a.seatIndex - b.seatIndex);
   if (orderedPlayers.length === 0) return;
 
+  // look up user IDs by username
   const usernames = orderedPlayers.map((p) => p.username);
   const userRes = await pool.query<{ id: string; username: string | null }>(
     'SELECT id, username FROM "User" WHERE username = ANY($1)',
@@ -83,6 +64,7 @@ async function persistMatch(io: Server, session: GameSession) {
     if (row.username) idByUsername.set(row.username, row.id);
   }
 
+  // compute final scores and find the winner
   const seats = session.table.seats();
   const scores = orderedPlayers.map((p) => seats[p.seatIndex]?.totalChips ?? 0);
 
@@ -101,6 +83,7 @@ async function persistMatch(io: Server, session: GameSession) {
 
   const matchId = randomUUID().replace(/-/g, "");
 
+  // save the match record
   const insertResult = await pool.query<{ id: string }>(
     `INSERT INTO "Match" ("id", "mode", "winnerId", "scores", "player1Id", "player2Id", "player3Id", "player4Id", "player5Id", "player6Id")
      VALUES ($1, $2, $3, $4::int[], $5, $6, $7, $8, $9, $10)
@@ -121,81 +104,91 @@ async function persistMatch(io: Server, session: GameSession) {
 
   const savedMatchId = insertResult.rows[0]?.id ?? "unknown";
 
-
   console.log(
     `[Poker] Match persisted id=${savedMatchId} players=${usernames.join(", ")} winner=${winnerId ?? "none"}`
   );
 
-for (const playerId of playerIds)
-{
-  if (!playerId) continue;
+  // ----------------------------------------------------------------
+  // STATS + ACHIEVEMENTS (one block per player)
+  // ----------------------------------------------------------------
 
-  const isWinner = playerId === winnerId;
+  for (let i = 0; i < orderedPlayers.length; i++) {
+    const player = orderedPlayers[i];
+    const playerId = playerIds[i];
+    if (!playerId) continue;
 
-  // find this player's username so we can look up their hand count from session
-  const player = orderedPlayers.find((p) => idByUsername.get(p.username) === playerId);
-  const handsThisMatch = player ? (session.handsPlayedByUsername[player.username] ?? 0) : 0;
+    const isWinner = playerId === winnerId;
+    const handsThisMatch = session.handsPlayedByUsername[player.username] ?? 0;
 
-  const updated = await pool.query<{
-    wins: number;
-    losses: number;
-    handsPlayed: number;
-  }>(
-    `UPDATE "User"
-    SET
-    "wins" = "wins" + $1,
-    "losses" = "losses" + $2,
-    "handsPlayed" = "handsPlayed" + $3
-    WHERE id = $4
-    RETURNING "wins", "losses", "handsPlayed"`,
-    [
-      isWinner ? 1 : 0,
-      isWinner ? 0 : 1,
-      handsThisMatch,
-      playerId
-    ]
-  );
+    // increment stats AND get the new totals back in one round-trip,
+    // so we can check achievement thresholds without a second SELECT
+    const updated = await pool.query<{
+      wins: number;
+      losses: number;
+      handsPlayed: number;
+    }>(
+      `UPDATE "User"
+         SET "wins" = "wins" + $1,
+             "losses" = "losses" + $2,
+             "handsPlayed" = "handsPlayed" + $3
+       WHERE id = $4
+       RETURNING "wins", "losses", "handsPlayed"`,
+      [
+        isWinner ? 1 : 0,
+        isWinner ? 0 : 1,
+        handsThisMatch,
+        playerId,
+      ]
+    );
 
-  if (updated.rows.length === 0) continue;
-  const stats = { ...updated.rows[0], isWinner };
+    if (updated.rows.length === 0) continue;
+    const stats = { ...updated.rows[0], isWinner };
+    console.log(`Updated stats for ${player.username} isWinner=${isWinner} handsThisMatch=${handsThisMatch}`);
 
-  console.log(`Updated stats for ${playerId} isWinner=${isWinner} handsThisMatch=${handsThisMatch}`);
-
-  const existing = await pool.query<{ type: string }>(
+    // fetch achievements the player already has so we don't re-emit unlocks
+    const existing = await pool.query<{ type: string }>(
       `SELECT "type" FROM "Achievement" WHERE "userId" = $1`,
       [playerId]
     );
-  const alreadyUnlocked = new Set(existing.rows.map((r) => r.type));
+    const alreadyUnlocked = new Set(existing.rows.map((r) => r.type));
 
+    // compute and insert any newly earned achievements
+    const newAchievements = computeNewAchievements(stats, alreadyUnlocked);
+    if (newAchievements.length > 0) {
+      // bulk insert; ON CONFLICT guards against rare race conditions where
+      // two matches finish at almost the same time
+      const valueTuples = newAchievements.map((_, idx) => `($1, $${idx + 2})`).join(", ");
+      await pool.query(
+        `INSERT INTO "Achievement" ("userId", "type")
+         VALUES ${valueTuples}
+         ON CONFLICT ("userId", "type") DO NOTHING`,
+        [playerId, ...newAchievements]
+      );
 
-  const newAchievements = computeNewAchievements(stats, alreadyUnlocked);
-  for (const type of newAchievements) {
-  await pool.query(
-    `INSERT INTO "Achievement" ("id", "userId", "type") VALUES ($1, $2, $3) ON CONFLICT ("userId", "type") DO NOTHING`,
-    [randomUUID().replace(/-/g, ""), playerId, type]
-    );
-  console.log(`[Achievement] ${player?.username ?? playerId} unlocked: ${type}`);
+      console.log(`[Achievements] ${player.username} unlocked: ${newAchievements.join(", ")}`);
+
+      // notify the player's history room so the UI can show a popup / refresh
+      io.to(`history:${player.username}`).emit("achievementsUnlocked", {
+        achievements: newAchievements,
+      });
+    }
   }
+
+  // notify history rooms that a new match was saved
+  for (const username of new Set(usernames)) {
+    io.to(`history:${username}`).emit("matchHistoryUpdated", { matchId: savedMatchId });
   }
 }
 
-
-
-
-
-
+// ----------------------------------------------------------------
+// END GAME
+// ----------------------------------------------------------------
 
 export function endGame(io: Server, state: PokerServerState, gameId: string) {
-  console.log(`\n>>>>>> [endGame] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
-  if (!session) {
-    console.log(`[endGame] !!! session=null, bailing out`);
-    return;
-  }
+  if (!session) return;
 
-  console.log(`[endGame] allPlayers: ${session.allPlayers.map(p => `${p.username}(socket=${p.socketId})`).join(', ')}`);
-  console.log(`[endGame] socketToGame keys BEFORE cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
-
+  // persist match results to the database (fire-and-forget so we don't block teardown)
   if (!session.matchSaved) {
     session.matchSaved = true;
     void persistMatch(io, session).catch((err) => {
@@ -204,41 +197,37 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
     });
   }
 
-  const usernames = session.players.map((p) => p.username);
-
-  const playersToClean = session.allPlayers;
-  for (const p of playersToClean) {
+  // release all sockets and pending-game entries (use allPlayers so eliminated players are also released)
+  for (const p of session.allPlayers) {
     state.pendingGames.delete(p.username);
-    const wasInMap = state.socketToGame.has(p.socketId);
     state.socketToGame.delete(p.socketId);
-    console.log(`[endGame]   cleaned ${p.username} socket=${p.socketId} wasInMap=${wasInMap}`);
   }
-  //clear active game for all players in the database
-
-  void pool.query(
-    'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = ANY($1::text[]) AND "activeGameId" = $2',
-    [usernames, gameId]
-  ).catch((err) => {
-    console.error(`Failed to clear active game for ${gameId}:`, err);
-  });
 
   state.reservedGameNames.delete(gameId);
   state.games.delete(gameId);
-  console.log(`[endGame] socketToGame keys AFTER cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
-  console.log(`<<<<<< [endGame] DONE for gameId=${gameId}\n`);
+  console.log(`Game ${gameId} ended - players released`);
 }
 
+// ----------------------------------------------------------------
+// ADVANCE ROUNDS
+// ----------------------------------------------------------------
+
+// runs after every player action to advance the game through any automatic
+// transitions (end of betting round, dealing of next street, showdown).
+// stops when the next betting round starts or the hand ends.
 export function advanceRounds(session: GameSession) {
   const { table } = session;
   let safety = 0;
 
   while (!table.isBettingRoundInProgress() && table.isHandInProgress() && safety++ < 5) {
     if (table.areBettingRoundsCompleted()) {
+      // showdown — distribute pots and record results
       session.lastCommunityCards = [...table.communityCards()];
       session.lastHoleCards = table.holeCards().map((h) => (h ? [...h] : null));
       const pots = table.pots();
       table.showdown();
 
+      // rawWinners is per-pot. iterate every pot so split-pot + side-pot scenarios are awarded correctly.
       const rawWinners = table.winners();
       const potWonBySeat = new Map<number, number>();
       const handInfoBySeat = new Map<number, { ranking: number }>();
@@ -265,6 +254,7 @@ export function advanceRounds(session: GameSession) {
       return;
     }
 
+    // betting round complete but more streets to come (deal flop/turn/river)
     table.endBettingRound();
     if (table.isHandInProgress()) {
       session.lastCommunityCards = [...table.communityCards()];
@@ -272,13 +262,19 @@ export function advanceRounds(session: GameSession) {
   }
 }
 
+// ----------------------------------------------------------------
+// HANDLE ELIMINATION
+// ----------------------------------------------------------------
+
+// removes busted players from the session.
+// returns true if the game is now over (1 or 0 players with chips).
+// in 1v1 game-over: keep busted player in session.players so they receive
+// the final isGameOver=true snapshot via broadcastState.
+// in multi-player: emit 'eliminated' to busted players and rebuild the table
+// with the survivors.
 export function handleElimination(io: Server, state: PokerServerState, gameId: string): boolean {
-  console.log(`\n>>>>>> [handleElimination] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
-  if (!session) {
-    console.log(`[handleElimination] !!! session=null, returning true`);
-    return true;
-  }
+  if (!session) return true;
 
   const seats = session.table.seats();
 
@@ -292,32 +288,18 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     return !seat || seat.totalChips === 0;
   });
 
-  console.log(`[handleElimination] active=[${activePlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
-  console.log(`[handleElimination] busted=[${bustedPlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
-
   const gameWillEnd = activePlayers.length <= 1;
-  console.log(`[handleElimination] gameWillEnd=${gameWillEnd} (activePlayers.length=${activePlayers.length})`);
 
   if (gameWillEnd) {
-    console.log(`[handleElimination] >>> GAME OVER PATH <<< setting session.isGameOver=true`);
     session.isGameOver = true;
-    console.log(`<<<<<< [handleElimination] returning true\n`);
     return true;
   }
 
-  console.log(`[handleElimination] MULTI-PLAYER PATH`);
-
+  // multi-player path — notify busted players and rebuild table with survivors
   for (const p of bustedPlayers) {
     io.to(p.socketId).emit("eliminated");
     state.socketToGame.delete(p.socketId);
     state.pendingGames.delete(p.username);
-    //clear active game for busted player in the database
-    void pool.query(
-      'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1 AND "activeGameId" = $2',
-      [p.username, gameId]
-    ).catch((err) => {
-      console.error(`Failed clearing active game for ${p.username}:`, err);
-    });
   }
 
   const newTable = new Table({ smallBlind: 10, bigBlind: 20 }, activePlayers.length);
@@ -338,6 +320,5 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
   session.lastCommunityCards = [];
   session.nextDealerSeat = 0;
 
-  console.log(`<<<<<< [handleElimination] returning false (game continues)\n`);
   return false;
 }
