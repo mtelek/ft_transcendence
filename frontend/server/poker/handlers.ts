@@ -169,7 +169,10 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     const seats = table.seats() as any[];
     const potBeforeAction = (table.pots() as any[]).reduce((sum: number, p) => sum + p.size, 0);
     const chipsBefore = seats.map((s) => s?.totalChips ?? 0);
-    const actorName = session.players.find((p) => p.seatIndex === seatIndex)?.username ?? "Unknown";
+    const actorName =
+      session.players.find((p) => p.seatIndex === seatIndex)?.username ??
+      session.allPlayers.find((p) => p.seatIndex === seatIndex)?.username ??
+      "Unknown";
     const myBetBefore = seats[seatIndex]?.betSize ?? 0;
     const myStackBefore = seats[seatIndex]?.stack ?? 0;
     const maxOppBetBefore = seats
@@ -285,9 +288,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isHandInProgress() || !table.isBettingRoundInProgress()) break;
       const actorSeat = table.playerToAct();
       const actor = session.players.find((p) => p.seatIndex === actorSeat);
-      if (!actor || actor.isActive) break;
+      const isAbandonedSeat = !actor;
+      if (!isAbandonedSeat && actor.isActive) break;
       const legal = table.legalActions();
-      const action = legal.actions.includes("check") ? "check" : "fold";
+      const action = legal.actions.includes("fold")
+        ? "fold"
+        : legal.actions.includes("check")
+          ? "check"
+          : "fold";
       applyAction(gameId, actorSeat, action);
     }
   }
@@ -494,7 +502,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     // ----------------------------------------------------------------
     // GAME — GIVE UP GAME
     // ----------------------------------------------------------------
-    // permanent disconnect: player gives up and cannot rejoin; game ends only if 1 player remains
+    // permanent disconnect: player gives up and cannot rejoin this game.
+    // unlike elimination, we do not rebuild the table here; abandoned seats are auto-acted.
     socket.on("giveUp", () => {
       const info = state.socketToGame.get(socket.id);
       if (!info) return;
@@ -505,99 +514,36 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       const giver = session.players.find((p) => p.seatIndex === info.seatIndex);
       if (!giver) return;
 
-      // Announce the give up first
+      clearSpecialRevealTimer(info.gameId, info.seatIndex);
+
       io.to(info.gameId).emit("message", {
         username: "game",
-        text: `DEALER: ${giver.username} gave up`,
+        text: `DEALER: ${giver.username} gave up and disconnected permanently`,
         type: "game",
       });
 
-      const seats = session.table.seats() as any[];
-      const seatTotals = seats.map((seat) => Math.max(0, seat?.totalChips ?? 0));
-      const giverTotalChips = seatTotals[info.seatIndex] ?? 0;
-
-      // Zero out giver total and transfer to the last active opponent in heads-up.
-      // poker-ts facade seats() returns mapped objects, so we rebuild table totals below.
-      seatTotals[info.seatIndex] = 0;
-
-      // Prevent rejoin and socket reconnection
+      // Prevent rejoin, clear active game marker, and remove from active roster.
       state.pendingGames.delete(giver.username);
       state.socketToGame.delete(socket.id);
       void clearActiveGameForUser(giver.username, info.gameId);
+      session.players = session.players.filter((p) => p.seatIndex !== info.seatIndex);
 
-      // Check if game will end (1 or fewer active players remaining)
-      const activePlayers = session.players.filter((p) => {
-        if (p.seatIndex === info.seatIndex) return false;
-        return (seatTotals[p.seatIndex] ?? 0) > 0;
-      });
+      const allEntry = session.allPlayers.find((p) => p.username === giver.username);
+      if (allEntry) allEntry.isActive = false;
 
-      const gameWillEnd = activePlayers.length <= 1;
-      if (gameWillEnd && giverTotalChips > 0 && activePlayers.length === 1) {
-        const winnerSeatIndex = activePlayers[0].seatIndex;
-        seatTotals[winnerSeatIndex] = (seatTotals[winnerSeatIndex] ?? 0) + giverTotalChips;
-      }
+      io.to(socket.id).emit("eliminated");
 
-      if (gameWillEnd) {
-        const rebuiltTable = new Table({ smallBlind: 10, bigBlind: 20 }, session.totalPlayers);
-        for (let i = 0; i < session.totalPlayers; i++) {
-          rebuiltTable.sitDown(i, Math.max(0, Math.floor(seatTotals[i] ?? 0)));
-        }
-        session.table = rebuiltTable;
-      }
-
-      if (gameWillEnd) {
-        // Game ends — only 1 or 0 players left
+      if (session.players.length <= 1) {
         session.isGameOver = true;
         broadcastState(io, state, info.gameId);
         endGame(io, state, info.gameId);
       } else {
-        // Game continues — reseat remaining players and restart hand to avoid stale turn state.
-        const continuingPlayers = activePlayers;
-        const blinds = session.table.forcedBets();
-        const rebuiltTable = new Table(
-          { smallBlind: blinds.smallBlind, bigBlind: blinds.bigBlind },
-          continuingPlayers.length
-        );
-
-        for (const p of session.players) clearSpecialRevealTimer(info.gameId, p.seatIndex);
-
-        continuingPlayers.forEach((p, newSeat) => {
-          rebuiltTable.sitDown(newSeat, Math.max(0, Math.floor(seatTotals[p.seatIndex] ?? 0)));
-        });
-
-        try {
-          rebuiltTable.startHand(0);
-        } catch (err) {
-          console.error("startHand error after giveUp reseat:", err);
-        }
-
-        continuingPlayers.forEach((p, newSeat) => {
-          p.seatIndex = newSeat;
-          p.isActive = true;
-          const socketEntry = state.socketToGame.get(p.socketId);
-          if (socketEntry) socketEntry.seatIndex = newSeat;
-          state.pendingGames.set(p.username, { gameId: info.gameId, seatIndex: newSeat });
-        });
-
-        session.table = rebuiltTable;
-        session.players = continuingPlayers;
-        session.handResult = null;
-        session.lastCommunityCards = [];
-        session.lastHoleCards = new Array(continuingPlayers.length).fill(null);
-        session.specialChipUsedBy = new Array(continuingPlayers.length).fill(false);
-        session.specialRevealActiveBySeat = new Array(continuingPlayers.length).fill(-1);
-        session.nextDealerSeat = continuingPlayers.length > 1 ? 1 : 0;
-
-        io.to(info.gameId).emit("message", {
-          username: "game",
-          text: "DEALER: — New Hand —",
-          type: "game",
-        });
-
-        io.to(socket.id).emit("eliminated");
         broadcastState(io, state, info.gameId);
         autoActForDisconnected(info.gameId);
       }
+
+      socket.leave(info.gameId);
+      socket.disconnect(true);
     });
 
     // ----------------------------------------------------------------
