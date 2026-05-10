@@ -204,6 +204,8 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
     });
   }
 
+  const usernames = session.players.map((p) => p.username);
+
   const playersToClean = session.allPlayers;
   for (const p of playersToClean) {
     state.pendingGames.delete(p.username);
@@ -211,6 +213,14 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
     state.socketToGame.delete(p.socketId);
     console.log(`[endGame]   cleaned ${p.username} socket=${p.socketId} wasInMap=${wasInMap}`);
   }
+  //clear active game for all players in the database
+
+  void pool.query(
+    'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = ANY($1::text[]) AND "activeGameId" = $2',
+    [usernames, gameId]
+  ).catch((err) => {
+    console.error(`Failed to clear active game for ${gameId}:`, err);
+  });
 
   state.reservedGameNames.delete(gameId);
   state.games.delete(gameId);
@@ -301,6 +311,13 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     io.to(p.socketId).emit("eliminated");
     state.socketToGame.delete(p.socketId);
     state.pendingGames.delete(p.username);
+    //clear active game for busted player in the database
+    void pool.query(
+      'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1 AND "activeGameId" = $2',
+      [p.username, gameId]
+    ).catch((err) => {
+      console.error(`Failed clearing active game for ${p.username}:`, err);
+    });
   }
 
   const newTable = new Table({ smallBlind: 10, bigBlind: 20 }, activePlayers.length);

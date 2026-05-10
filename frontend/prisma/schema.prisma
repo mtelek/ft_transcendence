@@ -44,6 +44,10 @@ model User {
   wins        Int @default(0)
   losses      Int @default(0)
   handsPlayed Int @default(0)
+
+  //Active Game
+  activeGameId String?
+  activeGameSeatIndex Int?
 }
 
 model Achievement {

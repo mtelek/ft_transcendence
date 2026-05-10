@@ -132,8 +132,6 @@ WHY NOT OTHERS?
     SQL is a better fit
   - MySQL: PostgreSQL is just more modern and feature-rich
 
-STATUS: Not installed yet. Next step after this document.
-
 
 ----------------------------------------------------------------
 5. PRISMA  (ORM - Database Interface)
@@ -162,7 +160,6 @@ EXAMPLE:
 
   Same result, but in TypeScript, safer and easier to read.
 
-STATUS: Not installed yet. Installed alongside PostgreSQL.
 
 
 ----------------------------------------------------------------
@@ -188,9 +185,6 @@ WHAT IS OAUTH?
   You have seen this as "Login with Google" buttons.
   This is a Minor module worth 1 point in the subject.
 
-STATUS: Not installed yet. Installed when we build the
-login/register pages.
-
 
 ----------------------------------------------------------------
 7. SOCKET.IO  (Real-time Communication)
@@ -214,8 +208,6 @@ WHEN DO WE NEED IT?
   The moment we start building the game or any live feature.
   Without it, two players cannot see each others moves
   in real time.
-
-STATUS: Not installed yet. Installed when we start the game.
 
 
 ----------------------------------------------------------------
@@ -260,7 +252,7 @@ Technology          Module                           Points
     ✅ Enable two players on separate computers to play the same game in real-time.
     ✅ Handle network latency and disconnections gracefully.
     ✅ Provide a smooth user experience for remote gameplay.
-    ❌ Implement reconnection logic.
+    ✅ Implement reconnection logic.
 
 ✅                Game customization              1 pt (Minor)
     ✅ Power-ups, attacks, or special abilities. Joker? Special Chip?
@@ -291,9 +283,9 @@ Technology          Module                           Points
 ❗in case some modules are not validated during evaluation.❗
 
 
-----------------------------------------------------------------
-WHAT WE HAVE NOT DECIDED YET (Possible module points)
-----------------------------------------------------------------
+---------------------------------------------------------------------
+WHAT WE HAVE NOT DECIDED YET (Possible module points) not implemented
+---------------------------------------------------------------------
 
 ❌ Add another game with user history and matchmaking. (Blackjack)
     ❌ Implement a second distinct game.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { io, Socket } from "socket.io-client";
@@ -99,7 +100,18 @@ export default function MatchHistory() {
             <tbody>
               {history.map((m) => (
                 <tr key={m.id} className="border-t border-white/5 text-slate-200">
-                  <td className="px-3 py-2 truncate max-w-[120px]">{m.opponent?.name ?? "-"}</td>
+                  <td className="px-3 py-2 truncate max-w-[120px]">
+                    {m.opponent?.name && m.opponent.name !== "Unknown" ? (
+                      <Link
+                        href={`/profile/${encodeURIComponent(m.opponent.name)}`}
+                        className="hover:text-white underline-offset-2 hover:underline"
+                      >
+                        {m.opponent.name}
+                      </Link>
+                    ) : (
+                      m.opponent?.name ?? "-"
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-slate-400 whitespace-nowrap">{new Date(m.playedAt).toLocaleDateString()}</td>
                   <td className={`px-3 py-2 text-right font-medium ${m.result === "WIN" ? "text-emerald-300" : m.result === "LOSS" ? "text-rose-300" : "text-slate-400"}`}>
                     {m.result}

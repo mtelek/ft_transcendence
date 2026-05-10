@@ -4,6 +4,9 @@ import type { PokerServerState } from "./state";
 import type { GameSession } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame, handleElimination } from "./game-flow";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 
 
@@ -73,6 +76,37 @@ function startGame(
 // ----------------------------------------------------------------
 
 export function registerPokerHandlers(io: Server, state: PokerServerState) {
+
+  async function clearActiveGameForUser(username: string, expectedGameId?: string) {
+    try {
+      if (expectedGameId) {
+        await pool.query(
+          'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1 AND "activeGameId" = $2',
+          [username, expectedGameId]
+        );
+        return;
+      }
+
+      await pool.query(
+        'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "username" = $1',
+        [username]
+      );
+    } catch (err) {
+      console.error(`Failed clearing active game marker for ${username}:`, err);
+    }
+  }
+
+  // On restart, in-memory games are gone, so clear stale DB game markers globally.
+  void pool
+    .query(
+      'UPDATE "User" SET "activeGameId" = NULL, "activeGameSeatIndex" = NULL WHERE "activeGameId" IS NOT NULL OR "activeGameSeatIndex" IS NOT NULL'
+    )
+    .then(() => {
+      console.log("[Poker] Cleared stale active game markers at startup");
+    })
+    .catch((err) => {
+      console.error("[Poker] Failed clearing stale active game markers at startup:", err);
+    });
 
   // timers for tracking special chip reveal duration and auto-advance to next hand
   const specialRevealTimers = new Map<string, NodeJS.Timeout>();
@@ -404,15 +438,17 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     // called when player navigates to the game page
     // handles both initial join and reconnect after page navigation or disconnect
-    socket.on("joinGame", ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
+    socket.on("joinGame", async ({ gameId, username, image }: { gameId: string; username: string; image?: string }) => {
       const pending = state.pendingGames.get(username);
       if (!pending || pending.gameId !== gameId) {
+        await clearActiveGameForUser(username, gameId);
         socket.emit("error", { message: "Not authorized for this game" });
         return;
       }
 
       const session = state.games.get(gameId);
       if (!session) {
+        await clearActiveGameForUser(username, gameId);
         socket.emit("error", { message: "Game not found" });
         return;
       }
@@ -439,6 +475,13 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
 
       state.socketToGame.set(socket.id, { gameId, seatIndex: pending.seatIndex });
+      // Keep DB active-game marker in sync, but do not block game join on DB hiccups.
+      void pool.query(
+        'UPDATE "User" SET "activeGameId" = $1, "activeGameSeatIndex" = $2 WHERE "username" = $3',
+        [gameId, pending.seatIndex, username]
+      ).catch((err) => {
+        console.error(`Failed setting active game for ${username}:`, err);
+      });
       socket.join(gameId);
       socket.emit("gameState", buildSnapshot(state, gameId, pending.seatIndex));
       broadcastState(io, state, gameId);
@@ -459,6 +502,115 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       if (!table.isBettingRoundInProgress() || table.playerToAct() !== info.seatIndex) return;
       applyAction(info.gameId, info.seatIndex, action, betSize);
       autoActForDisconnected(info.gameId);
+    });
+
+    // ----------------------------------------------------------------
+    // GAME — GIVE UP GAME
+    // ----------------------------------------------------------------
+    // permanent disconnect: player gives up and cannot rejoin; game ends only if 1 player remains
+    socket.on("giveUp", () => {
+      const info = state.socketToGame.get(socket.id);
+      if (!info) return;
+
+      const session = state.games.get(info.gameId);
+      if (!session || session.isGameOver) return;
+
+      const giver = session.players.find((p) => p.seatIndex === info.seatIndex);
+      if (!giver) return;
+
+      // Announce the give up first
+      io.to(info.gameId).emit("message", {
+        username: "game",
+        text: `DEALER: ${giver.username} gave up`,
+        type: "game",
+      });
+
+      const seats = session.table.seats() as any[];
+      const seatTotals = seats.map((seat) => Math.max(0, seat?.totalChips ?? 0));
+      const giverTotalChips = seatTotals[info.seatIndex] ?? 0;
+
+      // Zero out giver total and transfer to the last active opponent in heads-up.
+      // poker-ts facade seats() returns mapped objects, so we rebuild table totals below.
+      seatTotals[info.seatIndex] = 0;
+
+      // Prevent rejoin and socket reconnection
+      state.pendingGames.delete(giver.username);
+      state.socketToGame.delete(socket.id);
+      void clearActiveGameForUser(giver.username, info.gameId);
+
+      // Check if game will end (1 or fewer active players remaining)
+      const activePlayers = session.players.filter((p) => {
+        if (p.seatIndex === info.seatIndex) return false;
+        return (seatTotals[p.seatIndex] ?? 0) > 0;
+      });
+
+      const gameWillEnd = activePlayers.length <= 1;
+      if (gameWillEnd && giverTotalChips > 0 && activePlayers.length === 1) {
+        const winnerSeatIndex = activePlayers[0].seatIndex;
+        seatTotals[winnerSeatIndex] = (seatTotals[winnerSeatIndex] ?? 0) + giverTotalChips;
+      }
+
+      if (gameWillEnd) {
+        const rebuiltTable = new Table({ smallBlind: 10, bigBlind: 20 }, session.totalPlayers);
+        for (let i = 0; i < session.totalPlayers; i++) {
+          rebuiltTable.sitDown(i, Math.max(0, Math.floor(seatTotals[i] ?? 0)));
+        }
+        session.table = rebuiltTable;
+      }
+
+      if (gameWillEnd) {
+        // Game ends — only 1 or 0 players left
+        session.isGameOver = true;
+        broadcastState(io, state, info.gameId);
+        endGame(io, state, info.gameId);
+      } else {
+        // Game continues — reseat remaining players and restart hand to avoid stale turn state.
+        const continuingPlayers = activePlayers;
+        const blinds = session.table.forcedBets();
+        const rebuiltTable = new Table(
+          { smallBlind: blinds.smallBlind, bigBlind: blinds.bigBlind },
+          continuingPlayers.length
+        );
+
+        for (const p of session.players) clearSpecialRevealTimer(info.gameId, p.seatIndex);
+
+        continuingPlayers.forEach((p, newSeat) => {
+          rebuiltTable.sitDown(newSeat, Math.max(0, Math.floor(seatTotals[p.seatIndex] ?? 0)));
+        });
+
+        try {
+          rebuiltTable.startHand(0);
+        } catch (err) {
+          console.error("startHand error after giveUp reseat:", err);
+        }
+
+        continuingPlayers.forEach((p, newSeat) => {
+          p.seatIndex = newSeat;
+          p.isActive = true;
+          const socketEntry = state.socketToGame.get(p.socketId);
+          if (socketEntry) socketEntry.seatIndex = newSeat;
+          state.pendingGames.set(p.username, { gameId: info.gameId, seatIndex: newSeat });
+        });
+
+        session.table = rebuiltTable;
+        session.players = continuingPlayers;
+        session.handResult = null;
+        session.lastCommunityCards = [];
+        session.lastHoleCards = new Array(continuingPlayers.length).fill(null);
+        session.specialChipUsedBy = new Array(continuingPlayers.length).fill(false);
+        session.specialRevealActiveBySeat = new Array(continuingPlayers.length).fill(-1);
+        session.nextDealerSeat = continuingPlayers.length > 1 ? 1 : 0;
+
+        io.to(info.gameId).emit("message", {
+          username: "game",
+          text: "DEALER: — New Hand —",
+          type: "game",
+        });
+
+        io.to(socket.id).emit("eliminated");
+        broadcastState(io, state, info.gameId);
+        autoActForDisconnected(info.gameId);
+      }
     });
 
     // ----------------------------------------------------------------

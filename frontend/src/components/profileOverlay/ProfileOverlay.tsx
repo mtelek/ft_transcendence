@@ -284,13 +284,6 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
 			  Settings
 			</Link>
 
-			<button
-    			onClick={onClose}
-    			className="w-28 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition text-center"
-  			>
-			Close
-			</button>
-
 			<LogoutButton/>
 		</div>
 

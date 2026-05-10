@@ -126,8 +126,37 @@ function ActionBar({
   const minBet = chipRange?.min ?? 0;
   const maxBet = chipRange?.max ?? myStack;
   const step = 1;
+  const sliderRef = useRef<HTMLInputElement>(null);
+  const raiseButtonRef = useRef<HTMLButtonElement>(null);
+  const [specialChipSliderShift, setSpecialChipSliderShift] = useState(0);
+  const [specialChipSliderWidth, setSpecialChipSliderWidth] = useState(0);
 
   const quickBtn = "bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+
+  useEffect(() => {
+    if (!specialChipEnabled || !canBetOrRaise) {
+      setSpecialChipSliderShift(0);
+      setSpecialChipSliderWidth(0);
+      return;
+    }
+
+    const syncSpecialChipSlider = () => {
+      const sliderEl = sliderRef.current;
+      const raiseButtonEl = raiseButtonRef.current;
+      if (!sliderEl || !raiseButtonEl) return;
+
+      const sliderRect = sliderEl.getBoundingClientRect();
+      const raiseRect = raiseButtonEl.getBoundingClientRect();
+      const sliderLeft = sliderRect.left;
+      const raiseLeft = raiseRect.left;
+      setSpecialChipSliderShift(Math.round(raiseLeft - sliderLeft));
+      setSpecialChipSliderWidth(Math.round(raiseRect.width));
+    };
+
+    syncSpecialChipSlider();
+    window.addEventListener("resize", syncSpecialChipSlider);
+    return () => window.removeEventListener("resize", syncSpecialChipSlider);
+  }, [specialChipEnabled, canBetOrRaise, canFold, canCheck, canCall, callAmount]);
 
   return (
     <div
@@ -146,7 +175,7 @@ function ActionBar({
     >
       {/* preset bet size buttons + slider — only shown when bet/raise is possible */}
       {canBetOrRaise && (
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-16 pl-1">
           <div className="flex gap-2">
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(minBet)} className={quickBtn}>Min</button>
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(Math.min(maxBet, Math.max(minBet, Math.round((pot + 2 * callAmount) / 2))))} className={quickBtn}>½ Pot</button>
@@ -154,6 +183,7 @@ function ActionBar({
             <button disabled={!canBetOrRaise} onClick={() => setRaiseAmount(maxBet)} className={quickBtn}>Max</button>
           </div>
           <input
+            ref={sliderRef}
             id="raiseamount"
             type="range"
             min={minBet}
@@ -162,7 +192,8 @@ function ActionBar({
             value={raiseAmount}
             disabled={!canBetOrRaise}
             onChange={(e) => setRaiseAmount(Number(e.target.value))}
-            className="w-36 accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            style={specialChipEnabled && specialChipSliderWidth > 0 ? { width: `${specialChipSliderWidth}px`, transform: `translateX(${specialChipSliderShift}px)` } : undefined}
             autoComplete="off"
           />
         </div>
@@ -204,6 +235,7 @@ function ActionBar({
           <div className="flex flex-1 items-center justify-center gap-3">
             {/* bet/raise button with inline amount editor */}
             <button
+              ref={raiseButtonRef}
               disabled={!canBetOrRaise}
               onClick={() => {
                 let amount = raiseAmount;
@@ -388,6 +420,8 @@ type DealEntry = {
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
   const { settings, visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  //giving up confirmation
+  const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [showChat, setShowChat] = useState(true);
@@ -442,7 +476,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
     // redirect to dashboard if server rejects this player
     socket.on("error", (err: { message: string }) => {
-      if (err.message && err.message.toLowerCase().includes("not authorized")) {
+      const message = err.message?.toLowerCase() ?? "";
+      if (message.includes("not authorized") || message.includes("game not found")) {
         router.replace("/dashboard");
       } else {
         console.error("Socket error:", err.message);
@@ -454,6 +489,15 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       socket.disconnect();
     };
   }, [gameId, username, image, router]);
+
+  // if no snapshot arrives after reconnect/startup, leave stale game page.
+  useEffect(() => {
+    if (snapshot) return;
+    const timeoutId = window.setTimeout(() => {
+      router.replace("/dashboard");
+    }, 8000);
+    return () => window.clearTimeout(timeoutId);
+  }, [snapshot, router]);
 
   // ----------------------------------------------------------------
   // DEAL ANIMATION EFFECTS
@@ -620,6 +664,12 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
     const targetSeatIndex = parseInt(targetId, 10);
     socketRef.current?.emit("useSpecialChip", { targetSeatIndex });
   }
+  //functon to handle giving up
+
+  function handleGiveUp() {
+    socketRef.current?.emit("giveUp");
+    setGiveUpConfirm(false);
+  }
 
   // ----------------------------------------------------------------
   // EARLY RETURN SCREENS
@@ -727,6 +777,45 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       {/* settings gear + drawer */}
       <SettingsGearButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* give up button */}
+      {!isMatchOver && (
+        <button
+          onClick={() => setGiveUpConfirm(true)}
+          className="fixed top-5 z-50 bg-pokerred text-white text-xs font-bold px-3 py-2 rounded-full"
+          style={{ right: "5.0rem" }}
+          title="Give up - forfeit the hand and give your chips to your opponent(s)"
+        >
+          Give Up
+        </button>
+      )}
+
+      {/* give up confirm dialog */}
+      {giveUpConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 max-w-xs w-full text-center shadow-xl">
+            <p className="text-gray-400 font-bold text-lg">Give up?</p>
+            <p className="text-gray-400 text-sm">
+              Your chips will be given to your opponent{opponents.length > 1 ? "s" : ""}.
+              This cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-center mt-2">
+              <button
+                onClick={() => setGiveUpConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-full border border-gray-400 text-gray-400 hover:border-white/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGiveUp}
+                className="flex-1 px-4 py-2 rounded-full bg-pokerred text-gray-300 font-bold"
+              >
+                Give Up
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative flex flex-col items-center w-full">
 

@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import GoogleLogin from "@/components/authentication/GoogleLogin";
 import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
+import Link from "next/dist/client/link";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -70,13 +71,18 @@ export default function LoginPage() {
             </p>
             <button
               type="submit"
-              className="p-3 bg-teal-500 text-white rounded hover:bg-teal-600"
-            >
+              className="p-3 bg-teal-500 text-white rounded hover:bg-teal-600">
               Sign in
             </button>
             <div className="mt-2">
               <GoogleLogin />
             </div>
+            <p className="text-center mt-4 text-gray-400">
+              Don't have an account?{" "}
+              <Link href="/register" className="underline">
+              Sign up
+              </Link>
+            </p>
           </form>
         </div>
       </div>
