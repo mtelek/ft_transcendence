@@ -80,34 +80,43 @@ export default function Register() {
         {/* Use native form validation before the request is sent */}
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-black">
           <h1 className="text-2xl font-bold mb-6 text-center text-black">Register</h1>
-          <input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="p-3 border rounded"
-            autoComplete="email"
-          />
-          <input
-            id="username"
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            maxLength={MAX_USERNAME_LENGTH}
-            className="p-3 border rounded"
-            autoComplete="username"
-          />
-          <input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="p-3 border rounded"
-            autoComplete="new-password"
-          />
+          <label className="flex flex-col gap-2 text-sm text-black" htmlFor="email">
+            <span>Email</span>
+            <input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="p-3 border rounded"
+              autoComplete="email"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-black" htmlFor="username">
+            <span>Username</span>
+            <input
+              id="username"
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              maxLength={MAX_USERNAME_LENGTH}
+              className="p-3 border rounded"
+              autoComplete="username"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-black" htmlFor="password">
+            <span>Password</span>
+            <input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="p-3 border rounded"
+              autoComplete="new-password"
+            />
+          </label>
           <p
               className={`-mt-2 min-h-5 text-sm text-red-600 ${errorMessage ? "visible" : "invisible"}`}
               role={errorMessage ? "alert" : undefined}

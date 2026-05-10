@@ -21,7 +21,7 @@ export function GameplayTab() {
   return (
     <div className="flex flex-row justify-between pb-3 w-full overflow-hidden">
       <div>
-        <label className="text-xs text-slate-300 block mb-1">Table size</label>
+        <p className="text-xs text-slate-300 block mb-1">Table size</p>
         <Segmented
           value={settings.tableSize}
           options={TABLE_OPTIONS}
@@ -30,9 +30,9 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-1">
+        <p className="text-xs text-slate-300 block mb-1">
           Blinds (small / big)
-        </label>
+        </p>
         <Segmented
           value={blindKey}
           options={BLIND_PRESETS.map((b) => ({
@@ -47,7 +47,7 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-1">Starting stack</label>
+        <p className="text-xs text-slate-300 block mb-1">Starting stack</p>
         <ChipPreset
           value={settings.startingStack}
           options={STACK_PRESETS}
@@ -56,7 +56,7 @@ export function GameplayTab() {
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-1">Special Chip</label>
+        <p className="text-xs text-slate-300 block mb-1">Special Chip</p>
         <button
           type="button"
           onClick={() => update({ useSpecialChip: !settings.useSpecialChip })}

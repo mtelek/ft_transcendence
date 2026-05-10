@@ -122,6 +122,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
         <form onSubmit={sendMessage} className="flex border-t border-white/10 transition-all focus-within:ring-2 focus-within:ring-white/50">
           <input
             id="chat"
+            aria-label="Chat message"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."

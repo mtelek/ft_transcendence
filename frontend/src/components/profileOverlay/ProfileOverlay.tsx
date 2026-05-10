@@ -335,6 +335,7 @@ export default function ProfileOverlay({ onClose }: { onClose: () => void }) {
               <div className="flex items-center gap-2">
                 <input
                   id="friend"
+                  aria-label="Friend username or email"
                   value={friendIdentifier}
                   onChange={(event) => setFriendIdentifier(event.target.value)}
                   placeholder="Username or email"

@@ -191,6 +191,7 @@ function ActionBar({
             step={step}
             value={raiseAmount}
             disabled={!canBetOrRaise}
+            aria-label="Raise amount"
             onChange={(e) => setRaiseAmount(Number(e.target.value))}
             className="accent-lime-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
             style={specialChipEnabled && specialChipSliderWidth > 0 ? { width: `${specialChipSliderWidth}px`, transform: `translateX(${specialChipSliderShift}px)` } : undefined}
@@ -254,6 +255,7 @@ function ActionBar({
                   type="number"
                   min={minBet}
                   max={maxBet}
+                  aria-label="Custom raise amount"
                   className="mt-1 text-slate-900 font-semibold text-sm bg-transparent border-b border-slate-900/40 text-center w-[4.5rem] outline-none leading-none tabular-nums"
                   value={editValue}
                   autoFocus

@@ -356,6 +356,7 @@ export default function Home() {
                     ref={uploadInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
+                    aria-label="Upload profile picture"
                     className="hidden"
                     onChange={handleAvatarUpload}
                     autoComplete="off"
