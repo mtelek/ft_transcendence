@@ -8,7 +8,7 @@ type HistoryRow = {
   playedAt: string;
   mode: string;
   result: "WIN" | "LOSS" | "PENDING";
-  opponent: { name: string; image: string | null } | null;
+  opponents: { name: string; image: string | null }[];
   score: number | null;
 };
 
@@ -51,7 +51,6 @@ export async function GET() {
       );
       const mySeatIndex = players.findIndex((p) => p.id === user.id);
       const opponents = players.filter((p) => p.id !== user.id);
-      const opponent = opponents.length > 0 ? opponents[0] : null;
 
       let result: HistoryRow["result"] = "PENDING";
       if (m.winnerId === user.id) {
@@ -69,7 +68,7 @@ export async function GET() {
         playedAt: m.playedAt.toISOString(),
         mode: m.mode,
         result,
-        opponent: opponent ? { name: opponent.username ?? "Unknown", image: opponent.image ?? null } : null,
+        opponents: opponents.map((o) => ({ name: o.username ?? "Unknown", image: o.image ?? null })),
         score,
       };
     });

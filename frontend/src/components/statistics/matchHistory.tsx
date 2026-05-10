@@ -10,13 +10,17 @@ type HistoryEntry = {
   playedAt: string;
   mode: string;
   result: "WIN" | "LOSS" | "PENDING";
-  opponent: { name: string; image: string | null } | null;
+  opponents: { name: string; image: string | null }[];
   score: number | null;
 };
 
 type HistoryResponse = {
   matches: HistoryEntry[];
 };
+
+function truncateName(name: string, maxLength = 10) {
+  return name.length > maxLength ? `${name.slice(0, maxLength)}...` : name;
+}
 
 export default function MatchHistory() {
   const { data: session, status } = useSession();
@@ -100,16 +104,27 @@ export default function MatchHistory() {
             <tbody>
               {history.map((m) => (
                 <tr key={m.id} className="border-t border-white/5 text-slate-200">
-                  <td className="px-3 py-2 truncate max-w-[120px]">
-                    {m.opponent?.name && m.opponent.name !== "Unknown" ? (
-                      <Link
-                        href={`/profile/${encodeURIComponent(m.opponent.name)}`}
-                        className="hover:text-white underline-offset-2 hover:underline"
-                      >
-                        {m.opponent.name}
-                      </Link>
+                  <td className="px-3 py-2 max-w-[160px]">
+                    {m.opponents.length === 0 ? (
+                      <span>-</span>
                     ) : (
-                      m.opponent?.name ?? "-"
+                      <span className="flex flex-wrap gap-x-1">
+                        {m.opponents.map((opp, i) => (
+                          <span key={opp.name}>
+                            {opp.name !== "Unknown" ? (
+                              <Link
+                                href={`/profile/${encodeURIComponent(opp.name)}`}
+                                className="hover:text-white underline-offset-2 hover:underline"
+                              >
+                                {truncateName(opp.name)}
+                              </Link>
+                            ) : (
+                              <span>{truncateName(opp.name)}</span>
+                            )}
+                            {i < m.opponents.length - 1 && <span className="text-slate-500">,</span>}
+                          </span>
+                        ))}
+                      </span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-slate-400 whitespace-nowrap">{new Date(m.playedAt).toLocaleDateString()}</td>
