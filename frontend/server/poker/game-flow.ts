@@ -185,7 +185,7 @@ for (const playerId of playerIds)
 
 
 
-export function endGame(io: Server, state: PokerServerState, gameId: string) {
+export function endGame(io: Server, state: PokerServerState, gameId: string, skipPersist = false) {
   console.log(`\n>>>>>> [endGame] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
   if (!session) {
@@ -196,7 +196,7 @@ export function endGame(io: Server, state: PokerServerState, gameId: string) {
   console.log(`[endGame] allPlayers: ${session.allPlayers.map(p => `${p.username}(socket=${p.socketId})`).join(', ')}`);
   console.log(`[endGame] socketToGame keys BEFORE cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
 
-  if (!session.matchSaved) {
+  if (!skipPersist && !session.matchSaved) {
     session.matchSaved = true;
     void persistMatch(io, session).catch((err) => {
       console.error(`Failed to persist match ${gameId}:`, err);
