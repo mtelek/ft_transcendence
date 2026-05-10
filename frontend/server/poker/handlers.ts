@@ -718,6 +718,12 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
               autoActForDisconnected(info.gameId);
             }
           }
+
+          // if every remaining player is now disconnected, clean up the ghost game
+          if (session.players.length > 0 && session.players.every((p) => !p.isActive)) {
+            session.isGameOver = true;
+            endGame(io, state, info.gameId, true);
+          }
         }
         // always clean up this socket from tracking map
         state.socketToGame.delete(socket.id);
