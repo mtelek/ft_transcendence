@@ -13,6 +13,7 @@ import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 type EditableField = "username" | "email" | "password";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_USERNAME_LENGTH = 15;
 
 //Normalize unknown errors into user-friendly strings
 function getErrorMessage(err: unknown, fallback: string) {
@@ -100,6 +101,12 @@ export default function Home() {
     if (isSaving) return;
 
     // Give immediate client feedback before making a network request.
+    if (field === "username" && usernameValue.trim().length > MAX_USERNAME_LENGTH) {
+      setProfileError(`Username must be ${MAX_USERNAME_LENGTH} characters or less`);
+      setProfileSuccess(null);
+      return;
+    }
+
     if (field === "email" && emailValue.trim() && !EMAIL_RE.test(emailValue.trim())) {
       setProfileError("Invalid email format");
       setProfileSuccess(null);
@@ -292,6 +299,7 @@ export default function Home() {
             onStartEdit={startEditing}
             onSave={saveField}
             onCancel={cancelEditing}
+            maxLength={MAX_USERNAME_LENGTH}
           />
 
           <EditableFieldRow

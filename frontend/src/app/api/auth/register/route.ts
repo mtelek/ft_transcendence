@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_USERNAME_LENGTH = 15;
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +25,10 @@ export async function POST(request: Request) {
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       return jsonError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`, 400);
+    }
+
+    if (username && username.length > MAX_USERNAME_LENGTH) {
+      return jsonError(`Username must be ${MAX_USERNAME_LENGTH} characters or less`, 400);
     }
 
     //Check if user already exists

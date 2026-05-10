@@ -9,6 +9,7 @@ import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_USERNAME_LENGTH = 15;
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -25,6 +26,16 @@ export default function Register() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
       setErrorMessage("Invalid email format");
+      return;
+    }
+
+    if (!username.trim()) {
+      setErrorMessage("Username is required");
+      return;
+    }
+
+    if (username.length > MAX_USERNAME_LENGTH) {
+      setErrorMessage(`Username must be ${MAX_USERNAME_LENGTH} characters or less`);
       return;
     }
 
@@ -84,6 +95,7 @@ export default function Register() {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            maxLength={MAX_USERNAME_LENGTH}
             className="p-3 border rounded"
             autoComplete="username"
           />

@@ -14,6 +14,7 @@ type EditableFieldRowProps = {
   onCancel: () => void;
   inputType?: "text" | "password";
   placeholder?: string;
+  maxLength?: number;
 };
 
 export default function EditableFieldRow({
@@ -29,6 +30,7 @@ export default function EditableFieldRow({
   onCancel,
   inputType = "text",
   placeholder,
+  maxLength,
 }: EditableFieldRowProps) {
   //Only the row matching editingField should render its input/actions in edit mode
   const isEditing = editingField === field;
@@ -45,6 +47,7 @@ export default function EditableFieldRow({
             value={value}
             onChange={(e) => onChangeValue(e.target.value)}
             placeholder={placeholder}
+            maxLength={maxLength}
             className="mt-1 w-full rounded bg-zinc-800 px-3 py-2 text-white outline-none ring-1 ring-zinc-600 focus:ring-green-500"
             autoComplete={
               field === "username"

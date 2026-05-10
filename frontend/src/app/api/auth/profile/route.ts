@@ -6,6 +6,7 @@ import { findUserFromSession } from "@/lib/auth-user";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_USERNAME_LENGTH = 15;
 
 type ProfilePatchBody = {
   username?: string;
@@ -62,6 +63,10 @@ export async function PATCH(request: Request) {
     }
 
     // Keep profile edits aligned with registration minimum validation rules.
+    if (nextUsername && nextUsername.length > MAX_USERNAME_LENGTH) {
+      return jsonError(`Username must be ${MAX_USERNAME_LENGTH} characters or less`, 400);
+    }
+
     if (nextEmail && !EMAIL_RE.test(nextEmail)) {
       return jsonError("Invalid email format", 400);
     }
