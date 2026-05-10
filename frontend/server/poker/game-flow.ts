@@ -24,20 +24,44 @@ function computeNewAchievements(
   if (stats.handsPlayed > 0 && !alreadyUnlocked.has("FIRST_GAME")) {
     earned.push("FIRST_GAME");
     if (!stats.isWinner) earned.push("FIRST_GAME_LOSS");
+    else  earned.push("FIRST_GAME_WIN");
   }
 
   // WIN BASED — only when the player won this match AND just hit a threshold
   if (stats.isWinner) {
     const winThresholds: Array<{ count: number; type: string }> = [
-      { count: 1,  type: "WIN_1"  },
       { count: 3,  type: "WIN_3"  },
       { count: 5,  type: "WIN_5"  },
       { count: 10, type: "WIN_10" },
       { count: 25, type: "WIN_25" },
+      { count: 50, type: "WIN_50" },
+      { count: 100, type: "WIN_100" },
     ];
     for (const { count, type } of winThresholds) {
       if (stats.wins === count) earned.push(type);
     }
+  }
+
+  // GAMES PLAYED
+  const matchesPlayed = stats.wins + stats.losses;
+  if (matchesPlayed === 10)  earned.push("PLAY_10");
+  if (matchesPlayed === 50)  earned.push("PLAY_50");
+  if (matchesPlayed === 100) earned.push("PLAY_100");
+
+  // HANDS PLAYED —
+  if (stats.handsPlayed >= 50   && !alreadyUnlocked.has("HANDS_50"))   earned.push("HANDS_50");
+  if (stats.handsPlayed >= 250  && !alreadyUnlocked.has("HANDS_250"))  earned.push("HANDS_250");
+  if (stats.handsPlayed >= 1000 && !alreadyUnlocked.has("HANDS_1000")) earned.push("HANDS_1000")
+  
+  // STREAKS
+
+  // EXTRA
+  const hour = new Date().getHours();
+  if ((hour >= 0 && hour < 5) && !alreadyUnlocked.has("NIGHT_OWL")) {
+  earned.push("NIGHT_OWL");
+  }
+  if ((hour >= 6 && hour < 7) && !alreadyUnlocked.has("EARLY_BIRD")) {
+  earned.push("EARLY_BIRD");
   }
 
   // defensive: filter out any that were already unlocked

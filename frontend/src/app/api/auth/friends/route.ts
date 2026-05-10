@@ -49,6 +49,41 @@ async function getCurrentUserOrError(): Promise<CurrentUserResult> {
   return { currentUser: { id: currentUser.id } };
 }
 
+// CHECK IF A USER GETS ANY SOCIAL ACHIEVEMENTS AND ADD
+async function addSocialAchievements(userId: string) {
+  
+  const friendCount = await prisma.friendship.count({
+    where: { userId, accepted: true },
+  });
+
+  const toAward: string[] = [];
+  if (friendCount === 1) toAward.push("FIRST_FRIEND");
+  if (friendCount === 5) toAward.push("FRIEND_5");
+
+  for (const type of toAward) {
+    try {
+      await prisma.achievement.create({
+        data: { userId, type },
+      });
+      console.log(`[Achievement] ${userId} unlocked: ${type}`);
+    } catch {
+      // on dubplicate it just ignores
+    }
+  }
+}
+
+// CHECK IF USER GETS BREAKUP ACHIEVEMENTS and ADD 
+async function addBreakupAchievements(userId: string) {
+  try {
+    await prisma.achievement.create({
+      data: { userId, type: "BREAKUP" },
+    });
+    console.log(`[Achievement] ${userId} unlocked: BREAKUP`);
+  } catch {
+    // duplicate, ignore
+  }
+}
+
 export async function GET() {
   try {
     //Return accepted friends and pending requests for the authenticated user
@@ -117,6 +152,9 @@ export async function PATCH(request: Request) {
         ON CONFLICT ("userId", "friendId") DO UPDATE SET "accepted" = true
       `,
     ]);
+
+    await addSocialAchievements(currentUser.id);
+    await addSocialAchievements(friendId);
 
     return jsonOk({ message: "Friend request accepted" });
   } catch {
@@ -205,6 +243,9 @@ export async function POST(request: Request) {
         `,
       ]);
 
+        await addSocialAchievements(currentUser.id);
+        await addSocialAchievements(targetUser.id);
+
       return jsonOk({ message: "Friend request accepted" });
     }
 
@@ -245,6 +286,8 @@ export async function DELETE(request: Request) {
         WHERE "userId" = ${friendId} AND "friendId" = ${currentUser.id}
       `,
     ]);
+
+    await addBreakupAchievements(currentUser.id);
 
     return jsonOk({ message: "Friend removed" });
   } catch {
