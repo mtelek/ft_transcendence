@@ -830,6 +830,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             alt="Poker table"
             fill
             sizes="(max-width: 1024px) 100vw, 64rem"
+            loading="eager"
+            fetchPriority="high"
             className="object-contain"
             style={{ filter: visuals.tableFilter, transition: "filter 400ms ease" }}
           />

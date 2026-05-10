@@ -19,13 +19,13 @@ export async function GET() {
     const session = await auth();
 
     if (!session?.user) {
-      return jsonError("Unauthorized", 401);
+      return jsonOk({ error: "Unauthorized" });
     }
 
     const currentUser = await findUserFromSession(session);
 
     if (!currentUser) {
-      return jsonError("User not found", 404);
+      return jsonOk({ error: "User not found" });
     }
 
     return jsonOk(
@@ -35,7 +35,7 @@ export async function GET() {
       }
     );
   } catch {
-    return jsonError("Failed to load profile", 500);
+    return jsonOk({ error: "Failed to load profile" });
   }
 }
 
@@ -44,7 +44,7 @@ export async function PATCH(request: Request) {
     const session = await auth();
 
     if (!session?.user) {
-      return jsonError("Unauthorized", 401);
+      return jsonOk({ error: "Unauthorized" });
     }
 
     const body = (await request.json()) as ProfilePatchBody;
@@ -53,26 +53,26 @@ export async function PATCH(request: Request) {
     const nextPassword = body.password?.trim();
 
     if (!nextUsername && !nextEmail && !nextPassword) {
-      return jsonError("No changes provided", 400);
+      return jsonOk({ error: "No changes provided" });
     }
 
     const currentUser = await findUserFromSession(session);
 
     if (!currentUser) {
-      return jsonError("User not found", 404);
+      return jsonOk({ error: "User not found" });
     }
 
     // Keep profile edits aligned with registration minimum validation rules.
     if (nextUsername && nextUsername.length > MAX_USERNAME_LENGTH) {
-      return jsonError(`Username must be ${MAX_USERNAME_LENGTH} characters or less`, 400);
+      return jsonOk({ error: `Username must be ${MAX_USERNAME_LENGTH} characters or less` });
     }
 
     if (nextEmail && !EMAIL_RE.test(nextEmail)) {
-      return jsonError("Invalid email format", 400);
+      return jsonOk({ error: "Invalid email format" });
     }
 
     if (nextPassword && nextPassword.length < MIN_PASSWORD_LENGTH) {
-      return jsonError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`, 400);
+      return jsonOk({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
     const dataToUpdate: { username?: string; email?: string; password?: string } = {};
@@ -110,7 +110,16 @@ export async function PATCH(request: Request) {
         user: { username: updatedUser.username, email: updatedUser.email },
       }
     );
-  } catch {
-    return jsonError("Failed to update profile", 500);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      return jsonOk({ error: "Email or username already taken" });
+    }
+
+    return jsonOk({ error: "Failed to update profile" });
   }
 }

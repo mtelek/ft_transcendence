@@ -271,6 +271,8 @@ export default function Home() {
             alt="Current profile avatar"
             width={80}
             height={80}
+            loading="eager"
+            fetchPriority="high"
             onError={(e) => {
               e.currentTarget.src = DEFAULT_AVATAR;
             }}
