@@ -32,10 +32,6 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    //! JUST FOR TESTING ! DELETE LATER !
-    console.log("Fetched user:", user);
-    //
-
     return NextResponse.json({ user });
   } catch {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
