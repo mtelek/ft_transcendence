@@ -11,6 +11,74 @@ const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "im
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const LEGACY_UPLOAD_RE = /^uploaded\d+\.[a-z0-9]+$/i;
 const USER_UPLOAD_RE = /^user-[a-z0-9_-]+-uploaded\d+\.[a-z0-9]+$/i;
+const MAX_IMAGE_DIMENSION = 2048;
+const MAX_UPLOADS_PER_USER = 2;
+const MIME_TO_EXTENSION: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+// Magic bytes for file type verification
+const MAGIC_BYTES: Record<string, number[]> = {
+  "image/jpeg": [0xff, 0xd8, 0xff],
+  "image/png": [0x89, 0x50, 0x4e, 0x47],
+  "image/webp": [0x52, 0x49, 0x46, 0x46],
+  "image/gif": [0x47, 0x49, 0x46],
+};
+
+// Verify magic bytes match declared MIME type
+function verifyMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  const bytes = MAGIC_BYTES[mimeType];
+  if (!bytes || buffer.length < bytes.length) return false;
+  return bytes.every((b, i) => buffer[i] === b);
+}
+
+// Check image dimensions using buffer parsing (lightweight, no sharp dependency)
+function verifyImageDimensions(buffer: Buffer, mimeType: string): boolean {
+  try {
+    if (mimeType === "image/png") {
+      // PNG: width/height at bytes 16-24
+      if (buffer.length < 24) return false;
+      const width = buffer.readUInt32BE(16);
+      const height = buffer.readUInt32BE(20);
+      return width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION;
+    }
+    if (mimeType === "image/jpeg") {
+      // JPEG: scan for SOF marker and read dimensions
+      for (let i = 2; i < Math.min(buffer.length, 8192); i++) {
+        if (buffer[i] === 0xff && (buffer[i + 1] === 0xc0 || buffer[i + 1] === 0xc2)) {
+          const height = buffer.readUInt16BE(i + 5);
+          const width = buffer.readUInt16BE(i + 7);
+          return width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION;
+        }
+      }
+    }
+    // GIF/WebP: allow without dimension parsing for simplicity
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Clean up old uploads beyond quota
+async function cleanupOldUploads(userId: string): Promise<void> {
+  const files = await readAvatarFiles();
+  const userUploads = files.filter((f) => isUserOwnedAvatarFile(f, userId));
+
+  if (userUploads.length >= MAX_UPLOADS_PER_USER) {
+    // Sort by timestamp in filename (sequential index = older files have lower numbers)
+    const toDelete = userUploads.slice(0, userUploads.length - MAX_UPLOADS_PER_USER + 1);
+    for (const file of toDelete) {
+      try {
+        await fs.unlink(path.join(AVATARS_DIR, file));
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  }
+}
 
 export async function readAvatarFiles() {
   //Return only supported avatar image files in a stable sorted order
@@ -49,20 +117,7 @@ function resolveFileExtension(file: File) {
     return extFromName;
   }
 
-  if (file.type === "image/jpeg") return ".jpg";
-  if (file.type === "image/png") return ".png";
-  if (file.type === "image/webp") return ".webp";
-  if (file.type === "image/gif") return ".gif";
-
-  return null;
-}
-
-function resolveExtensionFromMimeType(mimeType: string) {
-  if (mimeType === "image/jpeg") return ".jpg";
-  if (mimeType === "image/png") return ".png";
-  if (mimeType === "image/webp") return ".webp";
-  if (mimeType === "image/gif") return ".gif";
-  return null;
+  return MIME_TO_EXTENSION[file.type] ?? null;
 }
 
 function escapeRegExp(value: string) {
@@ -140,6 +195,19 @@ export async function saveUploadedAvatar(file: File, userId: string) {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
+  // Verify magic bytes match declared MIME type
+  if (!verifyMagicBytes(buffer, file.type)) {
+    throw new Error("File signature does not match declared type");
+  }
+
+  // Verify image dimensions
+  if (!verifyImageDimensions(buffer, file.type)) {
+    throw new Error("Image exceeds maximum dimensions (2048x2048)");
+  }
+
+  // Clean up old uploads before saving new one
+  await cleanupOldUploads(userId);
+
   return saveBufferAsUploaded(buffer, ext, userId);
 }
 
@@ -155,7 +223,7 @@ export async function saveRemoteAvatarAsUploaded(imageUrl: string, userId: strin
     throw new Error("Unsupported file type");
   }
 
-  const ext = resolveExtensionFromMimeType(mimeType);
+  const ext = MIME_TO_EXTENSION[mimeType];
   if (!ext) {
     throw new Error("Unsupported avatar extension");
   }
@@ -165,5 +233,20 @@ export async function saveRemoteAvatarAsUploaded(imageUrl: string, userId: strin
     throw new Error("File too large");
   }
 
-  return saveBufferAsUploaded(Buffer.from(bytes), ext, userId);
+  const buffer = Buffer.from(bytes);
+
+  // Verify magic bytes
+  if (!verifyMagicBytes(buffer, mimeType)) {
+    throw new Error("Downloaded file signature does not match declared type");
+  }
+
+  // Verify dimensions
+  if (!verifyImageDimensions(buffer, mimeType)) {
+    throw new Error("Image exceeds maximum dimensions (2048x2048)");
+  }
+
+  // Clean up old uploads before saving
+  await cleanupOldUploads(userId);
+
+  return saveBufferAsUploaded(buffer, ext, userId);
 }
