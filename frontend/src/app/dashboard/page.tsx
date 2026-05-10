@@ -27,6 +27,7 @@ function DashboardInner() {
   const { data: session, status: sessionStatus } = useSession();
   const socketRef = useRef<Socket | null>(null);
   const [panel, setPanel] = useState<Panel>("join");
+  const [waitingOriginPanel, setWaitingOriginPanel] = useState<Panel>("join");
   const [status, setStatus] = useState<Status>("idle");
   const [gameName, setGameName] = useState("");
   const { settings, restoreDefaults } = usePokerSettings();
@@ -110,6 +111,7 @@ function DashboardInner() {
       return;
     }
     setError("");
+    setWaitingOriginPanel("host");
     const socket = getSocket();
     socket.emit("hostGame", {
       username,
@@ -129,6 +131,7 @@ function DashboardInner() {
       return;
     }
     setError("");
+    setWaitingOriginPanel("join");
     const socket = getSocket();
     socket.emit("joinNamedGame", { username, image, gameName: gameName.trim(), password });
   }
@@ -174,7 +177,7 @@ function DashboardInner() {
               socketRef.current?.disconnect();
               socketRef.current = null;
               setStatus("idle");
-              setPanel("join");
+              setPanel(waitingOriginPanel);
               setWaitingInfo(null);
             }}
             className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
