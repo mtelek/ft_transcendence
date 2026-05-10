@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
-const MAX_USERNAME_LENGTH = 15;
+import {
+  MAX_USERNAME_LENGTH,
+  normalizeTextInput,
+  validateEmailInput,
+  validatePasswordInput,
+  validateUsernameInput,
+} from "@/lib/input-validation";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -23,31 +26,31 @@ export default function Register() {
     setErrorMessage("");
 
     // Show persistent inline errors instead of short native validation bubbles.
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
-      setErrorMessage("Invalid email format");
+    const emailError = validateEmailInput(email);
+    if (emailError) {
+      setErrorMessage(emailError);
       return;
     }
 
-    if (!username.trim()) {
-      setErrorMessage("Username is required");
+    const usernameError = validateUsernameInput(username);
+    if (usernameError) {
+      setErrorMessage(usernameError);
       return;
     }
 
-    if (username.length > MAX_USERNAME_LENGTH) {
-      setErrorMessage(`Username must be ${MAX_USERNAME_LENGTH} characters or less`);
+    const passwordError = validatePasswordInput(password);
+    if (passwordError) {
+      setErrorMessage(passwordError);
       return;
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setErrorMessage(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
-      return;
-    }
+    const trimmedEmail = normalizeTextInput(email);
+    const trimmedUsername = normalizeTextInput(username);
 
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: trimmedEmail, username, password }),
+      body: JSON.stringify({ email: trimmedEmail, username: trimmedUsername, password }),
     });
 
     const data = await res.json();

@@ -6,6 +6,7 @@ import GoogleLogin from "@/components/authentication/GoogleLogin";
 import PokerBackground from "@/components/background/PokerBackground";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
 import Link from "next/dist/client/link";
+import { normalizeTextInput, validateRequiredInput } from "@/lib/input-validation";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -15,10 +16,22 @@ export default function LoginPage() {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
 
+    const identifierError = validateRequiredInput(identifier, "Email or username");
+    if (identifierError) {
+      setErrorMessage(identifierError);
+      return;
+    }
+
+    const passwordError = validateRequiredInput(password, "Password");
+    if (passwordError) {
+      setErrorMessage(passwordError);
+      return;
+    }
+
     setErrorMessage("");
 
     const result = await signIn("credentials", {
-      identifier,
+      identifier: normalizeTextInput(identifier),
       password,
       callbackUrl: "/dashboard",
       redirect: false,
@@ -42,7 +55,7 @@ export default function LoginPage() {
         style={{ backgroundColor: VARIANT_BG[DEFAULT_VARIANT] }}>
         <PokerBackground />
       <div className="w-full max-w-md p-8 bg-black rounded-lg shadow-md relative z-10">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
+          <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4 text-white">
             <h1 className="text-2xl font-bold mb-6 text-center text-white">Login</h1>
             <label className="flex flex-col gap-2 text-sm text-white" htmlFor="identifier">
               <span className="sr-only">Email or Username</span>

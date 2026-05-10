@@ -8,12 +8,16 @@ import { apiRequest } from "@/lib/client-api";
 import EditableFieldRow from "@/components/authentication/EditableFieldRow";
 import Image from "next/image";
 import { VARIANT_BG, DEFAULT_VARIANT } from "@/constants/BackgroundVariants";
+import {
+  MAX_USERNAME_LENGTH,
+  normalizeTextInput,
+  validateEmailInput,
+  validatePasswordInput,
+  validateUsernameInput,
+} from "@/lib/input-validation";
 
 //Editable profile fields supported by this page
 type EditableField = "username" | "email" | "password";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
-const MAX_USERNAME_LENGTH = 15;
 
 //Normalize unknown errors into user-friendly strings
 function getErrorMessage(err: unknown, fallback: string) {
@@ -101,22 +105,31 @@ export default function Home() {
     if (isSaving) return;
 
     // Give immediate client feedback before making a network request.
-    if (field === "username" && usernameValue.trim().length > MAX_USERNAME_LENGTH) {
-      setProfileError(`Username must be ${MAX_USERNAME_LENGTH} characters or less`);
-      setProfileSuccess(null);
-      return;
+    if (field === "username") {
+      const usernameError = validateUsernameInput(usernameValue);
+      if (usernameError) {
+        setProfileError(usernameError);
+        setProfileSuccess(null);
+        return;
+      }
     }
 
-    if (field === "email" && emailValue.trim() && !EMAIL_RE.test(emailValue.trim())) {
-      setProfileError("Invalid email format");
-      setProfileSuccess(null);
-      return;
+    if (field === "email") {
+      const emailError = validateEmailInput(emailValue);
+      if (emailError) {
+        setProfileError(emailError);
+        setProfileSuccess(null);
+        return;
+      }
     }
 
-    if (field === "password" && passwordValue.trim().length < MIN_PASSWORD_LENGTH) {
-      setProfileError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
-      setProfileSuccess(null);
-      return;
+    if (field === "password") {
+      const passwordError = validatePasswordInput(passwordValue);
+      if (passwordError) {
+        setProfileError(passwordError);
+        setProfileSuccess(null);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -126,8 +139,8 @@ export default function Home() {
     try {
       //Build a minimal PATCH payload containing only the edited field
       const payload: { username?: string; email?: string; password?: string } = {};
-      if (field === "username") payload.username = usernameValue;
-      else if (field === "email") payload.email = emailValue;
+      if (field === "username") payload.username = normalizeTextInput(usernameValue);
+      else if (field === "email") payload.email = normalizeTextInput(emailValue);
       else payload.password = passwordValue;
 
       const data = await apiRequest<{

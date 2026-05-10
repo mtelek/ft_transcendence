@@ -322,6 +322,10 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     // broadcasts a chat message — scoped to a game room if gameId is provided
     socket.on("message", (data: { username: string; text: string; gameId?: string }) => {
+      if (!data.text.trim()) {
+        return;
+      }
+
       const { gameId, ...msg } = data;
       if (gameId) {
         io.to(gameId).emit("message", msg);

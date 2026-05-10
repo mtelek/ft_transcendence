@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { validateRequiredInput } from "@/lib/input-validation";
 
 interface Message {
   username: string;
@@ -14,6 +15,7 @@ type ChatSize = "full" | "small";
 export default function Chat({ username, gameId }: { username: string; gameId?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [error, setError] = useState("");
   const [size, setSize] = useState<ChatSize>("small");
   const [closed, setClosed] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -54,7 +56,13 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
 
   function sendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!input.trim()) return;
+    const messageError = validateRequiredInput(input, "Message");
+    if (messageError) {
+      setError(messageError);
+      return;
+    }
+
+    setError("");
     socketRef.current?.emit("message", { username, text: input, gameId });
     setInput("");
   }
@@ -124,7 +132,10 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
             id="chat"
             aria-label="Chat message"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="Type a message..."
             className="flex-1 px-4 py-2 rounded-l text-white bg-white/10 placeholder-slate-400 text-sm transition-all focus:bg-white/20 outline-none"
             autoComplete="off"
@@ -137,6 +148,7 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
           </button>
         </form>
       )}
+      {!closed && error && <p className="border-t border-white/10 px-3 py-2 text-xs text-red-400">{error}</p>}
     </div>
   );
 }

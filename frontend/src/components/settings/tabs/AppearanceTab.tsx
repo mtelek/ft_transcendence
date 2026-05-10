@@ -78,7 +78,15 @@ export function AppearanceTab() {
                   settings.cardBackImage === id ? "border-white" : "border-transparent"
                 }`}
               >
-                <Image src={`/cards/${id}.png`} alt={id} width={28} height={40} className="block" />
+                <div className="relative h-10 w-7">
+                  <Image
+                    src={`/cards/${id}.png`}
+                    alt={id}
+                    fill
+                    sizes="28px"
+                    className="object-contain"
+                  />
+                </div>
               </button>
             ))}
           </div>

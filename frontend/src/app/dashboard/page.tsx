@@ -10,6 +10,7 @@ import Statistics from "@/components/statistics/statistics";
 import MatchHistory from "@/components/statistics/matchHistory";
 import { PokerSettingsProvider, usePokerSettings } from "@/lib/poker-settings/context";
 import { GameplayTab } from "@/components/settings/tabs/GameplayTab";
+import { normalizeTextInput, validateRequiredInput } from "@/lib/input-validation";
 
 type Panel = "host" | "join";
 type Status = "idle" | "waiting" | "matched";
@@ -106,17 +107,20 @@ function DashboardInner() {
   }
 
   function handleHost() {
-    if (!gameName.trim()) {
-      setError("Game name is required");
+    const gameNameError = validateRequiredInput(gameName, "Game name");
+    if (gameNameError) {
+      setError(gameNameError);
       return;
     }
+
+    const normalizedGameName = normalizeTextInput(gameName);
     setError("");
     setWaitingOriginPanel("host");
     const socket = getSocket();
     socket.emit("hostGame", {
       username,
       image,
-      gameName: gameName.trim(),
+      gameName: normalizedGameName,
       password,
       gameSize: settings.tableSize,
       blinds: settings.blinds,
@@ -126,14 +130,17 @@ function DashboardInner() {
   }
 
   function handleJoin() {
-    if (!gameName.trim()) {
-      setError("Game name is required");
+    const gameNameError = validateRequiredInput(gameName, "Game name");
+    if (gameNameError) {
+      setError(gameNameError);
       return;
     }
+
+    const normalizedGameName = normalizeTextInput(gameName);
     setError("");
     setWaitingOriginPanel("join");
     const socket = getSocket();
-    socket.emit("joinNamedGame", { username, image, gameName: gameName.trim(), password });
+    socket.emit("joinNamedGame", { username, image, gameName: normalizedGameName, password });
   }
 
   if (sessionStatus === "loading") {
