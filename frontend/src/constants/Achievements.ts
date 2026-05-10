@@ -37,12 +37,7 @@ export const ALL_ACHIEVEMENTS: AchievementType[] = [
   { type: "HANDS_250",        label: "Grinding",          description: "Play 250 hands",                         icon: "⚙️" },
   { type: "HANDS_1000",       label: "Marathon",          description: "Play 1,000 hands",                       icon: "🏃" },
 
-  // ----------------------------------------------------------------
-  // STREAKS
-  // ----------------------------------------------------------------
-  { type: "WIN_STREAK_3",     label: "On Fire",           description: "Win 3 games in a row",                   icon: "🔥" }, //missing
-  { type: "WIN_STREAK_5",     label: "Unstoppable",       description: "Win 5 games in a row",                   icon: "⚡" }, //missing
-  { type: "LOSS_STREAK_3",    label: "Rough Patch",       description: "Lose 3 games in a row",                  icon: "😭" }, //missing
+
 
   // ----------------------------------------------------------------
   // SOCIAL
