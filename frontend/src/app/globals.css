@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Poker";
+  src: url("/fonts/Poker.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -81,4 +89,8 @@ body {
 
 .text-pokerred {
   color: #A32020;
+}
+
+.landing-title {
+  font-family: "Poker", var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
