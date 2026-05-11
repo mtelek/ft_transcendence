@@ -80,6 +80,11 @@ export default function Chat({
       return;
     }
 
+    if (input.length > 250) {
+      setError("Message must be 100 characters or less");
+      return;
+    }
+
     setError("");
     socketRef.current?.emit("message", { username, text: input, gameId });
     setInput("");
