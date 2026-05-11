@@ -13,8 +13,8 @@ export default function Home() {
       >
         <PokerBackground />
         <div className="relative z-10 flex items-center justify-center">
-          <h1 className="text-center text-4xl font-bold leading-none tracking-widest text-pokerred drop-shadow-[0_0_10px_rgba(231,0,0,0.7)]">
-            WELCOME TO FT_TRANSCENDENCE
+          <h1 className="landing-title text-center text-6xl font-normal leading-none tracking-widest text-pokerred drop-shadow-[0_0_10px_rgba(231,0,0,0.7)]">
+            WELCOME To FT_TRANSCENDENCE
           </h1>
         </div>
       </section>

@@ -120,13 +120,19 @@ export default function ProfilePage() {
           className="relative flex flex-col items-center gap-2 group"
         >
           <div
-            className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 ${
+            className={`w-16 h-16 rounded-full flex items-center justify-center border-2 p-2 ${
               unlocked
                 ? "border-teal-500 bg-teal-900 opacity-100"
                 : "border-gray-600 bg-gray-800 opacity-50"
             }`}
           >
-            {achievement.icon}
+            <Image
+              src={achievement.icon}
+              alt={`${achievement.label} icon`}
+              width={48}
+              height={48}
+              className="h-10 w-10 object-contain"
+            />
           </div>
           <span
             className={`text-xs text-center text-gray-300 ${

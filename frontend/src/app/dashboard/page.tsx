@@ -197,10 +197,10 @@ function DashboardInner() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 flex flex-col items-center justify-center overflow-hidden ">
       <Image src="/dark-poker-background-of-spades-and-clubs.jpg" alt="" aria-hidden="true" fill sizes="100vw" loading="eager" className="absolute inset-0 object-cover opacity-30" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-6xl">
+      <div className="relative z-10 flex flex-col items-center gap-8 text-center px-4 w-full max-w-6xl mt-8">
         <h1 className="text-4xl font-bold text-white tracking-wide">Play Poker</h1>
 
         <div className="flex items-stretch gap-6 w-full">
