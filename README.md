@@ -132,24 +132,24 @@ All code was written, reviewed, and understood by team members. AI served as an 
 
 ## Team Information
 
-| Login    | Full Name        | Role                        |
-|----------|------------------|-----------------------------|
-| tmeniga  | Tom Meniga       | Tech Lead / Database & Ops  |
-| mtelek   | Marton Telek     | Developer — Auth & Users    |
-| mvolgger | Matthias Volgger | Developer — Game & Backend  |
-| kbrauer  | Kevin Braeuer    | Developer — Frontend        |
+| Login    | Full Name        | Role                                  |
+|----------|------------------|---------------------------------------|
+| tmeniga  | Tom Meniga       | Tech Lead / Developer — Database & Ops |
+| mtelek   | Marton Telek     | PM / Developer — Auth & Users         |
+| mvolgger | Matthias Volgger | PO / Developer — Game & Backend       |
+| kbrauer  | Kevin Braeuer    | Developer — Frontend                  |
 
 ### Tom Meniga — Tech Lead / Developer (Database & Ops)
 
-Led technical decision-making for the project, including the choice of tech stack (Next.js, PostgreSQL, Prisma, Socket.IO, Docker) and overall architecture. Designed the PostgreSQL database schema and Prisma data models. Wrote all migrations and maintained schema integrity across development cycles. Fully containerized the project with Docker and Docker Compose, including the multi-stage Dockerfile, HTTPS certificate generation, and health checks. Collaborated with Marton on game statistics persistence and the leaderboard API.
+As Tech Lead, Tom owned the technical direction, module choices, and overall architecture quality. Led technical decision-making for the project, including the choice of tech stack (Next.js, PostgreSQL, Prisma, Socket.IO, Docker) and overall architecture. Designed the PostgreSQL database schema and Prisma data models. Wrote all migrations and maintained schema integrity across development cycles. Fully containerized the project with Docker and Docker Compose, including the multi-stage Dockerfile, HTTPS certificate generation, and health checks. Collaborated with Marton on game statistics persistence and the leaderboard API.
 
-### Marton Telek — Developer (Auth & Users)
+### Marton Telek — PM / Developer (Auth & Users)
 
-Implemented the full user management system: registration, profile pages, avatar upload, friend requests, and online presence tracking. Set up Google OAuth via Auth.js and handled account linking for existing users. Built multi-browser compatibility and tested across Chrome, Brave, and Edge. Collaborated with Matthias on remote player reconnection logic and with Tom on game statistics and match history.
+As PM, Marton coordinated task distribution, meeting cadence, and the shared progress tracking document. Implemented the full user management system: registration, profile pages, avatar upload, friend requests, and online presence tracking. Set up Google OAuth via Auth.js and handled account linking for existing users. Built multi-browser compatibility and tested across Chrome, Brave, and Edge. Collaborated with Matthias on remote player reconnection logic and with Tom on game statistics and match history.
 
-### Matthias Volgger — Developer (Game & Backend)
+### Matthias Volgger — PO / Developer (Game & Backend)
 
-Designed and implemented the poker game engine, integrating the `poker-ts` library with a custom server-side state machine. Built all Socket.IO event handlers for game actions (fold, check, call, bet, raise), community card progression, hand result broadcasting, and real-time chat. Collaborated with Marton on remote player support and disconnection handling.
+As PO, Matthias owned product scope, feature priorities, and overall game experience direction. Designed and implemented the poker game engine, integrating the `poker-ts` library with a custom server-side state machine. Built all Socket.IO event handlers for game actions (fold, check, call, bet, raise), community card progression, hand result broadcasting, and real-time chat. Collaborated with Marton on remote player support and disconnection handling.
 
 ### Kevin Braeuer — Developer (Frontend)
 
@@ -307,7 +307,7 @@ User ──< Account         (one user, many OAuth accounts)
 User ──< Session         (one user, many sessions)
 User ──< Friendship      (as requester or recipient)
 User ──< Achievement     (one user, many achievements)
-User ──< Match           (as player1–player6 or winner)
+User ──< Match           (as player1–player6)
 ```
 
 ---
@@ -370,7 +370,7 @@ Socket.IO powers all real-time game communication: player actions, game state br
 Users can register, log in, update their profile (username, email, avatar), add and remove friends, and view other players' profile pages. Avatars can be uploaded or chosen from a preset set. Friend status (online/offline) is tracked via a presence heartbeat.
 
 #### Web-Based Game — Texas Hold'em Poker
-**Points:** 2 | **Who:** Matthias Volgger, Kevin Braeuer
+**Points:** 2 | **Who:** Matthias Volgger, Kevin Bräuer
 
 A complete Texas Hold'em implementation playable in the browser. Supports all standard betting rounds, hand rankings (High Card → Royal Flush), all-in scenarios, and pot management. The game has clear win/loss conditions: the last player with chips wins. The UI displays community cards, player chip stacks, the dealer button, and the current betting phase.
 
@@ -399,7 +399,7 @@ Prisma is used as the ORM between Next.js and PostgreSQL. All database queries a
 Users can sign in with their Google account via OAuth 2.0 through Auth.js. If the Google email matches an existing credentials account, the accounts are linked automatically. Google profile images are downloaded and stored locally on first login.
 
 #### Game Customization
-**Points:** 1 | **Who:** Kevin Braeuer
+**Points:** 1 | **Who:** Kevin Bräuer
 
 Players can customize the game table before starting a match. Three built-in themes (Classic Vegas, Wood Lodge, Garden) apply coordinated felt colors, card backs, and backgrounds in one click. A Custom mode lets players mix and match: 6 felt colors, 8 card back designs, 4 background styles. Animation speed can also be adjusted (slow / normal / fast). A Special Chip power-up can be toggled on or off. Default options are always available and pre-selected.
 
