@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { validateRequiredInput } from "@/lib/input-validation";
 
-interface Message {
+export interface Message {
   username: string;
   text: string;
   type?: "chat" | "game";
@@ -12,8 +12,19 @@ interface Message {
 
 type ChatSize = "full" | "small";
 
-export default function Chat({ username, gameId }: { username: string; gameId?: string }) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function Chat({
+  username,
+  gameId,
+  messages: externalMessages,
+  onNewMessage,
+}: {
+  username: string;
+  gameId?: string;
+  messages?: Message[];
+  onNewMessage?: (msg: Message) => void;
+}) {
+  const [internalMessages, setInternalMessages] = useState<Message[]>([]);
+  const messages = externalMessages ?? internalMessages;
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [size, setSize] = useState<ChatSize>("small");
@@ -26,7 +37,9 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
     socketRef.current = socket;
 
     const onMessage = (data: Message) => {
-      setMessages((prev) => [...prev, data]);
+      if (onNewMessage) onNewMessage(data);
+      else if (externalMessages === undefined) setInternalMessages((prev: Message[]) => [...prev, data]);
+      // display-only mode (externalMessages provided, no onNewMessage): skip — parent handles it
     };
 
     const onConnect = () => {
@@ -51,7 +64,12 @@ export default function Chat({ username, gameId }: { username: string; gameId?: 
   }, [gameId]);
 
   useEffect(() => {
-    if (!closed && size === "full") bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!closed && size === "full") {
+      const frame = requestAnimationFrame(() =>
+        bottomRef.current?.scrollIntoView({ behavior: "instant" })
+      );
+      return () => cancelAnimationFrame(frame);
+    }
   }, [messages, size, closed]);
 
   function sendMessage(e: React.FormEvent<HTMLFormElement>) {

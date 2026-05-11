@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Image from "next/image";
 import type { GameSnapshot, PokerCard } from "../../../../server";
-import Chat from "@/components/chat/Chat";
+import Chat, { type Message as ChatMessage } from "@/components/chat/Chat";
 import { PlayerAvatar } from "@/components/authentication/PlayerAvatar";
 import { ChipStacks } from "@/components/poker/ChipStack";
 import { usePokerSettings } from "@/lib/poker-settings/context";
@@ -436,6 +436,8 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [showChat, setShowChat] = useState(true);
   const [chatPopupOpen, setChatPopupOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const handleNewChatMessage = (msg: ChatMessage) => setChatMessages((prev: ChatMessage[]) => [...prev, msg]);
   const [disconnected, setDisconnected] = useState(false);
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
@@ -1023,9 +1025,9 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
       <div
         ref={chatRef}
         className={`fixed bottom-4 left-4 w-80 ${showChat ? "" : "invisible pointer-events-none"}`}
-        style={{ zIndex: 40 }}
+        style={{ zIndex: 70 }}
       >
-        <Chat username={username} gameId={gameId} />
+        <Chat username={username} gameId={gameId} messages={chatMessages} onNewMessage={handleNewChatMessage} />
       </div>
 
       {/* compact chat fallback — shown only when the regular chat would overlap the action bar */}
@@ -1041,7 +1043,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
 
           {chatPopupOpen && (
             <div className="fixed bottom-16 left-4 w-80 z-[80]">
-              <Chat username={username} gameId={gameId} />
+              <Chat username={username} gameId={gameId} messages={chatMessages} />
             </div>
           )}
         </>
