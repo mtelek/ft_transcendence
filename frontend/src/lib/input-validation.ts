@@ -1,5 +1,5 @@
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const MIN_PASSWORD_LENGTH = 8;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
 export const MAX_USERNAME_LENGTH = 15;
 
 export function normalizeTextInput(value: string | null | undefined) {
