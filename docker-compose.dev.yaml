@@ -6,7 +6,7 @@ services:
     container_name: frontend-dev
     build:
       context: ./frontend
-      dockerfile: ../docker/srcs/frontend/Dockerfile
+      dockerfile: ../docker/srcs/frontend/Dockerfile.dev
       args:
         IP: ${IP}
     depends_on:
