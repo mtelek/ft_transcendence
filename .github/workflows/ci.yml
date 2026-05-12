@@ -127,6 +127,10 @@ jobs:
       - name: Start stack
         run: docker compose up --build -d
 
+      - name: Show Postgres logs
+        if: failure()
+        run: docker logs postgres || true
+
       - name: Wait for frontend to be healthy
         run: |
           echo "Waiting for frontend to be ready..."
