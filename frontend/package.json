@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon --watch server.ts --exec ts-node --project tsconfig.server.json server.ts",
     "build": "next build",
-    "start": "next start",
+    "start": "ts-node --project tsconfig.server.json server.ts",
     "lint": "eslint",
     "knip": "npx -y knip",
     "deps:reinstall:dev": "rm -rf node_modules && npm install --include=dev"
