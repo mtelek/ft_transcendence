@@ -81,7 +81,7 @@ export default function Chat({
     }
 
     if (input.length > 250) {
-      setError("Message must be 100 characters or less");
+      setError("Message must be 250 characters or less");
       return;
     }
 
