@@ -31,14 +31,21 @@ export default function Chat({
   const [closed, setClosed] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const onNewMessageRef = useRef(onNewMessage);
+  const externalMessagesRef = useRef(externalMessages);
+
+  useEffect(() => {
+    onNewMessageRef.current = onNewMessage;
+    externalMessagesRef.current = externalMessages;
+  }, [onNewMessage, externalMessages]);
 
   useEffect(() => {
     const socket = io(); // Uses current origin (host/protocol)
     socketRef.current = socket;
 
     const onMessage = (data: Message) => {
-      if (onNewMessage) onNewMessage(data);
-      else if (externalMessages === undefined) setInternalMessages((prev: Message[]) => [...prev, data]);
+      if (onNewMessageRef.current) onNewMessageRef.current(data);
+      else if (externalMessagesRef.current === undefined) setInternalMessages((prev: Message[]) => [...prev, data]);
       // display-only mode (externalMessages provided, no onNewMessage): skip — parent handles it
     };
 

@@ -134,11 +134,7 @@ function ActionBar({
   const quickBtn = "bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
   useEffect(() => {
-    if (!specialChipEnabled || !canBetOrRaise) {
-      setSpecialChipSliderShift(0);
-      setSpecialChipSliderWidth(0);
-      return;
-    }
+    if (!specialChipEnabled || !canBetOrRaise) return;
 
     const syncSpecialChipSlider = () => {
       const sliderEl = sliderRef.current;
@@ -438,7 +434,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   const [chatPopupOpen, setChatPopupOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const handleNewChatMessage = (msg: ChatMessage) => setChatMessages((prev: ChatMessage[]) => [...prev, msg]);
-  const [disconnected, setDisconnected] = useState(false);
+  const disconnected = false;
   const [eliminated, setEliminated] = useState(false);
   const router = useRouter();
 
@@ -609,13 +605,7 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
   // ----------------------------------------------------------------
   // CHAT VISIBILITY
   // ----------------------------------------------------------------
-
-  // close the floating chat popup whenever the regular chat becomes visible again
-  useEffect(() => {
-    if (showChat) {
-      setChatPopupOpen(false);
-    }
-  }, [showChat]);
+  const isChatPopupVisible = !showChat && chatPopupOpen;
 
   // detect collisions between the action bar and the chat box.
   // when they overlap, hide the chat and surface a small "Chat" toggle button
@@ -1038,10 +1028,10 @@ export default function GameTable({ gameId, username, image }: { gameId: string;
             onClick={() => setChatPopupOpen((open) => !open)}
             className="fixed bottom-4 left-4 z-[70] rounded-full bg-black/80 text-white text-sm font-semibold px-4 py-2 border border-white/20 hover:bg-black/90 transition-colors"
           >
-            {chatPopupOpen ? "Hide Chat" : "Chat"}
+            {isChatPopupVisible ? "Hide Chat" : "Chat"}
           </button>
 
-          {chatPopupOpen && (
+          {isChatPopupVisible && (
             <div className="fixed bottom-16 left-4 w-80 z-[80]">
               <Chat username={username} gameId={gameId} messages={chatMessages} />
             </div>
