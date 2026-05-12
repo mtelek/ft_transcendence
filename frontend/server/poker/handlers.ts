@@ -1,7 +1,8 @@
 import { Table } from "poker-ts";
+import type { PokerCard } from "./types";
 import type { Server } from "socket.io";
 import type { PokerServerState } from "./state";
-import type { GameSession } from "./types";
+import type { GameSession, Seat } from "./types";
 import { buildSnapshot, broadcastState } from "./snapshot";
 import { advanceRounds, endGame, handleElimination } from "./game-flow";
 import { Pool } from "pg";
@@ -17,7 +18,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // detects players whose seat has 0 chips OR has been removed by the table.
 // poker-ts removes seats entirely on bust, so we must check both conditions.
 function hasBustedPlayer(session: GameSession) {
-  const seats = session.table.seats();
+  const seats = session.table.seats() as Seat[];
   return session.players.some((p) => {
     const seat = seats[p.seatIndex];
     return !seat || seat.totalChips === 0;
@@ -179,8 +180,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     if (!table.isBettingRoundInProgress() || table.playerToAct() !== seatIndex) return;
 
     const isFold = action === "fold";
-    const seats = table.seats() as any[];
-    const potBeforeAction = (table.pots() as any[]).reduce((sum: number, p) => sum + p.size, 0);
+    const seats = table.seats() as Seat[];
+    const potBeforeAction = (table.pots() as { size: number }[]).reduce((sum: number, p) => sum + p.size, 0);
     const chipsBefore = seats.map((s) => s?.totalChips ?? 0);
     const actorName =
       session.players.find((p) => p.seatIndex === seatIndex)?.username ??
@@ -189,7 +190,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     const myBetBefore = seats[seatIndex]?.betSize ?? 0;
     const myStackBefore = seats[seatIndex]?.stack ?? 0;
     const maxOppBetBefore = seats
-      .filter((_: unknown, i: number) => i !== seatIndex)
+      .filter((_: Seat | undefined, i: number) => i !== seatIndex)
       .reduce((max: number, s) => Math.max(max, s?.betSize ?? 0), 0);
 
     try {
@@ -211,8 +212,8 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
 
     const foldPot = isFold ? potBeforeAction + (betSize ?? 0) : 0;
 
-    const allHoles = table.holeCards() as any[];
-    session.lastHoleCards = allHoles.map((h: any) => {
+    const allHoles = table.holeCards() as (PokerCard[] | null)[];
+    session.lastHoleCards = allHoles.map((h: PokerCard[] | null) => {
       if (h) return [...h];
       return null;
     });
@@ -220,7 +221,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
     if (!table.isHandInProgress()) {
       // hand just ended (fold or all-in resolution)
       if (isFold) {
-        const chipsAfter = (table.seats() as any[]).map((s) => s?.totalChips ?? 0);
+        const chipsAfter = (table.seats() as Seat[]).map((s) => s?.totalChips ?? 0);
         const winnerSeatIdx = chipsAfter.findIndex((chips: number, i: number) => chips > chipsBefore[i]);
         const winner = winnerSeatIdx >= 0
           ? session.players.find((p) => p.seatIndex === winnerSeatIdx)
@@ -244,7 +245,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       advanceRounds(session);
 
       if (isFold && !table.isHandInProgress() && !session.handResult) {
-        const chipsAfter = (table.seats() as any[]).map((s) => s?.totalChips ?? 0);
+        const chipsAfter = (table.seats() as Seat[]).map((s) => s?.totalChips ?? 0);
         const winnerSeatIdx = chipsAfter.findIndex((chips: number, i: number) => chips > chipsBefore[i]);
         const winner = winnerSeatIdx >= 0
           ? session.players.find((p) => p.seatIndex === winnerSeatIdx)
@@ -649,7 +650,7 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         clearSpecialRevealTimer(info.gameId, info.seatIndex);
         const session = state.games.get(info.gameId);
         if (session && !session.isGameOver) {
-          const seat = (session.table.seats() as any[])[info.seatIndex];
+          const seat = (session.table.seats() as Seat[])[info.seatIndex];
           const alreadyEliminated = !seat || seat.totalChips === 0;
 
           if (alreadyEliminated) {

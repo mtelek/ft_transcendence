@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { jsonError, jsonOk } from "@/lib/api-response";
+import { jsonOk } from "@/lib/api-response";
 import { findUserFromSession } from "@/lib/auth-user";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

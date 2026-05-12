@@ -7,7 +7,6 @@ export function buildSnapshot(state: PokerServerState, gameId: string, mySeatInd
   const {
     table,
     players,
-    allPlayers,
     lastCommunityCards,
     lastHoleCards,
     startingStack,
