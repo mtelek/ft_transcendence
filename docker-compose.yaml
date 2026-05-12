@@ -17,12 +17,6 @@ services:
       - "443:443"
     env_file:
       - .env
-    # DEV ONLY: remove these 3 lines before evaluation so code runs from the Docker image
-    # volumes:
-    #   - ./frontend:/app
-    #   - /app/node_modules
-    # environment:
-    #   - WATCHPACK_POLLING=true
     restart: always
     networks:
       - transcendence
@@ -42,10 +36,11 @@ services:
     networks:
       - transcendence
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d transcendence"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: ["CMD-SHELL", "PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
 
 networks:
   transcendence:
