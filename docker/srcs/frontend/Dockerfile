@@ -23,7 +23,9 @@ COPY . .
 
 # Create directory for certs and generate self-signed certificate with SAN for localhost and custom IP
 RUN mkdir -p /app/certs \
-  && printf "[req]\ndistinguished_name=req\nreq_extensions = v3_req\n[req_distinguished_name]\n[v3_req]\nsubjectAltName=DNS:localhost,IP:127.0.0.1,IP:${IP}\n" > /app/certs/openssl.cnf \
+  && SAN_ENTRIES="DNS:localhost,IP:127.0.0.1" \
+  && if echo "$IP" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then SAN_ENTRIES="$SAN_ENTRIES,IP:$IP,DNS:$IP"; elif [ -n "$IP" ]; then SAN_ENTRIES="$SAN_ENTRIES,DNS:$IP"; fi \
+  && printf "[req]\ndistinguished_name=req\nreq_extensions = v3_req\n[req_distinguished_name]\n[v3_req]\nsubjectAltName=%s\n" "$SAN_ENTRIES" > /app/certs/openssl.cnf \
   && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /app/certs/key.pem \
     -out /app/certs/cert.pem \
@@ -37,4 +39,4 @@ RUN npx prisma generate
 EXPOSE 3000
 
 # Regenerate Prisma after bind mounts are applied, then run migrations and start dev.
-CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm run build && npm run start"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm run build && NODE_ENV=production npm run start"]
