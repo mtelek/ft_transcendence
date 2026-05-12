@@ -321,7 +321,7 @@ User ──< Match           (as player1–player6)
 | 3-player matches           | Named lobby, 3-seat table with elimination logic | Matthias |
 | Remote players             | Two or more players on separate machines playing in real time | Matthias, Marton |
 | Disconnection handling     | Disconnected players auto-fold or auto-check; game continues | Matthias, Marton |
-| Lobby system               | Create/join named game rooms; wait for players to fill seats | Matthias |
+| Lobby system               | Create/join named game rooms; wait for players to fill seats | Matthias, Marton |
 | Real-time game state       | Socket.IO broadcasts per-player game snapshots (hidden opponent cards, legal actions, pot, community cards)  | Matthias |
 | Real-time chat             | In-game chat with system messages for all game events | Matthias |
 | Special Chip power-up      | Reveal an opponent's hole cards for 5 seconds; usable once per game | Marton |
@@ -336,11 +336,11 @@ User ──< Match           (as player1–player6)
 | Online presence            | `lastSeenAt` heartbeat; users shown as online within 10 seconds of last activity | Marton |
 | Game statistics            | Win/loss counts, hands played, tracked and updated after every match | Marton, Tom |
 | Match history              | Last 20 matches with opponent, result, score, and timestamp; real-time updates via Socket.IO | Marton, Tom |
-| Achievements               | 36 achievements across game milestones, poker hands, and social actions | Marton, Tom |
+| Achievements               | 36 achievements across game milestones, poker hands, and social actions | Tom |
 | Leaderboard                | Friends leaderboard sorted by wins; global leaderboard of all-time top winners | Marton, Tom |
-| Database schema            | Prisma schema with User, Match, Friendship, Achievement, Account, Session models | Tom |
+| Database schema            | Prisma schema with User, Match, Friendship, Achievement, Account, Session models | Tom, Marton |
 | Dockerization              | Docker Compose setup for frontend + PostgreSQL; auto-runs migrations on startup | Tom |
-| HTTPS / TLS                | Self-signed certificate generated at build time; production runs on port 443 | Tom |
+| HTTPS / TLS                | Self-signed certificate generated at build time; production runs on port 443 | Tom, Marton |
 | Multi-browser support      | Full compatibility with Chrome, Brave, and Edge | Marton |
 | Animated UI                | Card dealing animations, card flips, framer-motion transitions | Kevin |
 | Landing page               | Landing page with hero section and legal links | Kevin |
@@ -411,27 +411,32 @@ After every match, results are persisted to the database: winner, all player IDs
 #### Multi-Browser Support
 **Points:** 1 | **Who:** Marton Telek
 
-All features were tested and verified in **Chrome**, **Brave**, and **Edge**.
+All features were tested and verified in **Chrome**, **Brave**, and **Firefox**.
 
-**Known limitation:** Edge may display a placeholder for lazy-loaded images briefly before rendering them. All game functionality remains unaffected.
+**Known limitation:** Google may deliver image chunks in suboptimal sizes for browsers, which can result in browser console warnings about image performance.
 
 ---
 
 ## Individual Contributions
 
+
 ### Marton Telek
 
-**Areas:** Authentication, user management, friend system, multi-browser support, remote players (with Matthias), game statistics (with Tom)
+**Areas:** Authentication, user management, friend system, lobby system, database schema, HTTPS/TLS, multi-browser support, remote players (with Matthias), game statistics (with Tom)
 
 - Set up Auth.js with both Credentials (email/password) and Google OAuth providers
-- Implemented Google account linking to existing credentials accounts and remote avatar caching
+- Implemented Google account linking to existing credentials accounts
 - Built the full user profile system: profile page, avatar upload with validation (file type, size, path traversal protection), avatar preset picker
 - Built the friend system: send/accept/reject requests, bidirectional friendship edges, friend list with online/offline status
 - Implemented the presence heartbeat (`lastSeenAt` timestamp updated by the client on an interval)
-- Tested and fixed all features across Chrome, Brave, and Edge; documented the Edge lazy-image limitation
+- Implemented the lobby system: create/join named game rooms/lobbies
+- Contributed to the database schema: added friendship and match records, ensured schema integrity, and maintained migrations
+- Implemented and tested HTTPS/TLS for secure connections in both development and production
+- Tested and fixed all features across Chrome, Brave, and Firefox; documented the Google chunck loading limitation
 - Collaborated with Matthias on remote player reconnection logic and disconnection handling
-- Built the match history API, history UI component, and real-time Socket.IO subscription for live updates
-- Built the leaderboard (friends and global views) and achievement unlock logic (36 achievements)
+- Built the match history API, history UI component, and real-time Socket.IO handler for live updates
+- Built the leaderboard (friends and global views)
+- Extended the Makefile with targets for `lint`, `logs-muted` and `knip`
 
 **Challenges:** Handling Google OAuth account linking while avoiding duplicate accounts required careful logic: check if an email already exists before creating a new user, then attach the OAuth provider record to the existing account. Getting online status right (avoiding false "online" readings from stale timestamps) required tuning the heartbeat interval and the 10-second presence window.
 
@@ -447,7 +452,7 @@ All features were tested and verified in **Chrome**, **Brave**, and **Edge**.
 - Containerized the entire application with Docker: wrote the multi-stage Dockerfile for the Next.js app, the PostgreSQL container configuration, and Docker Compose files for both production and development
 - Implemented HTTPS for production: OpenSSL certificate generation baked into the Docker build step; Nginx-style port forwarding from 80 → 443
 - Configured database health checks so the frontend container waits for PostgreSQL to be ready before starting
-- Built the Makefile with targets for `up`, `down`, `clean`, `dev`, `dev-clean`, `lint`, and `reset`
+- Built the Makefile with targets for `up`, `down`, `clean`, `dev`, `dev-clean` and `reset`
 - Collaborated with Marton on the match persistence logic (`persistMatch()`), the statistics API endpoints, and the leaderboard SQL queries
 
 **Challenges:** Getting Docker to reliably generate TLS certificates at build time and inject the correct IP into the Next.js config (for `AUTH_URL`) required a combination of Docker build args and entrypoint scripting. Making the dev and production Docker Compose files share the same `.env` without duplication also needed careful factoring.
@@ -491,7 +496,7 @@ All features were tested and verified in **Chrome**, **Brave**, and **Edge**.
 
 - Reconnection after a player is fully eliminated is not supported (the eliminated player is disconnected and cannot rejoin)
 - The TLS certificate in production is self-signed; browsers will show a security warning on first visit
-- Edge (Microsoft) may briefly show a placeholder for lazy-loaded images before rendering them — all functionality is unaffected
+Google may deliver images in suboptimal chunk sizes, which can trigger browser console warnings about image performance. All functionality is unaffected.
 - Game sessions are stored in server memory; restarting the Docker container will end any in-progress games
 
 ---
