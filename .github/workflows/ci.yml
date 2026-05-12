@@ -114,12 +114,15 @@ jobs:
       - name: Create .env file from secrets
         run: |
           cat <<EOF > .env
-          DATABASE_URL=$DATABASE_URL
-          POSTGRES_USER=$POSTGRES_USER
-          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-          POSTGRES_DB=$POSTGRES_DB
-          AUTH_SECRET=$AUTH_SECRET
-          AUTH_URL=$AUTH_URL
+          DATABASE_URL=postgresql://ci:ci@localhost:5432/ci
+          POSTGRES_USER=ci
+          POSTGRES_PASSWORD=test
+          POSTGRES_DB=ci
+          AUTH_SECRET=testsecret
+          AUTH_URL=http://localhost:3000
+          GOOGLE_CLIENT_ID=test
+          GOOGLE_CLIENT_SECRET=test
+          IP=127.0.0.1
           EOF
 
       - name: Start stack
