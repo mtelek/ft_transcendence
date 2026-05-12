@@ -488,7 +488,7 @@ All features were tested and verified in **Chrome**, **Brave**, and **Firefox**.
 - Implemented the reveal visualization on the game table
 - Integrated Framer Motion for card dealing animations, card flip transitions, and UI entrance effects
 
-**Challenges:** Designing a customization system flexible enough for full custom mode while keeping preset themes simple required a layered context + CSS filter architecture. Getting animations to feel natural at different speeds while respecting `prefers-reduced-motion` also needed careful handling.
+**Challenges:** Designing a customization system flexible enough for full custom mode while keeping preset themes simple required a layered context + CSS filter architecture. Getting animations to feel natural also needed careful handling.
 
 ---
 

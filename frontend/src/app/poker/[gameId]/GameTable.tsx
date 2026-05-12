@@ -426,7 +426,6 @@ type DealEntry = {
 export default function GameTable({ gameId, username, image }: { gameId: string; username: string; image: string }) {
   const { settings, visuals } = usePokerSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  //giving up confirmation
   const [giveUpConfirm, setGiveUpConfirm] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
