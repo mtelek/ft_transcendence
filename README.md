@@ -139,13 +139,13 @@ All code was written, reviewed, and understood by team members. AI served as an 
 | mvolgger | Matthias Volgger | PO / Developer — Game & Backend       |
 | kbrauer  | Kevin Braeuer    | Developer — Frontend                  |
 
-### Tom Meniga — Tech Lead / Developer (Database & Ops)
+### Tom Meniga — Tech Lead / Developer (Database & Ops & Initial Auth)
 
-As Tech Lead, Tom owned the technical direction, module choices, and overall architecture quality. Led technical decision-making for the project, including the choice of tech stack (Next.js, PostgreSQL, Prisma, Socket.IO, Docker) and overall architecture. Designed the PostgreSQL database schema and Prisma data models. Wrote all migrations and maintained schema integrity across development cycles. Fully containerized the project with Docker and Docker Compose, including the multi-stage Dockerfile, HTTPS certificate generation, and health checks. Collaborated with Marton on game statistics persistence and the leaderboard API.
+As Tech Lead, Tom owned the technical direction, module choices, and overall architecture quality. Led technical decision-making for the project, including the choice of tech stack (Next.js, PostgreSQL, Prisma, Socket.IO, Docker) and overall architecture. Built the initial authentication foundation — the email/password registration and login flow — that the user management system was later extended on top of. Designed the PostgreSQL database schema and Prisma data models. Wrote all migrations and maintained schema integrity across development cycles. Fully containerized the project with Docker and Docker Compose, including the multi-stage Dockerfile, HTTPS certificate generation, and health checks. Collaborated with Marton on game statistics persistence and the leaderboard API.
 
 ### Marton Telek — PM / Developer (Auth & Users)
 
-As PM, Marton coordinated task distribution, meeting cadence, and the shared progress tracking document. Implemented the full user management system: registration, profile pages, avatar upload, friend requests, and online presence tracking. Set up Google OAuth via Auth.js and handled account linking for existing users. Built multi-browser compatibility and tested across Chrome, Brave, and Edge. Collaborated with Matthias on remote player reconnection logic and with Tom on game statistics and match history.
+As PM, Marton coordinated task distribution, meeting cadence, and the shared progress tracking document. Extended the initial authentication system (built by Tom) into the full user management feature set: profile pages, avatar upload, friend requests, and online presence tracking. Added Google OAuth via Auth.js and handled account linking for existing users. Built multi-browser compatibility and tested across Chrome, Brave, and Edge. Collaborated with Matthias on remote player reconnection logic and with Tom on game statistics and match history.
 
 ### Matthias Volgger — PO / Developer (Game & Backend)
 
@@ -328,9 +328,9 @@ User ──< Match           (as player1–player6)
 | Poker table UI             | Full game table page: player seats, community cards, chip stacks, action bar (fold/check/call/bet/raise), bet slider, phase badge, pot display, hand result overlay, and dealer button | Kevin |
 | Game customization         | 3 preset themes + custom mode; felt colors, card backs, backgrounds, animation speed | Kevin |
 | Settings persistence       | Game settings stored in localStorage and applied per session | Kevin |
-| User registration          | Email + username + password signup with validation | Marton |
+| User registration & login  | Email + username + password signup with validation, credentials login flow | Tom (initial), Marton (extended) |
 | Google OAuth login         | Sign in with Google; auto-links to existing email accounts | Marton |
-| User profiles              | Profile page with avatar, stats (wins/losses/hands played), and achievements | Marton |
+| User profiles              | Profile page with avatar, stats (wins/losses/hands played), and achievements | Tom |
 | Avatar upload              | Upload a custom avatar (jpg, png, webp, gif, max 5 MB) or pick from presets | Marton |
 | Friend system              | Send/accept/reject friend requests; view friend list with online status | Marton |
 | Online presence            | `lastSeenAt` heartbeat; users shown as online within 10 seconds of last activity | Marton |
@@ -365,7 +365,7 @@ Next.js is used as both the frontend (React pages, App Router) and the backend (
 Socket.IO powers all real-time game communication: player actions, game state broadcasting, chat messages, and match result notifications. Each game runs in a named Socket.IO room. The server handles connection, disconnection, and reconnection events gracefully. Disconnected players are auto-acted on their turn so games never stall.
 
 #### Standard User Management
-**Points:** 2 | **Who:** Marton Telek
+**Points:** 2 | **Who:** Marton Telek , Tom Meniga
 
 Users can register, log in, update their profile (username, email, avatar), add and remove friends, and view other players' profile pages. Avatars can be uploaded or chosen from a preset set. Friend status (online/offline) is tracked via a presence heartbeat.
 
@@ -424,7 +424,7 @@ All features were tested and verified in **Chrome**, **Brave**, and **Firefox**.
 
 **Areas:** Authentication, user management, friend system, lobby system, database schema, HTTPS/TLS, multi-browser support, remote players (with Matthias), game statistics (with Tom)
 
-- Set up Auth.js with both Credentials (email/password) and Google OAuth providers
+- Extended the initial Auth.js setup (Tom's credentials provider) by adding the Google OAuth provider and configuring NextAuth callbacks
 - Implemented Google account linking to existing credentials accounts
 - Built the full user profile system: profile page, avatar upload with validation (file type, size, path traversal protection), avatar preset picker
 - Built the friend system: send/accept/reject requests, bidirectional friendship edges, friend list with online/offline status
@@ -432,6 +432,7 @@ All features were tested and verified in **Chrome**, **Brave**, and **Firefox**.
 - Implemented the lobby system: create/join named game rooms/lobbies
 - Contributed to the database schema: added friendship and match records, ensured schema integrity, and maintained migrations
 - Implemented and tested HTTPS/TLS for secure connections in both development and production
+- Implemented HTTPS for production: OpenSSL certificate generation baked into the Docker build step; Nginx-style port forwarding from 80 → 443
 - Tested and fixed all features across Chrome, Brave, and Firefox; documented the Google chunck loading limitation
 - Collaborated with Matthias on remote player reconnection logic and disconnection handling
 - Built the match history API, history UI component, and real-time Socket.IO handler for live updates
@@ -448,14 +449,14 @@ All features were tested and verified in **Chrome**, **Brave**, and **Firefox**.
 
 - Led all major technical decisions: choice of Next.js as the full-stack framework, PostgreSQL + Prisma for data persistence, Socket.IO for real-time communication, and Docker for deployment
 - Designed the complete PostgreSQL schema: User, Account, Session, Friendship, Match, Achievement, and VerificationToken models
+- Built the initial authentication system: signup API route with bcrypt password hashing and validation, login page, and the initial NextAuth Credentials provider configuration
 - Wrote and maintained all Prisma migrations across development iterations
-- Containerized the entire application with Docker: wrote the multi-stage Dockerfile for the Next.js app, the PostgreSQL container configuration, and Docker Compose files for both production and development
-- Implemented HTTPS for production: OpenSSL certificate generation baked into the Docker build step; Nginx-style port forwarding from 80 → 443
+- Containerized the entire application with Docker: wrote the multi-stage Dockerfile for the Next.js app, the PostgreSQL container configuration, and Docker Compose files for both production and   development
 - Configured database health checks so the frontend container waits for PostgreSQL to be ready before starting
 - Built the Makefile with targets for `up`, `down`, `clean`, `dev`, `dev-clean` and `reset`
 - Collaborated with Marton on the match persistence logic (`persistMatch()`), the statistics API endpoints, and the leaderboard SQL queries
 
-**Challenges:** Getting Docker to reliably generate TLS certificates at build time and inject the correct IP into the Next.js config (for `AUTH_URL`) required a combination of Docker build args and entrypoint scripting. Making the dev and production Docker Compose files share the same `.env` without duplication also needed careful factoring.
+**Challenges:** The initial auth setup was the steepest learning curve — Next.js App Router, Prisma, PostgreSQL and bcrypt were all new at once, and getting signup and login working end-to-end meant understanding how all four pieces fit together first. Later, building the profile page, stats tracking, and achievements meant reading through Matthias's poker engine carefully enough to plug match results and achievement triggers into the right places without breaking the hand lifecycle.
 
 ---
 
