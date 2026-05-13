@@ -41,7 +41,8 @@ app.prepare().then(() => {
     registerPokerHandlers(io, state);
 
     httpsServer.listen(443, () => {
-      console.log("> Ready on https://0.0.0.0:443");
+      const authUrl = process.env.AUTH_URL || "https://0.0.0.0:443";
+      console.log(`> Ready on ${authUrl}`);
     });
   } else {
     // Plain HTTP dev server — HMR WebSocket works without SSL
@@ -56,7 +57,8 @@ app.prepare().then(() => {
     registerPokerHandlers(io, state);
 
     httpServer.listen(3000, () => {
-      console.log("> Ready on http://0.0.0.0:3000 (dev, no HTTPS)");
+      const authUrl = process.env.AUTH_URL || "http://0.0.0.0:3000";
+      console.log(`> Ready on ${authUrl} (dev, no HTTPS)`);
     });
   }
 });
