@@ -186,15 +186,10 @@ for (const playerId of playerIds)
 
 
 export function endGame(io: Server, state: PokerServerState, gameId: string, skipPersist = false) {
-  console.log(`\n>>>>>> [endGame] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
   if (!session) {
-    console.log(`[endGame] !!! session=null, bailing out`);
     return;
   }
-
-  console.log(`[endGame] allPlayers: ${session.allPlayers.map(p => `${p.username}(socket=${p.socketId})`).join(', ')}`);
-  console.log(`[endGame] socketToGame keys BEFORE cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
 
   if (!skipPersist && !session.matchSaved) {
     session.matchSaved = true;
@@ -211,7 +206,6 @@ export function endGame(io: Server, state: PokerServerState, gameId: string, ski
     state.pendingGames.delete(p.username);
     const wasInMap = state.socketToGame.has(p.socketId);
     state.socketToGame.delete(p.socketId);
-    console.log(`[endGame]   cleaned ${p.username} socket=${p.socketId} wasInMap=${wasInMap}`);
   }
   //clear active game for all players in the database
 
@@ -224,8 +218,6 @@ export function endGame(io: Server, state: PokerServerState, gameId: string, ski
 
   state.reservedGameNames.delete(gameId);
   state.games.delete(gameId);
-  console.log(`[endGame] socketToGame keys AFTER cleanup: [${[...state.socketToGame.keys()].join(', ')}]`);
-  console.log(`<<<<<< [endGame] DONE for gameId=${gameId}\n`);
 }
 
 export function advanceRounds(session: GameSession) {
@@ -275,10 +267,8 @@ export function advanceRounds(session: GameSession) {
 }
 
 export function handleElimination(io: Server, state: PokerServerState, gameId: string): boolean {
-  console.log(`\n>>>>>> [handleElimination] CALLED for gameId=${gameId}`);
   const session = state.games.get(gameId);
   if (!session) {
-    console.log(`[handleElimination] !!! session=null, returning true`);
     return true;
   }
 
@@ -294,20 +284,13 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     return !seat || seat.totalChips === 0;
   });
 
-  console.log(`[handleElimination] active=[${activePlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
-  console.log(`[handleElimination] busted=[${bustedPlayers.map(p => `${p.username}(seat=${p.seatIndex},chips=${seats[p.seatIndex]?.totalChips})`).join(', ')}]`);
-
   const gameWillEnd = activePlayers.length <= 1;
-  console.log(`[handleElimination] gameWillEnd=${gameWillEnd} (activePlayers.length=${activePlayers.length})`);
-
+ 
   if (gameWillEnd) {
-    console.log(`[handleElimination] >>> GAME OVER PATH <<< setting session.isGameOver=true`);
     session.isGameOver = true;
-    console.log(`<<<<<< [handleElimination] returning true\n`);
     return true;
   }
 
-  console.log(`[handleElimination] MULTI-PLAYER PATH`);
 
   for (const p of bustedPlayers) {
     io.to(p.socketId).emit("eliminated");
@@ -340,6 +323,5 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
   session.lastCommunityCards = [];
   session.nextDealerSeat = 0;
 
-  console.log(`<<<<<< [handleElimination] returning false (game continues)\n`);
   return false;
 }
