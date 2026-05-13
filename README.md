@@ -104,6 +104,91 @@ make lint          # Run ESLint inside Docker
 
 ---
 
+## User Guide
+
+### 1. Create an Account
+
+Go to `/register` and fill in your **email**, **username**, and **password** — or click **Sign in with Google** to use your Google account. If your Google email matches an existing credentials account, the accounts are linked automatically.
+
+### 2. Log In
+
+Go to `/login` and sign in with your credentials or Google. You will land on the **Dashboard** after a successful login.
+
+### 3. Set Up Your Profile
+
+Click your avatar in the top-right corner to open your profile. From there you can:
+
+- Upload a custom **avatar** (JPG, PNG, WebP, or GIF — max 5 MB) or pick from a preset
+- Edit your **username** and **email**
+- View your **stats** (wins, losses, hands played) and unlocked **achievements**
+- Browse your **match history** (last 20 games)
+
+### 4. Add Friends
+
+Visit another player's profile page (`/profile/<username>`) and send a **friend request**. Accepted friends appear in your friends list with a live **online/offline** indicator. You can also view the **Leaderboard** (`/leaderboard`) to see top players globally or among your friends.
+
+### 5. Host a Game
+
+On the **Dashboard**, open the **Host** tab:
+
+1. Enter a **game name** (shared with your opponent to identify the lobby)
+2. Optionally set a **password** to keep the lobby private
+3. Choose **table size**: 1v1 (2 players) or 3-player
+4. Configure **blinds** and **starting stack**
+5. Toggle the **Special Chip** power-up on or off
+6. Click **Host** — you will wait in the lobby until enough players join
+
+### 6. Join a Game
+
+On the **Dashboard**, open the **Join** tab:
+
+1. Enter the **exact game name** of the lobby you want to join
+2. Enter the **password** if the lobby is protected
+3. Click **Join** — you will be placed at the table once all seats are filled
+
+> Share the game name (and password) with your opponents out of band — there is no in-app invite system.
+
+### 7. Customize the Table
+
+Before hosting a game, open the **gameplay settings** panel on the Dashboard to customize:
+
+- **Theme** — Classic Vegas, Wood Lodge, or Garden (applies felt color, card back, and background together)
+- **Custom mode** — mix and match: 6 felt colors, 8 card back designs, 4 background styles
+- **Animation speed** — Slow, Normal, or Fast
+
+Settings are saved in your browser and applied each time you play.
+
+### 8. Play Poker
+
+The game is **Texas Hold'em**. Each player starts with the configured chip stack. The game runs through standard betting rounds:
+
+| Phase    | Description                                    |
+|----------|------------------------------------------------|
+| Preflop  | Each player receives 2 hole cards; first betting round |
+| Flop     | 3 community cards revealed; second betting round |
+| Turn     | 1 more community card; third betting round     |
+| River    | Final community card; last betting round       |
+| Showdown | Best 5-card hand wins the pot                  |
+
+**Available actions** (shown in the action bar at the bottom of the table):
+
+- **Fold** — discard your hand and forfeit the current pot
+- **Check** — pass the action without betting (only when no bet is open)
+- **Call** — match the current bet
+- **Bet / Raise** — place or increase a bet using the slider or manual input
+
+In **3-player games**, eliminated players (those who run out of chips) are removed from the table and the remaining players continue.
+
+### 9. Use the Special Chip
+
+If the **Special Chip** was enabled when the lobby was created, each player has one use per game. Click the **Special Chip** button during your turn to **reveal one opponent's hole cards** for 5 seconds. Use it strategically — it cannot be used again once spent.
+
+### 10. After the Game
+
+After the match ends, results are automatically saved. Your **win/loss record** and **hands played** update on your profile. You may also unlock one or more of the **36 achievements** based on the outcome (e.g. winning with a specific hand, social actions, or milestones).
+
+---
+
 ## Resources
 
 ### Documentation
