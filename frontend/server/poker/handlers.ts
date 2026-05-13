@@ -372,13 +372,13 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
         return;
       }
 
-      // remove player from any existing lobby they might be in
-      for (const [name, entry] of state.namedLobbies) {
-        if (entry.players.some((p) => p.socketId === socket.id)) {
-          state.namedLobbies.delete(name);
-          state.reservedGameNames.delete(name);
-          break;
-        }
+      const existingLobby = [...state.namedLobbies.values()].find((l) =>
+        l.players.some((p) => p.username === username)
+      );
+      if (existingLobby) {
+        const isHost = existingLobby.players[0]?.username === username;
+        socket.emit("lobbyError", { message: isHost ? "You are already hosting a lobby" : "You are already waiting in a lobby" });
+        return;
       }
 
       const maxPlayers = gameSize === 3 ? 3 : 2;
@@ -426,6 +426,14 @@ export function registerPokerHandlers(io: Server, state: PokerServerState) {
       }
       if (lobby.players.some((p) => p.username === username)) {
         socket.emit("lobbyError", { message: "You are already in this lobby" });
+        return;
+      }
+
+      const alreadyInLobby = [...state.namedLobbies.values()].some((l) =>
+        l.players.some((p) => p.username === username)
+      );
+      if (alreadyInLobby) {
+        socket.emit("lobbyError", { message: "You are already waiting in a lobby" });
         return;
       }
 
