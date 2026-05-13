@@ -305,7 +305,7 @@ export function handleElimination(io: Server, state: PokerServerState, gameId: s
     });
   }
 
-  const newTable = new Table({ smallBlind: 10, bigBlind: 20 }, activePlayers.length);
+  const newTable = new Table({ smallBlind: session.blinds.small, bigBlind: session.blinds.big }, activePlayers.length);
   activePlayers.forEach((p, newSeat) => {
     const oldSeat = seats[p.seatIndex];
     newTable.sitDown(newSeat, oldSeat!.totalChips);

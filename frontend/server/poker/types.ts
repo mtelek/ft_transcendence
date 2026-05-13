@@ -30,6 +30,7 @@ export interface GameSession {
   lastCommunityCards: PokerCard[];
   lastHoleCards: (PokerCard[] | null)[];
   startingStack: number;
+  blinds: { small: number; big: number };
   specialChipEnabled: boolean;
   specialChipUsedBy: boolean[];
   specialRevealActiveBySeat: number[];  // -1 = inactive, N = target seatIndex

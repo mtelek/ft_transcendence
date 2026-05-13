@@ -54,6 +54,7 @@ function startGame(
     lastCommunityCards: [],
     lastHoleCards: new Array(n).fill(null),
     startingStack,
+    blinds,
     specialChipEnabled: useSpecialChip,
     specialChipUsedBy: new Array(n).fill(false),
     specialRevealActiveBySeat: new Array(n).fill(-1),
